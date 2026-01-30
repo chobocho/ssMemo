@@ -1,11 +1,11 @@
-/* [Ãß°¡/¼öÁ¤] CSS º¯¼ö Á¤ÀÇ (±âº» ¶óÀÌÆ® ¸ğµå) */
+/* [ì¶”ê°€/ìˆ˜ì •] CSS ë³€ìˆ˜ ì •ì˜ (ê¸°ë³¸ ë¼ì´íŠ¸ ëª¨ë“œ) */
 :root {
     --modal-bg: #ffffff;
     --modal-text: #000000;
     --search-border: #cfd8dc;
 }
 
-/* [Ãß°¡] ´ÙÅ© Å×¸¶ Å¬·¡½º */
+/* [ì¶”ê°€] ë‹¤í¬ í…Œë§ˆ í´ë˜ìŠ¤ */
 body.dark-theme {
     --modal-bg: #2d2d2d;
     --modal-text: #ffffff;
@@ -19,11 +19,11 @@ body {
     font-family: sans-serif;
     user-select: none;
     overflow: hidden;
-    /* transition Ãß°¡ÇÏ¿© Å×¸¶ º¯°æ ½Ã ºÎµå·´°Ô */
+    /* transition ì¶”ê°€í•˜ì—¬ í…Œë§ˆ ë³€ê²½ ì‹œ ë¶€ë“œëŸ½ê²Œ */
     transition: background-color 0.3s;
 }
 
-/* ´ÙÅ©¸ğµå¿¡¼­ ÀÔ·ÂÃ¢°ú ¹öÆ° °¡½Ã¼º È®º¸ */
+/* ë‹¤í¬ëª¨ë“œì—ì„œ ì…ë ¥ì°½ê³¼ ë²„íŠ¼ ê°€ì‹œì„± í™•ë³´ */
 body.dark-theme textarea {
     background-color: #404040;
     color: white;
@@ -59,7 +59,7 @@ button {
 
 .hidden { display: none !important; }
 
-/* ¸Ş¸ğÀå ÆĞ³Î ½ºÅ¸ÀÏ */
+/* ë©”ëª¨ì¥ íŒ¨ë„ ìŠ¤íƒ€ì¼ */
 .note-panel {
     position: absolute;
     top: 50%;
@@ -97,13 +97,13 @@ button {
 .note-search-controls {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 0;
     flex: 1 1 auto;
     justify-content: center;
 }
 
 .note-search-controls input {
-    width: 220px;
+    width: 320px;
     max-width: 100%;
     height: 26px;
     padding: 0 8px;
@@ -116,13 +116,10 @@ button {
 }
 
 .note-search-controls button {
-    height: 26px;
-    padding: 0 10px;
-    border-radius: 6px;
-    border: 1px solid var(--search-border);
-    background: var(--modal-bg);
-    color: var(--modal-text);
-    font-size: 12px;
+    background: none;
+    border: none;
+    font-size: 18px;
+    padding: 0 4px;
 }
 
 .note-search-controls button:hover {
@@ -155,7 +152,7 @@ body.dark-theme .note-search-controls button:hover {
 
 .line-numbers {
     width: 40px;
-    padding: 10px 0; /* ÁÂ¿ì ÆĞµù Á¦°Å, »óÇÏ¸¸ À¯Áö */
+    padding: 10px 0; /* ì¢Œìš° íŒ¨ë”© ì œê±°, ìƒí•˜ë§Œ ìœ ì§€ */
     text-align: right;
     background: rgba(0, 0, 0, 0.03);
     border-right: 1px solid var(--search-border);
@@ -169,7 +166,7 @@ body.dark-theme .note-search-controls button:hover {
 }
 
 .line-numbers div {
-    padding-right: 8px; /* ¼ıÀÚ¿Í °æ°è¼± »çÀÌ °£°İ */
+    padding-right: 8px; /* ìˆ«ìì™€ ê²½ê³„ì„  ì‚¬ì´ ê°„ê²© */
     height: 24px;
     line-height: 24px;
 }
@@ -183,7 +180,7 @@ body.dark-theme .note-search-controls button:hover {
     resize: none;
     font-family: monospace;
     font-size: 14px;
-    line-height: 24px; /* line-numbers¿Í µ¿ÀÏÇÏ°Ô ¼³Á¤ */
+    line-height: 24px; /* line-numbersì™€ ë™ì¼í•˜ê²Œ ì„¤ì • */
     background: transparent;
     color: var(--modal-text);
     overflow-y: auto;
@@ -193,7 +190,7 @@ body.dark-theme .note-search-controls button:hover {
     height: 100%;
 }
 
-/* 22ÁÙÀÌ ³Ñ¾î°¡¸é ½ºÅ©·Ñ¹Ù Ç¥½Ã (±âÁ¸¿¡´Â Ç×»ó ¼û±èÀÌ¾úÀ¸³ª º¯°æ) */
+/* 22ì¤„ì´ ë„˜ì–´ê°€ë©´ ìŠ¤í¬ë¡¤ë°” í‘œì‹œ (ê¸°ì¡´ì—ëŠ” í•­ìƒ ìˆ¨ê¹€ì´ì—ˆìœ¼ë‚˜ ë³€ê²½) */
 .note-editor::-webkit-scrollbar {
     display: initial;
     width: 8px;

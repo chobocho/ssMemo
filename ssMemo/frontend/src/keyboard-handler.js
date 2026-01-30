@@ -7,7 +7,6 @@ import { Notepad } from './notepad.js';
 export const KeyboardHandler = {
     handleGlobal(e) {
         const isFindShortcut = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f';
-        const isNotePadShortcut = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n';
         const isSaveShortcut = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's';
 
         if (isFindShortcut) {
@@ -30,14 +29,6 @@ export const KeyboardHandler = {
             return;
         }
 
-        if (isNotePadShortcut) {
-            const notePanel = document.getElementById('note-panel');
-            if (notePanel && !notePanel.classList.contains('hidden')) return;
-            e.preventDefault();
-            Notepad.open();
-            return;
-        }
-
         if (isSaveShortcut) {
             const notePanel = document.getElementById('note-panel');
             if (notePanel && !notePanel.classList.contains('hidden')) {
@@ -45,11 +36,6 @@ export const KeyboardHandler = {
                 Notepad.save();
                 return;
             }
-        }
-
-        if (e.key === 'Escape') {
-            Notepad.close();
-            return;
         }
     }
 };
