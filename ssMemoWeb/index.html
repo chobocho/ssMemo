@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ssMemo</title>
+    <link rel="stylesheet" href="./src/style.css">
+</head>
+<body>
+<div id="app">
+    <div id="note-panel" class="note-panel">
+        <div class="note-panel-header">
+            <span class="note-panel-title">📝 ssMemo</span>
+            <div class="note-search-controls">
+                <input id="noteSearchInput" type="text" placeholder="검색 (Ctrl + I)">
+                <button id="noteSearchBtn" type="button" title="">🔍</button>
+                <button id="noteSearchPrevBtn" type="button" title="Ctrl + <">⬅️</button>
+                <button id="noteSearchNextBtn" type="button" title="Ctrl + >">➡️</button>
+            </div>
+            <span id="note-char-count" class="note-char-count-panel">글자수: 0</span>
+            <button onclick="saveNotePadWithNoti()" class="note-icon-btn" title="저장">💾</button>
+            <button onclick="showNoteHelpPanel()" class="note-icon-btn" title="도움말">❓</button>
+            <button class="note-icon-btn" title="설정">⚙️</button>
+        </div>
+        <div class="note-editor-container">
+            <div id="line-numbers" class="line-numbers">1</div>
+            <textarea id="note-editor" class="note-editor" spellcheck="false"></textarea>
+        </div>
+    </div>
+</div>
+<script src="./src/main.js" type="module"></script>
+</body>
+</html>
