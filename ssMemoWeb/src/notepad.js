@@ -243,52 +243,43 @@ export const Notepad = {
 
         if (e.ctrlKey && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
             e.preventDefault();
-            this.insertSymbol('->');
+            this.insertSymbol('→');
             return;
         }
 
         if (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'c')) {
             e.preventDefault();
-            this.insertSymbol('[v]');
-            return;
-        }
-
-        if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i')) {
-            e.preventDefault();
-            this.insertSymbol('[ ]');
+            this.insertSymbol('✅');
             return;
         }
 
         if (e.ctrlKey && e.shiftKey && (e.key === 'O' || e.key === 'o')) {
             e.preventDefault();
-            this.insertSymbol('[o]');
+            this.insertSymbol('□');
             return;
         }
 
         if (e.ctrlKey && e.shiftKey && (e.key === 'R' || e.key === 'r')) {
             e.preventDefault();
-            this.insertSymbol('[*]');
+            this.insertSymbol('※');
             return;
         }
 
         if (e.ctrlKey && e.shiftKey && (e.key === 'Z' || e.key === 'z')) {
             e.preventDefault();
-            this.insertSymbol('[?]');
+            this.insertSymbol('🟩');
             return;
         }
 
         if (e.ctrlKey && e.shiftKey && (e.key === 'X' || e.key === 'x')) {
             e.preventDefault();
-            this.insertSymbol('[x]');
+            this.insertSymbol('❎');
             return;
         }
     },
 
     showHelpPanel() {
         const helpText = `메모장 단축키
-
-Esc - 메모장 닫기
-
 Alt + B - 페이지 위로
 Alt + F - 페이지 아래로
 
@@ -301,13 +292,12 @@ Ctrl + L - 구분선 삽입
 기호 삽입:
 Ctrl + Shift + A - →
 Ctrl + Shift + C - ✅ (체크마크)
-Ctrl + Shift + I - ■ (체크박스)
 Ctrl + Shift + O - □ (박스)
 Ctrl + Shift + R - ※
 Ctrl + Shift + X - ❎
 Ctrl + Shift + Z - 🟩
 
-URL을 드래그 후 우클릭하면 브라우저로 이동합니다.
+URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
 `;
 
         AppAPI.showMessage('메모장 도움말', helpText);
