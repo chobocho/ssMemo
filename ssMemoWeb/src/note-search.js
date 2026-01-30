@@ -29,7 +29,7 @@ export const NoteSearchUI = {
         state.elements.noteSearchInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                this.find({ startFromBeginning: false });
+                this.find({ startFromBeginning: true });
             }
         });
     },
