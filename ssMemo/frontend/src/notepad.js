@@ -58,14 +58,14 @@ export const Notepad = {
 
     async save() {
         const noteEditor = document.getElementById('note-editor');
-        if (!noteEditor) return 'No editor found.';
+        if (!noteEditor) return "저장할 데이타가 없습니다.";
 
         const content = noteEditor.value;
         if (!state.notepad.isDirty || content === state.notepad.lastSavedContent) {
-            return 'No changes to save.';
+            return "변경 내용이 없습니다.";
         }
 
-        let retMsg = 'Saved.';
+        let retMsg = "저장에 성공했습니다.";
         try {
             await window.go.main.App.SaveOrUpdateNoteByDate(CONSTANTS.NOTEPAD_KEY, content);
             state.notepad.lastSavedContent = content;
@@ -73,14 +73,14 @@ export const Notepad = {
             console.log('Notepad auto-saved');
         } catch (e) {
             console.error('Failed to save notepad:', e);
-            retMsg = 'Save failed.';
+            retMsg = "저장에 실패했습니다.";
         }
         return retMsg;
     },
 
     async saveWithNotification() {
         const msg = await this.save();
-        await window.go.main.App.ShowMessage('Notepad', msg);
+        await window.go.main.App.ShowMessage("메모 저장", msg);
     },
 
     startAutoSave() {
@@ -99,7 +99,7 @@ export const Notepad = {
         const noteEditor = document.getElementById('note-editor');
         if (!noteEditor) return;
 
-        const divider = '-'.repeat(CONSTANTS.DIVIDER_LENGTH);
+        const divider = '─'.repeat(CONSTANTS.DIVIDER_LENGTH);
         const cursorPos = noteEditor.selectionStart;
         const textBefore = noteEditor.value.substring(0, cursorPos);
         const textAfter = noteEditor.value.substring(noteEditor.selectionEnd);
@@ -277,28 +277,32 @@ export const Notepad = {
     },
 
     showHelpPanel() {
-        const helpText = `Notepad shortcuts
+        const helpText = `메모장 단축키:
 
-Esc - Close notepad
-Alt + B - Page up
-Alt + F - Page down
-Ctrl + F - Find
-Ctrl + , - Find previous
-Ctrl + . - Find next
-Ctrl + L - Insert divider
+Esc - 메모장 닫기
 
-Symbol shortcuts:
-Ctrl + Shift + A - ->
-Ctrl + Shift + C - [v]
-Ctrl + Shift + I - [ ]
-Ctrl + Shift + O - [o]
-Ctrl + Shift + R - [*]
-Ctrl + Shift + X - [x]
-Ctrl + Shift + Z - [?]
+Alt + B - 한 페이지 앞으로
+Alt + F - 한 페이지 뒤로
 
-Tip: If selected text is a URL, right-click opens it.`;
+Ctrl + F - 검색 하기
+Ctrl + <  - 이전 검색 결과로 이동
+Ctrl + >  - 다음 검색 결과로 이동
 
-        window.go.main.App.ShowMessage('Notepad Help', helpText);
+Ctrl + L - 구분선 삽입
+
+기호 삽입:
+Ctrl + Shift + A - →
+Ctrl + Shift + C - ✅ (체크마크)
+Ctrl + Shift + I - ■ (체크박스)
+Ctrl + Shift + O - □ (박스)
+Ctrl + Shift + R - ※
+Ctrl + Shift + X - ❎
+Ctrl + Shift + Z - 🟩
+
+URL을 드래그 후 우클릭하면 브라우저로 열립니다.
+`;
+
+        window.go.main.App.ShowMessage("메모장 도움말", helpText);
     }
 };
 
