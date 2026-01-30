@@ -6,13 +6,20 @@ import { CONSTANTS } from './constants.js';
 import { NoteSearchUI } from './note-search.js';
 import { AppAPI } from './app-api.js';
 
+// Cache DOM elements
+let notePanel = null;
+let noteEditor = null;
+let lineNumbers = null;
+let charCountEl = null;
+
 export const Notepad = {
     async open() {
-        const notePanel = document.getElementById('note-panel');
-        const noteEditor = document.getElementById('note-editor');
-        const lineNumbers = document.getElementById('line-numbers');
+        notePanel = document.getElementById('note-panel');
+        noteEditor = document.getElementById('note-editor');
+        lineNumbers = document.getElementById('line-numbers');
+        charCountEl = document.getElementById('note-char-count');
 
-        if (!notePanel || !noteEditor || !lineNumbers) return;
+        if (!notePanel || !noteEditor || !lineNumbers || !charCountEl) return;
 
         notePanel.classList.remove('hidden');
         noteEditor.focus();
@@ -49,7 +56,6 @@ export const Notepad = {
     },
 
     async close() {
-        const notePanel = document.getElementById('note-panel');
         if (notePanel && !notePanel.classList.contains('hidden')) {
             await this.save();
             notePanel.classList.add('hidden');
@@ -58,7 +64,6 @@ export const Notepad = {
     },
 
     async save() {
-        const noteEditor = document.getElementById('note-editor');
         if (!noteEditor) return "저장할 데이터가 없습니다.";
 
         const content = noteEditor.value;
@@ -97,7 +102,6 @@ export const Notepad = {
     },
 
     insertDivider() {
-        const noteEditor = document.getElementById('note-editor');
         if (!noteEditor) return;
 
         const divider = '─'.repeat(CONSTANTS.DIVIDER_LENGTH);
@@ -120,7 +124,6 @@ export const Notepad = {
     },
 
     insertSymbol(symbol) {
-        const noteEditor = document.getElementById('note-editor');
         if (!noteEditor) return;
 
         const cursorPos = noteEditor.selectionStart;
@@ -139,15 +142,11 @@ export const Notepad = {
     },
 
     updateCharCount() {
-        const noteEditor = document.getElementById('note-editor');
-        const charCountEl = document.getElementById('note-char-count');
         if (!noteEditor || !charCountEl) return;
         charCountEl.textContent = `글자수: ${noteEditor.value.length}`;
     },
 
     updateLineNumbers() {
-        const noteEditor = document.getElementById('note-editor');
-        const lineNumbers = document.getElementById('line-numbers');
         if (!noteEditor || !lineNumbers) return;
 
         const lines = noteEditor.value.split('\n');
@@ -156,13 +155,11 @@ export const Notepad = {
         for (let i = 1; i <= lineCount; i++) {
             lineNumbersHTML += `<div>${i}</div>`;
         }
-        const scrollTop = noteEditor.scrollTop;
         lineNumbers.innerHTML = lineNumbersHTML;
-        lineNumbers.scrollTop = scrollTop;
+        lineNumbers.scrollTop = noteEditor.scrollTop;
     },
 
     handleContextMenu(e) {
-        const noteEditor = document.getElementById('note-editor');
         if (!noteEditor) return;
 
         const start = noteEditor.selectionStart;
@@ -187,39 +184,38 @@ export const Notepad = {
     handleKeyDown(e) {
         if (e.ctrlKey && (e.key === 'I' || e.key === 'i')) {
             e.preventDefault();
-            const noteSearchInput = document.getElementById('noteSearchInput');
-            noteSearchInput.focus();
+            state.elements.noteSearchInput?.focus();
             return;
         }
 
         if (e.key === 'PageUp' || (e.altKey && (e.key === 'B' || e.key === 'b'))) {
             e.preventDefault();
-            const noteEditor = document.getElementById('note-editor');
-            noteEditor.scrollTop -= noteEditor.clientHeight;
+            if (noteEditor) noteEditor.scrollTop -= noteEditor.clientHeight;
             return;
         }
 
         if (e.key === 'PageDown' || (e.altKey && (e.key === 'F' || e.key === 'f'))) {
             e.preventDefault();
-            const noteEditor = document.getElementById('note-editor');
-            noteEditor.scrollTop += noteEditor.clientHeight;
+            if (noteEditor) noteEditor.scrollTop += noteEditor.clientHeight;
             return;
         }
 
         if (e.ctrlKey && (e.key === '6' || e.key === 'h' || e.key === 'H')) {
             e.preventDefault();
-            const noteEditor = document.getElementById('note-editor');
-            noteEditor.setSelectionRange(0, 0);
-            noteEditor.scrollTop = 0;
+            if (noteEditor) {
+                noteEditor.setSelectionRange(0, 0);
+                noteEditor.scrollTop = 0;
+            }
             return;
         }
 
         if (e.ctrlKey && (e.key === '4' || e.key === 'e' || e.key === 'E')) {
             e.preventDefault();
-            const noteEditor = document.getElementById('note-editor');
-            const endPos = noteEditor.value.length;
-            noteEditor.setSelectionRange(endPos, endPos);
-            noteEditor.scrollTop = noteEditor.scrollHeight;
+            if (noteEditor) {
+                const endPos = noteEditor.value.length;
+                noteEditor.setSelectionRange(endPos, endPos);
+                noteEditor.scrollTop = noteEditor.scrollHeight;
+            }
             return;
         }
 
