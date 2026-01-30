@@ -62,14 +62,12 @@ button {
 /* 메모장 패널 스타일 */
 .note-panel {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 1024px;
-    height: 768px;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     background: var(--modal-bg);
     border: 1px solid var(--search-border);
-    border-radius: 8px;
+    border-radius: 0;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
     z-index: 150;
     display: flex;
@@ -81,7 +79,7 @@ button {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px 15px 0px 15px;
+    padding: 0px 15px 0px 15px;
     background: rgba(0, 0, 0, 0.05);
     border-bottom: 1px solid var(--search-border);
     color: var(--modal-text);
