@@ -1,0 +1,2 @@
+# ssMemo
+Simple Memo Application
