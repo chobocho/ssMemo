@@ -1,26 +1,15 @@
-ï»¿/* [ì¶”ê°€/ìˆ˜ì •] CSS ë³€ìˆ˜ ì •ì˜ (ê¸°ë³¸ ë¼ì´íŠ¸ ëª¨ë“œ) */
+/* [Ãß°¡/¼öÁ¤] CSS º¯¼ö Á¤ÀÇ (±âº» ¶óÀÌÆ® ¸ğµå) */
 :root {
-    --canvas-bg: rgba(255, 255, 255, 0.95); /* ê¸°ì¡´ ë¼ì´íŠ¸ ë°°ê²½ */
     --modal-bg: #ffffff;
     --modal-text: #000000;
-    --search-bg: rgba(255, 255, 255, 0.98);
     --search-border: #cfd8dc;
-    --search-text: #222222;
-    --search-muted: #777777;
-    --search-hover: #eef3f6;
 }
 
-/* [ì¶”ê°€] ë‹¤í¬ í…Œë§ˆ í´ë˜ìŠ¤ */
+/* [Ãß°¡] ´ÙÅ© Å×¸¶ Å¬·¡½º */
 body.dark-theme {
-    /* ìš”ì²­ì‚¬í•­: ë°°ê²½ì€ 90% íˆ¬ëª…ë„(0.9 ë¶ˆíˆ¬ëª…ë„), ê²€ì€ìƒ‰ */
-    --canvas-bg: rgba(0, 0, 0, 0.9);
     --modal-bg: #2d2d2d;
     --modal-text: #ffffff;
-    --search-bg: rgba(25, 25, 25, 0.95);
     --search-border: #444444;
-    --search-text: #f1f1f1;
-    --search-muted: #aaaaaa;
-    --search-hover: #2a2a2a;
 }
 
 body {
@@ -30,11 +19,11 @@ body {
     font-family: sans-serif;
     user-select: none;
     overflow: hidden;
-    /* transition ì¶”ê°€í•˜ì—¬ í…Œë§ˆ ë³€ê²½ ì‹œ ë¶€ë“œëŸ½ê²Œ */
+    /* transition Ãß°¡ÇÏ¿© Å×¸¶ º¯°æ ½Ã ºÎµå·´°Ô */
     transition: background-color 0.3s;
 }
 
-/* ë‹¤í¬ëª¨ë“œì—ì„œ ì…ë ¥ì°½ê³¼ ë²„íŠ¼ ê°€ì‹œì„± í™•ë³´ */
+/* ´ÙÅ©¸ğµå¿¡¼­ ÀÔ·ÂÃ¢°ú ¹öÆ° °¡½Ã¼º È®º¸ */
 body.dark-theme textarea {
     background-color: #404040;
     color: white;
@@ -68,50 +57,9 @@ button {
     z-index: 1000;
 }
 
-/* ëª¨ë‹¬ ìŠ¤íƒ€ì¼ */
 .hidden { display: none !important; }
-.modal {
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 100;
-}
-.modal-content {
-    /* [ìˆ˜ì •] ë³€ìˆ˜ ì‚¬ìš© */
-    background: var(--modal-bg);
-    color: var(--modal-text);
-    padding: 20px;
-    border-radius: 8px;
-    width: 400px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-}
 
-/* ë‹¤í¬ëª¨ë“œì—ì„œ ì…ë ¥ì°½ê³¼ ë²„íŠ¼ ê°€ì‹œì„± í™•ë³´ */
-body.dark-theme textarea {
-    background-color: #404040;
-    color: white;
-    border: 1px solid #555;
-}
-
-#noteInput { width: 100%; height: 80px; margin-top: 10px; }
-#modalNoteList {
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-.button-group { margin-top: 10px; display: flex; justify-content: flex-end; gap: 5px; }
-.note-hint {
-    font-size: 11px;
-    color: #888888;
-    margin-right: auto;
-    line-height: 1.2;
-}
-
-/* ë©”ëª¨ì¥ íŒ¨ë„ ìŠ¤íƒ€ì¼ */
+/* ¸Ş¸ğÀå ÆĞ³Î ½ºÅ¸ÀÏ */
 .note-panel {
     position: absolute;
     top: 50%;
@@ -207,7 +155,7 @@ body.dark-theme .note-search-controls button:hover {
 
 .line-numbers {
     width: 40px;
-    padding: 10px 0; /* ì¢Œìš° íŒ¨ë”© ì œê±°, ìƒí•˜ë§Œ ìœ ì§€ */
+    padding: 10px 0; /* ÁÂ¿ì ÆĞµù Á¦°Å, »óÇÏ¸¸ À¯Áö */
     text-align: right;
     background: rgba(0, 0, 0, 0.03);
     border-right: 1px solid var(--search-border);
@@ -221,7 +169,7 @@ body.dark-theme .note-search-controls button:hover {
 }
 
 .line-numbers div {
-    padding-right: 8px; /* ìˆ«ìì™€ ê²½ê³„ì„  ì‚¬ì´ ê°„ê²© */
+    padding-right: 8px; /* ¼ıÀÚ¿Í °æ°è¼± »çÀÌ °£°İ */
     height: 24px;
     line-height: 24px;
 }
@@ -235,7 +183,7 @@ body.dark-theme .note-search-controls button:hover {
     resize: none;
     font-family: monospace;
     font-size: 14px;
-    line-height: 24px; /* line-numbersì™€ ë™ì¼í•˜ê²Œ ì„¤ì • */
+    line-height: 24px; /* line-numbers¿Í µ¿ÀÏÇÏ°Ô ¼³Á¤ */
     background: transparent;
     color: var(--modal-text);
     overflow-y: auto;
@@ -245,7 +193,7 @@ body.dark-theme .note-search-controls button:hover {
     height: 100%;
 }
 
-/* 22ì¤„ì´ ë„˜ì–´ê°€ë©´ ìŠ¤í¬ë¡¤ë°” í‘œì‹œ (ê¸°ì¡´ì—ëŠ” í•­ìƒ ìˆ¨ê¹€ì´ì—ˆìœ¼ë‚˜ ë³€ê²½) */
+/* 22ÁÙÀÌ ³Ñ¾î°¡¸é ½ºÅ©·Ñ¹Ù Ç¥½Ã (±âÁ¸¿¡´Â Ç×»ó ¼û±èÀÌ¾úÀ¸³ª º¯°æ) */
 .note-editor::-webkit-scrollbar {
     display: initial;
     width: 8px;
@@ -268,13 +216,3 @@ body.dark-theme .note-editor::-webkit-scrollbar-thumb {
     font-weight: lighter;
     font-size: 12px;
 }
-
-.note-item {
-    display: flex; justify-content: space-between;
-    border-bottom: 1px solid #eee; padding: 5px 0;
-}
-.note-content {
-    flex: 1;
-    text-align: left;
-}
-
