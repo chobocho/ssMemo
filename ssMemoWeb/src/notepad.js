@@ -274,6 +274,51 @@ export const Notepad = {
         }
     },
 
+    splitNoteIntoChunks(len) {
+        if (!noteEditor) return;
+
+        const delimiter = "\n\n<----------[절취선]---------->\n\n";
+        const content = noteEditor.value;
+        
+        const btn = document.querySelector('button[onclick^="splitNoteIntoChunks"]');
+        
+        // 1. 구분자가 이미 존재하면 모두 없애기
+        if (content.includes(delimiter)) {
+            // escape special characters for regex
+            const escapedDelimiter = delimiter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            // Remove delimiters and potentially leading/trailing newlines added around them
+            // We'll use a simple replace first.
+            const newContent = content.split(delimiter).join('');
+            noteEditor.value = newContent;
+
+            if (btn) {
+                btn.textContent = '➗';
+                btn.title = `${len}자 크기로 나누기`;
+            }
+        } else {
+            // 2. 구분자가 없다면 len사이즈 마다 구분자를 넣기
+            if (!len || len <= 0) return;
+            
+            let newContent = "";
+            for (let i = 0; i < content.length; i += len) {
+                if (i > 0) {
+                    newContent += delimiter;
+                }
+                newContent += content.substring(i, i + len);
+            }
+            noteEditor.value = newContent;
+
+            if (btn) {
+                btn.textContent = '➕';
+                btn.title = '절취선 문구 삭제';
+            }
+        }
+
+        this.updateLineNumbers();
+        this.updateCharCount();
+        state.notepad.isDirty = noteEditor.value !== state.notepad.lastSavedContent;
+    },
+
     showHelpPanel() {
         const helpText = `메모장 단축키
 Alt + B - 페이지 위로
@@ -305,3 +350,4 @@ window.closeNotePanel = () => Notepad.close();
 window.saveNotePad = () => Notepad.save();
 window.saveNotePadWithNoti = () => Notepad.saveWithNotification();
 window.showNoteHelpPanel = () => Notepad.showHelpPanel();
+window.splitNoteIntoChunks = (len) => Notepad.splitNoteIntoChunks(len);

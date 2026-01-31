@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ssMemo</title>
+    <title>ssMemo V0.126.1</title>
     <link rel="stylesheet" href="./src/style.css">
 </head>
 <body>
@@ -17,6 +17,7 @@
                 <button id="noteSearchNextBtn" type="button" title="Ctrl + >">➡️</button>
             </div>
             <span id="note-char-count" class="note-char-count-panel">글자수: 0</span>
+            <button onclick="splitNoteIntoChunks(2000)" class="note-icon-btn" title="2000자 크기로 나누기">➗</button>
             <button onclick="saveNotePadWithNoti()" class="note-icon-btn" title="저장">💾</button>
             <button onclick="showNoteHelpPanel()" class="note-icon-btn" title="도움말">❓</button>
             <button class="note-icon-btn" title="설정">⚙️</button>
