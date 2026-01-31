@@ -295,9 +295,11 @@ export const Notepad = {
                 btn.textContent = '➗';
                 btn.title = `${len}자 크기로 나누기`;
             }
+            if ( state.elements.noteSearchInput.value === '절취선') {
+                state.elements.noteSearchInput.value = '';
+            }
         } else {
-            // 2. 구분자가 없다면 len사이즈 마다 구분자를 넣기
-            if (!len || len <= 0) return;
+            if (!len || len <= 0 || content.length <= len) return;
             
             let newContent = "";
             for (let i = 0; i < content.length; i += len) {
@@ -312,6 +314,7 @@ export const Notepad = {
                 btn.textContent = '➕';
                 btn.title = '절취선 문구 삭제';
             }
+            state.elements.noteSearchInput.value = '절취선';
         }
 
         this.updateLineNumbers();
