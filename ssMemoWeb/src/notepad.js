@@ -277,9 +277,10 @@ export const Notepad = {
     splitNoteIntoChunks(len) {
         if (!noteEditor) return;
 
-        const delimiter = "\n\n<----------[절취선]---------->\n\n";
         const content = noteEditor.value;
-        
+        if (!len || len <= 0 || content.length <= len) return;
+
+        const delimiter = "\n\n<----------[절취선]---------->\n\n";
         const btn = document.querySelector('button[onclick^="splitNoteIntoChunks"]');
         
         // 1. 구분자가 이미 존재하면 모두 없애기
@@ -299,8 +300,6 @@ export const Notepad = {
                 state.elements.noteSearchInput.value = '';
             }
         } else {
-            if (!len || len <= 0 || content.length <= len) return;
-            
             let newContent = "";
             for (let i = 0; i < content.length; i += len) {
                 if (i > 0) {
