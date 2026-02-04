@@ -441,7 +441,12 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         tab.classList.remove('note-tab-hidden');
         const labelEl = tab.querySelector('.note-tab-label');
         if (labelEl) {
-            labelEl.textContent = fileInfo.fileName;
+            // 파일명이 10글자를 초과하면 10글자까지만 표시
+            const displayName = fileInfo.fileName.length > 10
+                ? fileInfo.fileName.substring(0, 8) + '...'
+                : fileInfo.fileName;
+            labelEl.textContent = displayName;
+            labelEl.title = fileInfo.fileName; // 전체 파일명은 툴팁으로 표시
         }
     },
 
