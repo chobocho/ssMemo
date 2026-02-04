@@ -35,7 +35,7 @@ export const NoteSearchUI = {
     },
 
     find({ startFromBeginning }) {
-        const noteEditor = document.getElementById('note-editor');
+        const noteEditor = this.getCurrentEditor();
         if (!noteEditor || !state.elements.noteSearchInput) return;
 
         const query = state.elements.noteSearchInput.value;
@@ -61,7 +61,7 @@ export const NoteSearchUI = {
     },
 
     findPrev() {
-        const noteEditor = document.getElementById('note-editor');
+        const noteEditor = this.getCurrentEditor();
         if (!noteEditor || !state.elements.noteSearchInput) return;
 
         const query = state.elements.noteSearchInput.value;
@@ -87,6 +87,15 @@ export const NoteSearchUI = {
         noteEditor.focus();
         noteEditor.setSelectionRange(matchIndex, matchIndex + query.length);
         this.scrollToIndex(noteEditor, matchIndex);
+    },
+
+    getCurrentEditor() {
+        // 현재 활성화된 에디터를 찾습니다
+        const activeContainer = document.querySelector('.note-editor-container:not(.hidden)');
+        if (!activeContainer) return null;
+
+        const editor = activeContainer.querySelector('.note-editor');
+        return editor;
     },
 
     showMiss() {

@@ -463,6 +463,42 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
             targetTab.classList.add('note-tab-active');
             targetContainer.classList.remove('hidden');
             fileTabs.currentTab = tabId;
+
+            // 글자수 업데이트
+            this.updateCharCountForTab(tabId);
+
+            // 저장하기, 나누기 버튼 표시/숨김 처리
+            this.updateButtonsVisibility(tabId);
+        }
+    },
+
+    updateCharCountForTab(tabId) {
+        if (!charCountEl) return;
+
+        let editor;
+        if (tabId === 'main') {
+            editor = noteEditor;
+        } else {
+            editor = document.getElementById(`note-editor-${tabId}`);
+        }
+
+        if (editor) {
+            charCountEl.textContent = `글자수: ${editor.value.length}`;
+        }
+    },
+
+    updateButtonsVisibility(tabId) {
+        const saveBtn = document.querySelector('button[onclick="saveNotePadWithNoti()"]');
+        const splitBtn = document.querySelector('button[onclick^="splitNoteIntoChunks"]');
+
+        if (saveBtn && splitBtn) {
+            if (tabId === 'main') {
+                saveBtn.style.display = '';
+                splitBtn.style.display = '';
+            } else {
+                saveBtn.style.display = 'none';
+                splitBtn.style.display = 'none';
+            }
         }
     },
 
