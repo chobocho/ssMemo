@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ssMemo V0.126.1b</title>
+    <title>ssMemo V0.126.1c</title>
     <link rel="stylesheet" href="./src/style.css">
 </head>
 <body>
@@ -22,41 +22,41 @@
             <button onclick="LoadFileFromDisk()" class="note-icon-btn" title="불러오기">🗂️</button>
             <button onclick="splitNoteIntoChunks(2000)" class="note-icon-btn" title="2000자 크기로 나누기">➗</button>
             <button onclick="forceEnterToNote()" class="note-icon-btn" title="강제 줄 바꿈">⬇️</button>
-            <button onclick="saveNotePadWithNoti()" class="note-icon-btn" title="저장">💾</button>
+            <button onclick="saveNotePadWithNoti()" class="note-icon-Fbtn" title="저장">💾</button>
             <button onclick="showNoteHelpPanel()" class="note-icon-btn" title="도움말">❓</button>
         </div>
         <!-- 탭 UI -->
         <div class="note-tabs-container">
             <div class="note-tab note-tab-active" data-tab="main">
-                <span class="note-tab-label">메인 에디터</span>
+                <span class="note-tab-label">메모장</span>
             </div>
             <div class="note-tab note-tab-hidden" data-tab="0">
                 <span class="note-tab-label">파일 1</span>
-                <button class="note-tab-close" onclick="closeFileTab(0)">✕</button>
+                <button class="note-tab-close" onclick="closeFileTab(0)">❌</button>
             </div>
             <div class="note-tab note-tab-hidden" data-tab="1">
                 <span class="note-tab-label">파일 2</span>
-                <button class="note-tab-close" onclick="closeFileTab(1)">✕</button>
+                <button class="note-tab-close" onclick="closeFileTab(1)">❌</button>
             </div>
             <div class="note-tab note-tab-hidden" data-tab="2">
                 <span class="note-tab-label">파일 3</span>
-                <button class="note-tab-close" onclick="closeFileTab(2)">✕</button>
+                <button class="note-tab-close" onclick="closeFileTab(2)">❌</button>
             </div>
             <div class="note-tab note-tab-hidden" data-tab="3">
                 <span class="note-tab-label">파일 4</span>
-                <button class="note-tab-close" onclick="closeFileTab(3)">✕</button>
+                <button class="note-tab-close" onclick="closeFileTab(3)">❌</button>
             </div>
             <div class="note-tab note-tab-hidden" data-tab="4">
                 <span class="note-tab-label">파일 5</span>
-                <button class="note-tab-close" onclick="closeFileTab(4)">✕</button>
+                <button class="note-tab-close" onclick="closeFileTab(4)">❌</button>
             </div>
             <div class="note-tab note-tab-hidden" data-tab="5">
                 <span class="note-tab-label">파일 6</span>
-                <button class="note-tab-close" onclick="closeFileTab(5)">✕</button>
+                <button class="note-tab-close" onclick="closeFileTab(5)">❌</button>
             </div>
             <div class="note-tab note-tab-hidden" data-tab="6">
                 <span class="note-tab-label">파일 7</span>
-                <button class="note-tab-close" onclick="closeFileTab(6)">✕</button>
+                <button class="note-tab-close" onclick="closeFileTab(6)">❌</button>
             </div>
         </div>
 
