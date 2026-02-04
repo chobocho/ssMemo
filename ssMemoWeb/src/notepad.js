@@ -371,6 +371,33 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
             const file = e.target.files[0];
             if (!file) return;
 
+            if (file.size > 10 * 1024 * 1024) {
+                await AppAPI.showMessage('파일 불러오기 실패', '파일 크기가 너무 큽니다. (10MB 이하)');
+                return;
+            }
+
+            function isInvalidFileExtension() {
+                return !file.name.endsWith('.txt') &&
+                    !file.name.endsWith('.md') &&
+                    !file.name.endsWith('.py') &&
+                    !file.name.endsWith('.java') &&
+                    !file.name.endsWith('.go') &&
+                    !file.name.endsWith('.c') &&
+                    !file.name.endsWith('.cpp') &&
+                    !file.name.endsWith('.txt') &&
+                    !file.name.endsWith('.js') &&
+                    !file.name.endsWith('.json') &&
+                    !file.name.endsWith('.html');
+            }
+
+            if (isInvalidFileExtension()) {
+                if (file.type !== 'text/plain') {
+                    console.log(file.type);
+                    await AppAPI.showMessage('파일 불러오기 실패', '지원하지 않는 파일 형식입니다. (텍스트 파일만 가능)');
+                    return;
+                }
+            }
+
             try {
                 const content = await file.text();
 
