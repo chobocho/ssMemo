@@ -536,6 +536,35 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
                 this.switchTab(tabId);
             });
         });
+    },
+
+    forceEnterToNote() {
+        const btn = document.querySelector('button[onclick="forceEnterToNote()"]');
+        if (!btn) return;
+
+        // 현재 활성화된 에디터 찾기
+        let currentEditor = noteEditor;
+        if (fileTabs.currentTab !== 'main') {
+            currentEditor = document.getElementById(`note-editor-${fileTabs.currentTab}`);
+        }
+        if (!currentEditor) return;
+
+        // 현재 상태 토글
+        const isWrapped = currentEditor.style.whiteSpace === 'pre-wrap';
+
+        if (isWrapped) {
+            // 줄 바꿈 해제 (가로 스크롤 활성화)
+            currentEditor.style.whiteSpace = 'pre';
+            currentEditor.style.overflowX = 'auto';
+            btn.textContent = '⬇️';
+            btn.title = '강제 줄 바꿈';
+        } else {
+            // 줄 바꿈 활성화 (가로 스크롤 비활성화)
+            currentEditor.style.whiteSpace = 'pre-wrap';
+            currentEditor.style.overflowX = 'hidden';
+            btn.textContent = '⬆️';
+            btn.title = '강제 줄 바꿈 해제';
+        }
     }
 };
 
@@ -547,3 +576,4 @@ window.showNoteHelpPanel = () => Notepad.showHelpPanel();
 window.splitNoteIntoChunks = (len) => Notepad.splitNoteIntoChunks(len);
 window.LoadFileFromDisk = () => Notepad.loadFileFromDisk();
 window.closeFileTab = (index) => Notepad.closeFileTab(index);
+window.forceEnterToNote = () => Notepad.forceEnterToNote();
