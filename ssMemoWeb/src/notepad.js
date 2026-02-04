@@ -200,13 +200,19 @@ export const Notepad = {
 
         if (e.key === 'PageUp' || (e.altKey && (e.key === 'B' || e.key === 'b'))) {
             e.preventDefault();
-            if (noteEditor) noteEditor.scrollTop -= noteEditor.clientHeight;
+            const currentEditor = fileTabs.currentTab === 'main'
+                ? noteEditor
+                : document.getElementById(`note-editor-${fileTabs.currentTab}`);
+            if (currentEditor) currentEditor.scrollTop -= currentEditor.clientHeight;
             return;
         }
 
         if (e.key === 'PageDown' || (e.altKey && (e.key === 'F' || e.key === 'f'))) {
             e.preventDefault();
-            if (noteEditor) noteEditor.scrollTop += noteEditor.clientHeight;
+            const currentEditor = fileTabs.currentTab === 'main'
+                ? noteEditor
+                : document.getElementById(`note-editor-${fileTabs.currentTab}`);
+            if (currentEditor) currentEditor.scrollTop += currentEditor.clientHeight;
             return;
         }
 
