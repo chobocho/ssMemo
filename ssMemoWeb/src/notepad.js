@@ -344,6 +344,36 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
 `;
 
         AppAPI.showMessage('메모장 도움말', helpText);
+    },
+
+    async loadFileFromDisk() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.txt,.md,text/*';
+
+        input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            try {
+                const content = await file.text();
+
+                if (noteEditor) {
+                    noteEditor.value = content;
+                    this.updateLineNumbers();
+                    this.updateCharCount();
+                    state.notepad.isDirty = noteEditor.value !== state.notepad.lastSavedContent;
+                    noteEditor.focus();
+                }
+
+                await AppAPI.showMessage('파일 불러오기', `파일 "${file.name}"을 불러왔습니다.`);
+            } catch (error) {
+                console.error('Failed to read file:', error);
+                await AppAPI.showMessage('파일 불러오기 실패', '파일을 읽을 수 없습니다.');
+            }
+        };
+
+        input.click();
     }
 };
 
@@ -353,3 +383,4 @@ window.saveNotePad = () => Notepad.save();
 window.saveNotePadWithNoti = () => Notepad.saveWithNotification();
 window.showNoteHelpPanel = () => Notepad.showHelpPanel();
 window.splitNoteIntoChunks = (len) => Notepad.splitNoteIntoChunks(len);
+window.LoadFileFromDisk = () => Notepad.loadFileFromDisk();
