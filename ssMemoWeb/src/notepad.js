@@ -510,6 +510,12 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
     },
 
     closeFileTab(index) {
+        // 탭 닫기 확인
+        const fileName = fileTabs.slots[index]?.fileName || `파일 ${index + 1}`;
+        if (!confirm(`"${fileName}" 탭을 닫으시겠습니까?`)) {
+            return;
+        }
+
         // 슬롯 초기화
         fileTabs.slots[index] = null;
 
