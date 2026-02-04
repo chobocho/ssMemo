@@ -12,6 +12,12 @@ let noteEditor = null;
 let lineNumbers = null;
 let charCountEl = null;
 
+// 파일 탭 관리 상태
+const fileTabs = {
+    slots: Array(7).fill(null), // 각 슬롯의 파일 정보 {fileName, content}
+    currentTab: 'main' // 현재 활성 탭
+};
+
 export const Notepad = {
     async open() {
         notePanel = document.getElementById('note-panel');
@@ -51,6 +57,9 @@ export const Notepad = {
 
         noteEditor.onkeydown = (e) => this.handleKeyDown(e);
         noteEditor.oncontextmenu = (e) => this.handleContextMenu(e);
+
+        // 탭 클릭 핸들러 설정
+        this.setupTabClickHandlers();
 
         this.startAutoSave();
     },
@@ -358,13 +367,24 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
             try {
                 const content = await file.text();
 
-                if (noteEditor) {
-                    noteEditor.value = content;
-                    this.updateLineNumbers();
-                    this.updateCharCount();
-                    state.notepad.isDirty = noteEditor.value !== state.notepad.lastSavedContent;
-                    noteEditor.focus();
+                // 빈 슬롯 찾기
+                const emptySlotIndex = fileTabs.slots.findIndex(slot => slot === null);
+
+                if (emptySlotIndex === -1) {
+                    await AppAPI.showMessage('파일 불러오기 실패', '최대 7개의 파일만 열 수 있습니다.');
+                    return;
                 }
+
+                // 슬롯에 파일 정보 저장
+                fileTabs.slots[emptySlotIndex] = {
+                    fileName: file.name,
+                    content: content
+                };
+
+                // 해당 탭 표시 및 내용 설정
+                this.showFileTab(emptySlotIndex);
+                this.loadFileToEditor(emptySlotIndex);
+                this.switchTab(emptySlotIndex);
 
                 await AppAPI.showMessage('파일 불러오기', `파일 "${file.name}"을 불러왔습니다.`);
             } catch (error) {
@@ -374,6 +394,109 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         };
 
         input.click();
+    },
+
+    showFileTab(index) {
+        const tab = document.querySelector(`.note-tab[data-tab="${index}"]`);
+        if (!tab) return;
+
+        const fileInfo = fileTabs.slots[index];
+        if (!fileInfo) return;
+
+        // 탭 표시 및 파일명 설정
+        tab.classList.remove('note-tab-hidden');
+        const labelEl = tab.querySelector('.note-tab-label');
+        if (labelEl) {
+            labelEl.textContent = fileInfo.fileName;
+        }
+    },
+
+    hideFileTab(index) {
+        const tab = document.querySelector(`.note-tab[data-tab="${index}"]`);
+        if (!tab) return;
+
+        tab.classList.add('note-tab-hidden');
+        tab.classList.remove('note-tab-active');
+    },
+
+    loadFileToEditor(index) {
+        const fileInfo = fileTabs.slots[index];
+        if (!fileInfo) return;
+
+        const editor = document.getElementById(`note-editor-${index}`);
+        const lineNumEl = document.getElementById(`line-numbers-${index}`);
+
+        if (!editor || !lineNumEl) return;
+
+        editor.value = fileInfo.content;
+
+        // 줄 번호 업데이트
+        const lines = fileInfo.content.split('\n');
+        const lineCount = lines.length;
+        let lineNumbersHTML = '';
+        for (let i = 1; i <= lineCount; i++) {
+            lineNumbersHTML += `<div>${i}</div>`;
+        }
+        lineNumEl.innerHTML = lineNumbersHTML;
+
+        // 스크롤 동기화
+        editor.onscroll = () => {
+            lineNumEl.scrollTop = editor.scrollTop;
+        };
+    },
+
+    switchTab(tabId) {
+        // 모든 탭과 컨테이너 비활성화
+        document.querySelectorAll('.note-tab').forEach(tab => {
+            tab.classList.remove('note-tab-active');
+        });
+
+        document.querySelectorAll('.note-editor-container').forEach(container => {
+            container.classList.add('hidden');
+        });
+
+        // 선택된 탭과 컨테이너 활성화
+        const targetTab = document.querySelector(`.note-tab[data-tab="${tabId}"]`);
+        const targetContainer = document.getElementById(`note-container-${tabId}`);
+
+        if (targetTab && targetContainer) {
+            targetTab.classList.add('note-tab-active');
+            targetContainer.classList.remove('hidden');
+            fileTabs.currentTab = tabId;
+        }
+    },
+
+    closeFileTab(index) {
+        // 슬롯 초기화
+        fileTabs.slots[index] = null;
+
+        // 탭 숨기기
+        this.hideFileTab(index);
+
+        // 에디터 내용 초기화
+        const editor = document.getElementById(`note-editor-${index}`);
+        const lineNumEl = document.getElementById(`line-numbers-${index}`);
+        if (editor) editor.value = '';
+        if (lineNumEl) lineNumEl.innerHTML = '1';
+
+        // 현재 탭이 닫힌 탭이면 메인 탭으로 전환
+        if (fileTabs.currentTab === index) {
+            this.switchTab('main');
+        }
+    },
+
+    setupTabClickHandlers() {
+        document.querySelectorAll('.note-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                // 닫기 버튼 클릭은 무시
+                if (e.target.classList.contains('note-tab-close')) {
+                    return;
+                }
+
+                const tabId = tab.getAttribute('data-tab');
+                this.switchTab(tabId);
+            });
+        });
     }
 };
 
@@ -384,3 +507,4 @@ window.saveNotePadWithNoti = () => Notepad.saveWithNotification();
 window.showNoteHelpPanel = () => Notepad.showHelpPanel();
 window.splitNoteIntoChunks = (len) => Notepad.splitNoteIntoChunks(len);
 window.LoadFileFromDisk = () => Notepad.loadFileFromDisk();
+window.closeFileTab = (index) => Notepad.closeFileTab(index);

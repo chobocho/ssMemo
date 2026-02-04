@@ -295,3 +295,93 @@ body.dark-theme .note-editor::-webkit-scrollbar-thumb {
 .custom-modal-btn:active {
     transform: scale(0.98);
 }
+
+/* 탭 UI 스타일 */
+.note-tabs-container {
+    display: flex;
+    gap: 4px;
+    padding: 8px 12px 0 12px;
+    background: rgba(0, 0, 0, 0.02);
+    border-bottom: 1px solid var(--search-border);
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-wrap: nowrap;
+}
+
+.note-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--search-border);
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s;
+    min-width: 100px;
+}
+
+.note-tab:hover {
+    background: rgba(0, 0, 0, 0.15);
+}
+
+body.dark-theme .note-tab:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.note-tab-active {
+    background: var(--modal-bg) !important;
+    border-bottom: 1px solid var(--modal-bg);
+    font-weight: bold;
+}
+
+.note-tab-hidden {
+    display: none;
+}
+
+.note-tab-label {
+    color: var(--modal-text);
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.note-tab-close {
+    background: none;
+    border: none;
+    color: var(--modal-text);
+    font-size: 14px;
+    padding: 0;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.note-tab-close:hover {
+    opacity: 1;
+}
+
+/* 탭별 색상 구분 */
+.note-tab[data-tab="0"] { border-top: 3px solid #FF6B6B; }
+.note-tab[data-tab="1"] { border-top: 3px solid #4ECDC4; }
+.note-tab[data-tab="2"] { border-top: 3px solid #FFE66D; }
+.note-tab[data-tab="3"] { border-top: 3px solid #95E1D3; }
+.note-tab[data-tab="4"] { border-top: 3px solid #FFA07A; }
+.note-tab[data-tab="5"] { border-top: 3px solid #87CEEB; }
+.note-tab[data-tab="6"] { border-top: 3px solid #DDA0DD; }
+
+/* 읽기 전용 에디터 스타일 */
+.note-editor-readonly {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.note-editor-readonly .note-editor {
+    background: rgba(0, 0, 0, 0.02);
+    cursor: default;
+}
+
+body.dark-theme .note-editor-readonly .note-editor {
+    background: rgba(255, 255, 255, 0.02);
+}

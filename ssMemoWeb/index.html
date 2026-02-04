@@ -23,9 +23,75 @@
             <button onclick="showNoteHelpPanel()" class="note-icon-btn" title="도움말">❓</button>
             <button class="note-icon-btn" title="설정">⚙️</button>
         </div>
-        <div class="note-editor-container">
+        <!-- 탭 UI -->
+        <div class="note-tabs-container">
+            <div class="note-tab note-tab-active" data-tab="main">
+                <span class="note-tab-label">메인 에디터</span>
+            </div>
+            <div class="note-tab note-tab-hidden" data-tab="0">
+                <span class="note-tab-label">파일 1</span>
+                <button class="note-tab-close" onclick="closeFileTab(0)">✕</button>
+            </div>
+            <div class="note-tab note-tab-hidden" data-tab="1">
+                <span class="note-tab-label">파일 2</span>
+                <button class="note-tab-close" onclick="closeFileTab(1)">✕</button>
+            </div>
+            <div class="note-tab note-tab-hidden" data-tab="2">
+                <span class="note-tab-label">파일 3</span>
+                <button class="note-tab-close" onclick="closeFileTab(2)">✕</button>
+            </div>
+            <div class="note-tab note-tab-hidden" data-tab="3">
+                <span class="note-tab-label">파일 4</span>
+                <button class="note-tab-close" onclick="closeFileTab(3)">✕</button>
+            </div>
+            <div class="note-tab note-tab-hidden" data-tab="4">
+                <span class="note-tab-label">파일 5</span>
+                <button class="note-tab-close" onclick="closeFileTab(4)">✕</button>
+            </div>
+            <div class="note-tab note-tab-hidden" data-tab="5">
+                <span class="note-tab-label">파일 6</span>
+                <button class="note-tab-close" onclick="closeFileTab(5)">✕</button>
+            </div>
+            <div class="note-tab note-tab-hidden" data-tab="6">
+                <span class="note-tab-label">파일 7</span>
+                <button class="note-tab-close" onclick="closeFileTab(6)">✕</button>
+            </div>
+        </div>
+
+        <!-- 메인 에디터 (기존) -->
+        <div class="note-editor-container" id="note-container-main">
             <div id="line-numbers" class="line-numbers">1</div>
             <textarea id="note-editor" class="note-editor" spellcheck="false"></textarea>
+        </div>
+
+        <!-- 읽기 전용 파일 에디터 7개 -->
+        <div class="note-editor-container note-editor-readonly hidden" id="note-container-0">
+            <div class="line-numbers" id="line-numbers-0">1</div>
+            <textarea class="note-editor" id="note-editor-0" spellcheck="false" readonly></textarea>
+        </div>
+        <div class="note-editor-container note-editor-readonly hidden" id="note-container-1">
+            <div class="line-numbers" id="line-numbers-1">1</div>
+            <textarea class="note-editor" id="note-editor-1" spellcheck="false" readonly></textarea>
+        </div>
+        <div class="note-editor-container note-editor-readonly hidden" id="note-container-2">
+            <div class="line-numbers" id="line-numbers-2">1</div>
+            <textarea class="note-editor" id="note-editor-2" spellcheck="false" readonly></textarea>
+        </div>
+        <div class="note-editor-container note-editor-readonly hidden" id="note-container-3">
+            <div class="line-numbers" id="line-numbers-3">1</div>
+            <textarea class="note-editor" id="note-editor-3" spellcheck="false" readonly></textarea>
+        </div>
+        <div class="note-editor-container note-editor-readonly hidden" id="note-container-4">
+            <div class="line-numbers" id="line-numbers-4">1</div>
+            <textarea class="note-editor" id="note-editor-4" spellcheck="false" readonly></textarea>
+        </div>
+        <div class="note-editor-container note-editor-readonly hidden" id="note-container-5">
+            <div class="line-numbers" id="line-numbers-5">1</div>
+            <textarea class="note-editor" id="note-editor-5" spellcheck="false" readonly></textarea>
+        </div>
+        <div class="note-editor-container note-editor-readonly hidden" id="note-container-6">
+            <div class="line-numbers" id="line-numbers-6">1</div>
+            <textarea class="note-editor" id="note-editor-6" spellcheck="false" readonly></textarea>
         </div>
     </div>
 </div>
