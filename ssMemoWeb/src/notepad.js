@@ -443,6 +443,9 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         editor.onscroll = () => {
             lineNumEl.scrollTop = editor.scrollTop;
         };
+
+        // 키보드 이벤트 핸들러 연결 (검색 단축키 지원)
+        editor.onkeydown = (e) => this.handleKeyDown(e);
     },
 
     switchTab(tabId) {
