@@ -15,7 +15,8 @@ let charCountEl = null;
 // 파일 탭 관리 상태
 const fileTabs = {
     slots: Array(7).fill(null), // 각 슬롯의 파일 정보 {fileName, content}
-    currentTab: 'main' // 현재 활성 탭
+    currentTab: 'main', // 현재 활성 탭
+    wrapStates: { main: false, 0: false, 1: false, 2: false, 3: false, 4: false, 5: false, 6: false } // 각 탭의 줄바꿈 상태
 };
 
 export const Notepad = {
@@ -358,7 +359,7 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
     async loadFileFromDisk() {
         const input = document.createElement('input');
         input.type = 'file';
-        input.accept = '.txt,.md,text/*';
+        input.accept = '.txt,.md,.py,.java,.go,.c,.cpp,text/*';
 
         input.onchange = async (e) => {
             const file = e.target.files[0];
@@ -472,6 +473,9 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
 
             // 저장하기, 나누기 버튼 표시/숨김 처리
             this.updateButtonsVisibility(tabId);
+
+            // 줄바꿈 버튼 상태 동기화
+            this.syncForceEnterButton();
         }
     },
 
@@ -544,27 +548,61 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
 
         // 현재 활성화된 에디터 찾기
         let currentEditor = noteEditor;
+        let currentLineNumbers = lineNumbers;
         if (fileTabs.currentTab !== 'main') {
             currentEditor = document.getElementById(`note-editor-${fileTabs.currentTab}`);
+            currentLineNumbers = document.getElementById(`line-numbers-${fileTabs.currentTab}`);
         }
-        if (!currentEditor) return;
+        if (!currentEditor || !currentLineNumbers) return;
 
-        // 현재 상태 토글
-        const isWrapped = currentEditor.style.whiteSpace === 'pre-wrap';
+        // 현재 탭의 상태 토글
+        const currentState = fileTabs.wrapStates[fileTabs.currentTab];
 
-        if (isWrapped) {
+        if (currentState) {
             // 줄 바꿈 해제 (가로 스크롤 활성화)
             currentEditor.style.whiteSpace = 'pre';
             currentEditor.style.overflowX = 'auto';
+            fileTabs.wrapStates[fileTabs.currentTab] = false;
             btn.textContent = '⬇️';
             btn.title = '강제 줄 바꿈';
         } else {
             // 줄 바꿈 활성화 (가로 스크롤 비활성화)
             currentEditor.style.whiteSpace = 'pre-wrap';
             currentEditor.style.overflowX = 'hidden';
+            fileTabs.wrapStates[fileTabs.currentTab] = true;
             btn.textContent = '⬆️';
             btn.title = '강제 줄 바꿈 해제';
         }
+
+        // 줄 번호 동기화
+        this.updateLineNumbersForEditor(currentEditor, currentLineNumbers);
+    },
+
+    syncForceEnterButton() {
+        const btn = document.querySelector('button[onclick="forceEnterToNote()"]');
+        if (!btn) return;
+
+        const currentState = fileTabs.wrapStates[fileTabs.currentTab];
+        if (currentState) {
+            btn.textContent = '⬆️';
+            btn.title = '강제 줄 바꿈 해제';
+        } else {
+            btn.textContent = '⬇️';
+            btn.title = '강제 줄 바꿈';
+        }
+    },
+
+    updateLineNumbersForEditor(editor, lineNumbersEl) {
+        if (!editor || !lineNumbersEl) return;
+
+        const lines = editor.value.split('\n');
+        const lineCount = lines.length;
+        let lineNumbersHTML = '';
+        for (let i = 1; i <= lineCount; i++) {
+            lineNumbersHTML += `<div>${i}</div>`;
+        }
+        lineNumbersEl.innerHTML = lineNumbersHTML;
+        lineNumbersEl.scrollTop = editor.scrollTop;
     }
 };
 
