@@ -442,7 +442,7 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         const labelEl = tab.querySelector('.note-tab-label');
         if (labelEl) {
             // 파일명이 10글자를 초과하면 10글자까지만 표시
-            const displayName = fileInfo.fileName.length > 10
+            const displayName = fileInfo.fileName.length > 12
                 ? fileInfo.fileName.substring(0, 8) + '...'
                 : fileInfo.fileName;
             labelEl.textContent = displayName;
