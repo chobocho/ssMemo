@@ -62,6 +62,9 @@ export const Notepad = {
         // 탭 클릭 핸들러 설정
         this.setupTabClickHandlers();
 
+        // Drag & Drop 핸들러 설정
+        this.setupDragAndDrop();
+
         this.startAutoSave();
     },
 
@@ -647,6 +650,91 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         }
         lineNumbersEl.innerHTML = lineNumbersHTML;
         lineNumbersEl.scrollTop = editor.scrollTop;
+    },
+
+    setupDragAndDrop() {
+        if (!notePanel) return;
+
+        // 드래그 오버 시 시각적 효과
+        notePanel.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            notePanel.classList.add('drag-over');
+        });
+
+        notePanel.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // notePanel 자체를 벗어났을 때만 클래스 제거
+            if (e.target === notePanel) {
+                notePanel.classList.remove('drag-over');
+            }
+        });
+
+        notePanel.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            notePanel.classList.remove('drag-over');
+
+            const files = e.dataTransfer.files;
+            if (files.length === 0) return;
+
+            // 첫 번째 파일만 처리
+            const file = files[0];
+
+            if (file.size > 10 * 1024 * 1024) {
+                await AppAPI.showMessage('파일 불러오기 실패', '파일 크기가 너무 큽니다. (10MB 이하)');
+                return;
+            }
+
+            function isInvalidFileExtension(fileName) {
+                return !fileName.endsWith('.txt') &&
+                    !fileName.endsWith('.md') &&
+                    !fileName.endsWith('.py') &&
+                    !fileName.endsWith('.java') &&
+                    !fileName.endsWith('.go') &&
+                    !fileName.endsWith('.c') &&
+                    !fileName.endsWith('.cpp') &&
+                    !fileName.endsWith('.js') &&
+                    !fileName.endsWith('.json') &&
+                    !fileName.endsWith('.html');
+            }
+
+            if (isInvalidFileExtension(file.name)) {
+                if (file.type !== 'text/plain') {
+                    await AppAPI.showMessage('파일 불러오기 실패', '지원하지 않는 파일 형식입니다. (텍스트 파일만 가능)');
+                    return;
+                }
+            }
+
+            try {
+                const content = await file.text();
+
+                // 빈 슬롯 찾기
+                const emptySlotIndex = fileTabs.slots.findIndex(slot => slot === null);
+
+                if (emptySlotIndex === -1) {
+                    await AppAPI.showMessage('파일 불러오기 실패', '최대 7개의 파일만 열 수 있습니다.');
+                    return;
+                }
+
+                // 슬롯에 파일 정보 저장
+                fileTabs.slots[emptySlotIndex] = {
+                    fileName: file.name,
+                    content: content
+                };
+
+                // 해당 탭 표시 및 내용 설정
+                this.showFileTab(emptySlotIndex);
+                this.loadFileToEditor(emptySlotIndex);
+                this.switchTab(emptySlotIndex);
+
+                await AppAPI.showMessage('파일 불러오기', `파일 "${file.name}"을 불러왔습니다.`);
+            } catch (error) {
+                console.error('Failed to read file:', error);
+                await AppAPI.showMessage('파일 불러오기 실패', '파일을 읽을 수 없습니다.');
+            }
+        });
     }
 };
 

@@ -73,6 +73,18 @@ button {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+/* 드래그 오버 시 시각적 효과 */
+.note-panel.drag-over {
+    background: rgba(33, 150, 243, 0.1);
+    border: 2px dashed #2196F3;
+}
+
+body.dark-theme .note-panel.drag-over {
+    background: rgba(33, 150, 243, 0.15);
+    border: 2px dashed #64B5F6;
 }
 
 .note-panel-header {
