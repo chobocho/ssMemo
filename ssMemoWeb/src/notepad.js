@@ -195,7 +195,7 @@ export const Notepad = {
     },
 
     handleKeyDown(e) {
-        if (e.ctrlKey && (e.key === 'I' || e.key === 'i')) {
+        if (e.ctrlKey && (e.key === 'F' || e.key === 'I' || e.key === 'i')) {
             e.preventDefault();
             state.elements.noteSearchInput?.focus();
             return;
