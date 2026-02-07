@@ -165,6 +165,10 @@ body.dark-theme .note-search-controls button:hover {
     align-items: center;
     justify-content: center;
 }
+.note-icon-btn:hover {
+    background: rgba(0, 0, 0, 0.08);
+    border-radius: 30%;
+}
 
 .note-editor-container {
     flex: 1;
