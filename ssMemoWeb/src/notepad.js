@@ -538,14 +538,17 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
     updateButtonsVisibility(tabId) {
         const saveBtn = document.querySelector('button[onclick="saveNotePadWithNoti()"]');
         const splitBtn = document.querySelector('button[onclick^="splitNoteIntoChunks"]');
+        const downloadBtn = document.querySelector('button[onclick^="downloadNotePad"]');
 
         if (saveBtn && splitBtn) {
             if (tabId === 'main') {
                 saveBtn.style.display = '';
                 splitBtn.style.display = '';
+                downloadBtn.style.display = '';
             } else {
                 saveBtn.style.display = 'none';
                 splitBtn.style.display = 'none';
+                downloadBtn.style.display = 'none';
             }
         }
     },
@@ -636,6 +639,48 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         } else {
             btn.textContent = '⬇️';
             btn.title = '강제 줄 바꿈';
+        }
+    },
+
+    downloadNotePad() {
+        let content = '';
+        let fileName = 'ssMemo.txt';
+
+        if (fileTabs.currentTab === 'main') {
+            content = noteEditor.value;
+        } else {
+            const index = fileTabs.currentTab;
+            const slot = fileTabs.slots[index];
+            if (slot) {
+                content = slot.content;
+                fileName = slot.fileName;
+            } else {
+                // Fallback for unexpected state
+                const editor = document.getElementById(`note-editor-${index}`);
+                if (editor) {
+                    content = editor.value;
+                }
+            }
+        }
+
+        if (!content) {
+            AppAPI.showMessage('다운로드', '다운로드할 내용이 없습니다.');
+            return;
+        }
+
+        try {
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Failed to download file:', error);
+            AppAPI.showMessage('다운로드 실패', '파일을 다운로드하는 중 오류가 발생했습니다.');
         }
     },
 
@@ -747,3 +792,4 @@ window.splitNoteIntoChunks = (len) => Notepad.splitNoteIntoChunks(len);
 window.LoadFileFromDisk = () => Notepad.loadFileFromDisk();
 window.closeFileTab = (index) => Notepad.closeFileTab(index);
 window.forceEnterToNote = () => Notepad.forceEnterToNote();
+window.downloadNotePad = () => Notepad.downloadNotePad();
