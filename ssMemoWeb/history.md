@@ -5,6 +5,7 @@
 
 ## 2026-04-27
 
+- 마크다운 렌더링 추가. 외부 의존 없이 `src/markdown.js` 자체 파서(헤더/굵게/기울임/코드/리스트/링크/인용/수평선) 작성. XSS 방지 위해 HTML 이스케이프 후 처리, javascript: 스킴 차단. .md 파일 탭에서만 📖 미리보기 토글 버튼 노출. 17개 단위 테스트 통과. 테스트 러너를 `test/runner.js`로 분리.
 - 200KB 이상 파일 로드 시 ⏳ 오버레이 스피너 표시. `LOADING_SPINNER_THRESHOLD` 상수 추가. `loadFileFromDisk`/드래그앤드롭 분기 중복 코드를 `handleIncomingFile` 헬퍼로 통합. CSS `@keyframes spin` 추가.
 - 테스트 인프라 추가 (`test/` 폴더). 순수 함수 `src/utils.js` 신규 작성: `splitTextIntoChunks`, `joinTextChunks`, `findNextIndex`, `findPrevIndex`. 17개 단위 테스트 모두 통과. `notepad.js`의 `splitNoteIntoChunks`가 새 유틸 사용하도록 리팩터링.
 - build.sh / build.bat 추가. `release/` 폴더에 실행 파일만 복사. build.bat은 cp949(`chcp 949`)로 한글 안 깨지게 처리. `.gitignore`에 release/ 추가.

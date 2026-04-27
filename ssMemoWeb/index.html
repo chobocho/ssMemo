@@ -22,6 +22,7 @@
             <button onclick="LoadFileFromDisk()" class="note-icon-btn" title="불러오기">🗂️</button>
             <button onclick="splitNoteIntoChunks(2000)" class="note-icon-btn" title="2000자 크기로 나누기">➗</button>
             <button onclick="forceEnterToNote()" class="note-icon-btn" title="강제 줄 바꿈">⬇️</button>
+            <button onclick="toggleMarkdownPreview()" class="note-icon-btn hidden" id="md-preview-btn" title="마크다운 미리보기">📖</button>
             <button onclick="saveNotePadWithNoti()" class="note-icon-btn" title="저장">💾</button>
             <button onclick="downloadNotePad()" class="note-icon-btn" title="디바이스로 다운로드">📥</button>
             <button onclick="showNoteHelpPanel()" class="note-icon-btn" title="도움말">❓</button>
@@ -71,30 +72,37 @@
         <div class="note-editor-container note-editor-readonly hidden" id="note-container-0">
             <div class="line-numbers" id="line-numbers-0">1</div>
             <textarea class="note-editor" id="note-editor-0" spellcheck="false" readonly></textarea>
+            <div class="note-md-preview hidden" id="note-md-preview-0"></div>
         </div>
         <div class="note-editor-container note-editor-readonly hidden" id="note-container-1">
             <div class="line-numbers" id="line-numbers-1">1</div>
             <textarea class="note-editor" id="note-editor-1" spellcheck="false" readonly></textarea>
+            <div class="note-md-preview hidden" id="note-md-preview-1"></div>
         </div>
         <div class="note-editor-container note-editor-readonly hidden" id="note-container-2">
             <div class="line-numbers" id="line-numbers-2">1</div>
             <textarea class="note-editor" id="note-editor-2" spellcheck="false" readonly></textarea>
+            <div class="note-md-preview hidden" id="note-md-preview-2"></div>
         </div>
         <div class="note-editor-container note-editor-readonly hidden" id="note-container-3">
             <div class="line-numbers" id="line-numbers-3">1</div>
             <textarea class="note-editor" id="note-editor-3" spellcheck="false" readonly></textarea>
+            <div class="note-md-preview hidden" id="note-md-preview-3"></div>
         </div>
         <div class="note-editor-container note-editor-readonly hidden" id="note-container-4">
             <div class="line-numbers" id="line-numbers-4">1</div>
             <textarea class="note-editor" id="note-editor-4" spellcheck="false" readonly></textarea>
+            <div class="note-md-preview hidden" id="note-md-preview-4"></div>
         </div>
         <div class="note-editor-container note-editor-readonly hidden" id="note-container-5">
             <div class="line-numbers" id="line-numbers-5">1</div>
             <textarea class="note-editor" id="note-editor-5" spellcheck="false" readonly></textarea>
+            <div class="note-md-preview hidden" id="note-md-preview-5"></div>
         </div>
         <div class="note-editor-container note-editor-readonly hidden" id="note-container-6">
             <div class="line-numbers" id="line-numbers-6">1</div>
             <textarea class="note-editor" id="note-editor-6" spellcheck="false" readonly></textarea>
+            <div class="note-md-preview hidden" id="note-md-preview-6"></div>
         </div>
     </div>
 </div>

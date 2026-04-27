@@ -6,6 +6,7 @@ import { CONSTANTS } from './constants.js';
 import { NoteSearchUI } from './note-search.js';
 import { AppAPI } from './app-api.js';
 import { splitTextIntoChunks, joinTextChunks, CHUNK_DELIMITER } from './utils.js';
+import { renderMarkdown } from './markdown.js';
 
 // Cache DOM elements
 let notePanel = null;
@@ -17,7 +18,8 @@ let charCountEl = null;
 const fileTabs = {
     slots: Array(7).fill(null), // 각 슬롯의 파일 정보 {fileName, content}
     currentTab: 'main', // 현재 활성 탭
-    wrapStates: { main: false, 0: false, 1: false, 2: false, 3: false, 4: false, 5: false, 6: false } // 각 탭의 줄바꿈 상태
+    wrapStates: { main: false, 0: false, 1: false, 2: false, 3: false, 4: false, 5: false, 6: false }, // 각 탭의 줄바꿈 상태
+    previewStates: { 0: false, 1: false, 2: false, 3: false, 4: false, 5: false, 6: false } // .md 미리보기 상태
 };
 
 export const Notepad = {
@@ -528,6 +530,49 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
                 downloadBtn.style.display = 'none';
             }
         }
+
+        this.updateMarkdownButtonVisibility(tabId);
+    },
+
+    updateMarkdownButtonVisibility(tabId) {
+        const btn = document.getElementById('md-preview-btn');
+        if (!btn) return;
+        const isMd = tabId !== 'main' &&
+            fileTabs.slots[tabId]?.fileName?.toLowerCase().endsWith('.md');
+        if (isMd) {
+            btn.classList.remove('hidden');
+            const previewing = fileTabs.previewStates[tabId];
+            btn.textContent = previewing ? '✏️' : '📖';
+            btn.title = previewing ? '마크다운 원문 보기' : '마크다운 미리보기';
+        } else {
+            btn.classList.add('hidden');
+        }
+    },
+
+    toggleMarkdownPreview() {
+        const tabId = fileTabs.currentTab;
+        if (tabId === 'main') return;
+        const slot = fileTabs.slots[tabId];
+        if (!slot || !slot.fileName.toLowerCase().endsWith('.md')) return;
+
+        const editor = document.getElementById(`note-editor-${tabId}`);
+        const lineNumEl = document.getElementById(`line-numbers-${tabId}`);
+        const previewEl = document.getElementById(`note-md-preview-${tabId}`);
+        if (!editor || !previewEl) return;
+
+        const turningOn = !fileTabs.previewStates[tabId];
+        if (turningOn) {
+            previewEl.innerHTML = renderMarkdown(slot.content);
+            previewEl.classList.remove('hidden');
+            editor.classList.add('hidden');
+            if (lineNumEl) lineNumEl.classList.add('hidden');
+        } else {
+            previewEl.classList.add('hidden');
+            editor.classList.remove('hidden');
+            if (lineNumEl) lineNumEl.classList.remove('hidden');
+        }
+        fileTabs.previewStates[tabId] = turningOn;
+        this.updateMarkdownButtonVisibility(tabId);
     },
 
     closeFileTab(index) {
@@ -539,15 +584,27 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
 
         // 슬롯 초기화
         fileTabs.slots[index] = null;
+        fileTabs.previewStates[index] = false;
 
         // 탭 숨기기
         this.hideFileTab(index);
 
-        // 에디터 내용 초기화
+        // 에디터 내용 초기화 및 미리보기 정리
         const editor = document.getElementById(`note-editor-${index}`);
         const lineNumEl = document.getElementById(`line-numbers-${index}`);
-        if (editor) editor.value = '';
-        if (lineNumEl) lineNumEl.innerHTML = '1';
+        const previewEl = document.getElementById(`note-md-preview-${index}`);
+        if (editor) {
+            editor.value = '';
+            editor.classList.remove('hidden');
+        }
+        if (lineNumEl) {
+            lineNumEl.innerHTML = '1';
+            lineNumEl.classList.remove('hidden');
+        }
+        if (previewEl) {
+            previewEl.innerHTML = '';
+            previewEl.classList.add('hidden');
+        }
 
         // 현재 탭이 닫힌 탭이면 메인 탭으로 전환
         if (fileTabs.currentTab === index) {
@@ -715,3 +772,4 @@ window.LoadFileFromDisk = () => Notepad.loadFileFromDisk();
 window.closeFileTab = (index) => Notepad.closeFileTab(index);
 window.forceEnterToNote = () => Notepad.forceEnterToNote();
 window.downloadNotePad = () => Notepad.downloadNotePad();
+window.toggleMarkdownPreview = () => Notepad.toggleMarkdownPreview();

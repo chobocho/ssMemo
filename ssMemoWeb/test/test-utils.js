@@ -1,5 +1,5 @@
 // ========================================
-// 브라우저 단위 테스트 러너 (외부 의존성 없음)
+// 순수 유틸 함수 단위 테스트
 // 실행: 프로젝트 루트에서 python -m http.server 8001
 //       후 http://localhost:8001/test/ 접속
 // ========================================
@@ -10,23 +10,10 @@ import {
     findPrevIndex,
     CHUNK_DELIMITER,
 } from '../src/utils.js';
+import { assertEqual, section } from './runner.js';
 
-const results = document.getElementById('results');
-const summary = document.getElementById('summary');
-let passed = 0;
-let failed = 0;
+section('utils.js');
 
-function assertEqual(actual, expected, label) {
-    const ok = JSON.stringify(actual) === JSON.stringify(expected);
-    const li = document.createElement('li');
-    li.className = ok ? 'pass' : 'fail';
-    li.textContent = `${ok ? '✅' : '❌'} ${label}` +
-        (ok ? '' : `  (expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)})`);
-    results.appendChild(li);
-    if (ok) passed++; else failed++;
-}
-
-// ----- splitTextIntoChunks -----
 assertEqual(
     splitTextIntoChunks('abcdef', 2),
     'ab' + CHUNK_DELIMITER + 'cd' + CHUNK_DELIMITER + 'ef',
@@ -39,18 +26,15 @@ assertEqual(splitTextIntoChunks('', 5), '',
 assertEqual(splitTextIntoChunks('abc', 0), 'abc',
     'splitTextIntoChunks: len이 0이면 원본 반환');
 
-// ----- joinTextChunks (역연산) -----
 const sample = 'AAA' + CHUNK_DELIMITER + 'BBB' + CHUNK_DELIMITER + 'CCC';
 assertEqual(joinTextChunks(sample), 'AAABBBCCC',
     'joinTextChunks: 모든 delimiter 제거');
 assertEqual(joinTextChunks('no-delim'), 'no-delim',
     'joinTextChunks: delimiter 없으면 원본 유지');
 
-// 라운드트립
 const roundTrip = joinTextChunks(splitTextIntoChunks('1234567890', 3));
 assertEqual(roundTrip, '1234567890', 'split → join 라운드트립 일치');
 
-// ----- findNextIndex -----
 assertEqual(findNextIndex('hello world hello', 'hello', 0), 0,
     'findNextIndex: 처음부터 검색');
 assertEqual(findNextIndex('hello world hello', 'hello', 5), 12,
@@ -64,7 +48,6 @@ assertEqual(findNextIndex('', 'a', 0), -1,
 assertEqual(findNextIndex('hello', '', 0), -1,
     'findNextIndex: 빈 쿼리는 -1');
 
-// ----- findPrevIndex -----
 assertEqual(findPrevIndex('hello world hello', 'hello', 16), 12,
     'findPrevIndex: 뒤에서부터 검색');
 assertEqual(findPrevIndex('hello world hello', 'hello', 11), 0,
@@ -73,12 +56,3 @@ assertEqual(findPrevIndex('hello world hello', 'xyz', 16), -1,
     'findPrevIndex: 매치 없으면 -1');
 assertEqual(findPrevIndex('hello', 'h', -1), -1,
     'findPrevIndex: startIndex<0이면 -1');
-
-summary.textContent = `결과: ${passed} 통과 / ${failed} 실패`;
-summary.className = 'summary ' + (failed === 0 ? 'pass' : 'fail');
-console.log(`[ssMemo tests] ${passed} passed, ${failed} failed`);
-if (failed > 0) {
-    document.title = `❌ ${failed} 실패 - ssMemo 테스트`;
-} else {
-    document.title = `✅ ${passed} 통과 - ssMemo 테스트`;
-}
