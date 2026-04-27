@@ -5,6 +5,7 @@
 
 ## 2026-04-27
 
+- 키맵/확장자 상수화. `ALLOWED_TEXT_EXTENSIONS`, `SYMBOL_SHORTCUTS`, `MAX_FILE_TABS`를 `constants.js`로 분리. 6개 if문으로 흩어져 있던 Ctrl+Shift+(A/C/O/R/X/Z) 기호 삽입을 단일 lookup으로 정리. 파일 검증 로직을 `src/file-utils.js`로 추출 (`hasAllowedExtension`/`isAllowedTextFile`/`isOversized`) — 단위 테스트 13건 통과.
 - IndexedDB 실패 시 메모리 폴백 자동 전환. `src/data-sources/memory.js` 신규 작성, `AppAPI.init/get/save`를 try/catch로 감싸 한 번 실패하면 모든 호출이 `MemorySource`로 위임. 사용자에게 1회 경고 모달 표시.
 - "메모장 초기화" (다시하기) 버튼 🗑️ 추가. `AppAPI.confirm` 헬퍼로 취소/확인 모달 제공 (위험 액션은 빨간색). 초기화 시 IndexedDB도 함께 비움.
 - MemorySource 단위 테스트 4건 추가.

@@ -2,11 +2,12 @@
 // Notepad Management
 // ========================================
 import { state } from './state.js';
-import { CONSTANTS } from './constants.js';
+import { CONSTANTS, SYMBOL_SHORTCUTS } from './constants.js';
 import { NoteSearchUI } from './note-search.js';
 import { AppAPI } from './app-api.js';
 import { splitTextIntoChunks, joinTextChunks, CHUNK_DELIMITER } from './utils.js';
 import { renderMarkdown } from './markdown.js';
+import { isAllowedTextFile, isOversized } from './file-utils.js';
 
 // Cache DOM elements
 let notePanel = null;
@@ -259,40 +260,14 @@ export const Notepad = {
             return;
         }
 
-        if (e.ctrlKey && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
-            e.preventDefault();
-            this.insertSymbol('→');
-            return;
-        }
-
-        if (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'c')) {
-            e.preventDefault();
-            this.insertSymbol('✅');
-            return;
-        }
-
-        if (e.ctrlKey && e.shiftKey && (e.key === 'O' || e.key === 'o')) {
-            e.preventDefault();
-            this.insertSymbol('□');
-            return;
-        }
-
-        if (e.ctrlKey && e.shiftKey && (e.key === 'R' || e.key === 'r')) {
-            e.preventDefault();
-            this.insertSymbol('※');
-            return;
-        }
-
-        if (e.ctrlKey && e.shiftKey && (e.key === 'Z' || e.key === 'z')) {
-            e.preventDefault();
-            this.insertSymbol('🟩');
-            return;
-        }
-
-        if (e.ctrlKey && e.shiftKey && (e.key === 'X' || e.key === 'x')) {
-            e.preventDefault();
-            this.insertSymbol('❎');
-            return;
+        if (e.ctrlKey && e.shiftKey && e.key) {
+            const upperKey = e.key.toUpperCase();
+            const symbol = SYMBOL_SHORTCUTS[upperKey];
+            if (symbol) {
+                e.preventDefault();
+                this.insertSymbol(symbol);
+                return;
+            }
         }
     },
 
@@ -368,15 +343,11 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
     },
 
     async handleIncomingFile(file) {
-        if (file.size > CONSTANTS.MAX_FILE_SIZE) {
+        if (isOversized(file)) {
             await AppAPI.showMessage('파일 불러오기 실패', '파일 크기가 너무 큽니다. (10MB 이하)');
             return;
         }
-
-        const allowedExt = ['.txt', '.md', '.py', '.java', '.go', '.c', '.cpp', '.js', '.json', '.html'];
-        const lowerName = file.name.toLowerCase();
-        const isAllowedExt = allowedExt.some(ext => lowerName.endsWith(ext));
-        if (!isAllowedExt && file.type !== 'text/plain') {
+        if (!isAllowedTextFile(file)) {
             await AppAPI.showMessage('파일 불러오기 실패', '지원하지 않는 파일 형식입니다. (텍스트 파일만 가능)');
             return;
         }
@@ -394,7 +365,8 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
 
             const emptySlotIndex = fileTabs.slots.findIndex(slot => slot === null);
             if (emptySlotIndex === -1) {
-                await AppAPI.showMessage('파일 불러오기 실패', '최대 7개의 파일만 열 수 있습니다.');
+                await AppAPI.showMessage('파일 불러오기 실패',
+                    `최대 ${CONSTANTS.MAX_FILE_TABS}개의 파일만 열 수 있습니다.`);
                 return;
             }
 
