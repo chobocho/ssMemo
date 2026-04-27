@@ -61,4 +61,25 @@ export const AppAPI = {
         }
         window.open(url, '_blank', 'noopener');
     },
+
+    showLoading(message = '파일을 불러오는 중...') {
+        let overlay = document.getElementById('loading-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'loading-overlay';
+            overlay.className = 'loading-overlay';
+            overlay.innerHTML = `
+                <div class="loading-overlay-icon">⏳</div>
+                <div class="loading-overlay-message"></div>
+            `;
+            document.body.appendChild(overlay);
+        }
+        overlay.querySelector('.loading-overlay-message').textContent = message;
+        overlay.style.display = 'flex';
+    },
+
+    hideLoading() {
+        const overlay = document.getElementById('loading-overlay');
+        if (overlay) overlay.remove();
+    },
 };

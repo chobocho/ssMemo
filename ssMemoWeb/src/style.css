@@ -326,6 +326,38 @@ body.dark-theme .note-editor::-webkit-scrollbar-thumb {
     transform: scale(0.98);
 }
 
+/* 큰 파일 로드 중 표시되는 오버레이 스피너 */
+.loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-size: 14px;
+    gap: 12px;
+}
+
+.loading-overlay-icon {
+    font-size: 48px;
+    animation: spin 1.2s linear infinite;
+}
+
+.loading-overlay-message {
+    background: rgba(0, 0, 0, 0.5);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
 /* 탭 UI 스타일 */
 .note-tabs-container {
     display: flex;
