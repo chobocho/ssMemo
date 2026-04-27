@@ -172,6 +172,7 @@ body.dark-theme .note-search-controls button:hover {
 
 .note-editor-container {
     flex: 1;
+    min-height: 0;
     display: flex;
     overflow: hidden;
     position: relative;
@@ -376,13 +377,19 @@ body.dark-theme .note-editor::-webkit-scrollbar-thumb {
 /* Markdown 미리보기 */
 .note-md-preview {
     flex: 1;
+    height: 100%;
+    min-height: 0;          /* flex 부모 안에서 overflow가 동작하도록 */
     overflow-y: auto;
-    padding: 14px 20px;
+    padding: 14px 20px 32px; /* 마지막 줄이 잘려 보이지 않도록 하단 여유 */
     color: var(--modal-text);
     background: var(--modal-bg);
     line-height: 1.55;
     font-size: 14px;
     box-sizing: border-box;
+}
+
+.note-md-preview > *:last-child {
+    margin-bottom: 0;
 }
 
 .note-md-preview h1,
