@@ -5,6 +5,7 @@
 
 ## 2026-04-27
 
+- 마크다운 표 렌더링 추가 (GFM 형식). `| 헤더 |\n| --- |\n| 셀 |` 패턴을 `<table>/<thead>/<tbody>`로 변환. 셀 정렬(`:---`/`---:`/`:---:`) 지원, 표 외곽 가로 스크롤 가능. 13건 단위 테스트 통과.
 - 마크다운 미리보기 하단 잘림 수정. `.note-editor-container`와 `.note-md-preview`에 `min-height: 0`, 미리보기에 `height: 100%`, 하단 padding을 14→32px로 늘리고 마지막 자식의 `margin-bottom`을 제거. flex 부모 안에서 overflow-y가 정확히 동작하도록 함.
 - 단일 index.html 빌드 옵션 추가. `bundle.py`(Python 표준 라이브러리만 사용)가 ES 모듈을 위상 정렬해 import/export 키워드 제거 후 단일 `<script>`로 인라인, CSS도 `<style>`로 인라인하여 `release/index.single.html` 생성. build.sh / build.bat에서 자동 호출.
 - 키맵/확장자 상수화. `ALLOWED_TEXT_EXTENSIONS`, `SYMBOL_SHORTCUTS`, `MAX_FILE_TABS`를 `constants.js`로 분리. 6개 if문으로 흩어져 있던 Ctrl+Shift+(A/C/O/R/X/Z) 기호 삽입을 단일 lookup으로 정리. 파일 검증 로직을 `src/file-utils.js`로 추출 (`hasAllowedExtension`/`isAllowedTextFile`/`isOversized`) — 단위 테스트 13건 통과.

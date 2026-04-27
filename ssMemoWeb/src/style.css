@@ -456,6 +456,27 @@ body.dark-theme .note-md-preview pre {
 }
 .note-md-preview a:hover { text-decoration: underline; }
 
+.note-md-preview table {
+    border-collapse: collapse;
+    margin: 0.8em 0;
+    display: block;
+    overflow-x: auto;
+    max-width: 100%;
+}
+.note-md-preview th,
+.note-md-preview td {
+    border: 1px solid var(--search-border);
+    padding: 6px 10px;
+    text-align: left;
+}
+.note-md-preview thead th {
+    background: rgba(0, 0, 0, 0.06);
+    font-weight: 600;
+}
+body.dark-theme .note-md-preview thead th {
+    background: rgba(255, 255, 255, 0.08);
+}
+
 /* 탭 UI 스타일 */
 .note-tabs-container {
     display: flex;

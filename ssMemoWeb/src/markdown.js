@@ -3,7 +3,7 @@
 // XSS 방지를 위해 모든 입력을 HTML 이스케이프 후 처리합니다.
 // 지원: 헤더(#~######), bold(**), italic(*/_), inline code(`),
 //       코드 블록(```), 순서/비순서 리스트, 링크[text](url),
-//       수평선(---), 인용(>), 단락
+//       수평선(---), 인용(>), GFM 표(|---|), 단락
 // ========================================
 
 export function escapeHtml(s) {
@@ -30,6 +30,56 @@ function renderInline(text) {
     return s;
 }
 
+// 표 한 행의 셀들을 추출. `|` 경계를 가진 행과 그렇지 않은 행 모두 처리.
+function parseTableRow(line) {
+    let s = line.trim();
+    if (s.startsWith('|')) s = s.slice(1);
+    if (s.endsWith('|')) s = s.slice(0, -1);
+    return s.split('|').map(c => c.trim());
+}
+
+// 표 구분 행 여부: `|---|:---:|---:|` 형태. 셀 정렬 배열을 반환하거나 null.
+function parseTableSeparator(line) {
+    if (!/\|/.test(line)) return null;
+    const cells = parseTableRow(line);
+    if (cells.length === 0) return null;
+    const aligns = [];
+    for (const cell of cells) {
+        if (!/^:?-{3,}:?$/.test(cell)) return null;
+        const left = cell.startsWith(':');
+        const right = cell.endsWith(':');
+        aligns.push(left && right ? 'center' : right ? 'right' : left ? 'left' : null);
+    }
+    return aligns;
+}
+
+function renderTable(headerLine, aligns, bodyLines) {
+    const headers = parseTableRow(headerLine);
+    const colCount = headers.length;
+    const headHtml = headers
+        .map((h, i) => {
+            const a = aligns[i];
+            const styleAttr = a ? ` style="text-align:${a}"` : '';
+            return `<th${styleAttr}>${renderInline(h)}</th>`;
+        })
+        .join('');
+    const bodyHtml = bodyLines.map(line => {
+        const cells = parseTableRow(line);
+        // 부족한 셀은 빈 문자열로 채우고, 초과는 잘라냅니다.
+        const padded = cells.slice(0, colCount);
+        while (padded.length < colCount) padded.push('');
+        const tds = padded
+            .map((c, i) => {
+                const a = aligns[i];
+                const styleAttr = a ? ` style="text-align:${a}"` : '';
+                return `<td${styleAttr}>${renderInline(c)}</td>`;
+            })
+            .join('');
+        return `<tr>${tds}</tr>`;
+    }).join('');
+    return `<table><thead><tr>${headHtml}</tr></thead><tbody>${bodyHtml}</tbody></table>`;
+}
+
 export function renderMarkdown(text) {
     if (!text) return '';
     const lines = text.split('\n');
@@ -52,7 +102,9 @@ export function renderMarkdown(text) {
         }
     };
 
-    for (const line of lines) {
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
         if (inCode) {
             if (/^```/.test(line)) {
                 out.push(`<pre><code>${codeBuffer.map(escapeHtml).join('\n')}</code></pre>`);
@@ -91,6 +143,24 @@ export function renderMarkdown(text) {
             closeList();
             out.push(`<blockquote>${renderInline(line.replace(/^>\s?/, ''))}</blockquote>`);
             continue;
+        }
+
+        // 표: 현재 줄에 `|`가 있고 다음 줄이 구분 행이면 표로 처리
+        if (/\|/.test(line) && i + 1 < lines.length) {
+            const aligns = parseTableSeparator(lines[i + 1]);
+            if (aligns) {
+                flushParagraph();
+                closeList();
+                const bodyLines = [];
+                let j = i + 2;
+                while (j < lines.length && /\|/.test(lines[j]) && lines[j].trim() !== '') {
+                    bodyLines.push(lines[j]);
+                    j++;
+                }
+                out.push(renderTable(line, aligns, bodyLines));
+                i = j - 1;
+                continue;
+            }
         }
 
         const ul = line.match(/^\s*[-*+]\s+(.+)$/);

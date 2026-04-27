@@ -41,3 +41,22 @@ assertContains(renderMarkdown('> 인용문'), '<blockquote>인용문</blockquote
 assertContains(renderMarkdown('일반 텍스트'), '<p>일반 텍스트</p>', '단락');
 
 assertEqual(escapeHtml('<>&"\''), '&lt;&gt;&amp;&quot;&#39;', 'escapeHtml 모든 문자');
+
+// 표 (GFM)
+const table = renderMarkdown('| 이름 | 나이 |\n| --- | ---: |\n| Kim | 30 |\n| Lee | 25 |');
+assertContains(table, '<table>', '표 시작');
+assertContains(table, '<thead>', 'thead 존재');
+assertContains(table, '<th>이름</th>', '헤더 셀 1');
+assertContains(table, '<th style="text-align:right">나이</th>', '헤더 셀 우측 정렬');
+assertContains(table, '<tbody>', 'tbody 존재');
+assertContains(table, '<td>Kim</td>', '본문 셀');
+assertContains(table, '<td style="text-align:right">30</td>', '본문 셀 우측 정렬');
+assertContains(table, '<td>Lee</td>', '두 번째 행');
+
+// 표가 아닌 경우는 표로 처리되지 않음 (구분 행 없음)
+const notTable = renderMarkdown('| 단순 | 텍스트 |');
+assertNotContains(notTable, '<table>', '구분 행 없으면 표 아님');
+
+// 가운데 정렬
+const centered = renderMarkdown('| A |\n| :---: |\n| 가 |');
+assertContains(centered, 'text-align:center', '가운데 정렬');
