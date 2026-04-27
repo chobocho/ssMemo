@@ -5,6 +5,7 @@
 
 ## 2026-04-27
 
+- 텍스트 파일 마지막 줄 정렬 버그 수정. (1) CRLF/CR 줄 끝을 LF로 정규화해 split 카운트와 textarea 시각 라인 수가 일치하도록 함. (2) `syncLineNumbersHeight` 추가 — 탭이 보이는 상태에서 textarea와 line-numbers의 scrollHeight를 측정해 차이만큼 line-numbers의 padding-bottom을 늘려 끝까지 스크롤해도 줄번호와 본문이 어긋나지 않도록 함. 탭 전환/줄바꿈 토글 후에도 재호출.
 - 큰 파일 로딩 스피너 잔류 버그 수정. 스피너 z-index(10000) > 모달(9999)이라 "불러왔습니다" 모달 위를 스피너가 가려 사용자가 확인을 못 누르고 앱이 잠긴 상태가 됐던 문제. 메시지 표시 직전에 `hideLoading()`을 명시 호출하도록 변경.
 - 마크다운 표 렌더링 추가 (GFM 형식). `| 헤더 |\n| --- |\n| 셀 |` 패턴을 `<table>/<thead>/<tbody>`로 변환. 셀 정렬(`:---`/`---:`/`:---:`) 지원, 표 외곽 가로 스크롤 가능. 13건 단위 테스트 통과.
 - 마크다운 미리보기 하단 잘림 수정. `.note-editor-container`와 `.note-md-preview`에 `min-height: 0`, 미리보기에 `height: 100%`, 하단 padding을 14→32px로 늘리고 마지막 자식의 `margin-bottom`을 제거. flex 부모 안에서 overflow-y가 정확히 동작하도록 함.

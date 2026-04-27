@@ -364,7 +364,10 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         let resultTitle = '파일 불러오기';
         let resultMsg;
         try {
-            const content = await file.text();
+            const rawContent = await file.text();
+            // CRLF/CR 파일을 LF로 정규화: 그렇지 않으면 split('\n')이 세는 줄 수와
+            // 브라우저가 textarea에 그리는 시각적 줄 수가 어긋나 마지막 줄이 잘못 표시될 수 있음.
+            const content = rawContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
             const emptySlotIndex = fileTabs.slots.findIndex(slot => slot === null);
             if (emptySlotIndex === -1) {
@@ -444,6 +447,17 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         editor.onkeydown = (e) => this.handleKeyDown(e);
     },
 
+    // textarea의 scrollHeight와 line-numbers 패널의 scrollHeight를 일치시킨다.
+    // 일부 브라우저는 textarea 바닥에 1행 분량의 추가 공간을 두어 두 요소가 어긋난다.
+    // 탭이 표시된(보이는) 상태에서만 호출해야 측정이 유효하다.
+    syncLineNumbersHeight(editor, lineNumEl) {
+        if (!editor || !lineNumEl) return;
+        if (editor.offsetParent === null) return; // 숨겨진 상태면 측정 불가
+        const diff = editor.scrollHeight - lineNumEl.scrollHeight;
+        const basePadding = 10;
+        lineNumEl.style.paddingBottom = `${Math.max(basePadding, basePadding + diff)}px`;
+    },
+
     switchTab(tabId) {
         // 모든 탭과 컨테이너 비활성화
         document.querySelectorAll('.note-tab').forEach(tab => {
@@ -471,6 +485,13 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
 
             // 줄바꿈 버튼 상태 동기화
             this.syncForceEnterButton();
+
+            // 탭이 화면에 그려진 다음 프레임에 line-numbers 높이 보정
+            if (tabId !== 'main') {
+                const editor = document.getElementById(`note-editor-${tabId}`);
+                const lineNumEl = document.getElementById(`line-numbers-${tabId}`);
+                requestAnimationFrame(() => this.syncLineNumbersHeight(editor, lineNumEl));
+            }
         }
     },
 
@@ -635,6 +656,9 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
 
         // 줄 번호 동기화
         this.updateLineNumbersForEditor(currentEditor, currentLineNumbers);
+        if (fileTabs.currentTab !== 'main') {
+            requestAnimationFrame(() => this.syncLineNumbersHeight(currentEditor, currentLineNumbers));
+        }
     },
 
     syncForceEnterButton() {
