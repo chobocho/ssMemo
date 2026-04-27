@@ -322,6 +322,21 @@ body.dark-theme .note-editor::-webkit-scrollbar-thumb {
     background: #1976D2;
 }
 
+.custom-modal-footer .custom-modal-btn-cancel {
+    background: #757575;
+    margin-right: 8px;
+}
+.custom-modal-footer .custom-modal-btn-cancel:hover {
+    background: #616161;
+}
+
+.custom-modal-footer .custom-modal-btn-danger {
+    background: #d32f2f;
+}
+.custom-modal-footer .custom-modal-btn-danger:hover {
+    background: #b71c1c;
+}
+
 .custom-modal-btn:active {
     transform: scale(0.98);
 }

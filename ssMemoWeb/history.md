@@ -5,6 +5,9 @@
 
 ## 2026-04-27
 
+- IndexedDB 실패 시 메모리 폴백 자동 전환. `src/data-sources/memory.js` 신규 작성, `AppAPI.init/get/save`를 try/catch로 감싸 한 번 실패하면 모든 호출이 `MemorySource`로 위임. 사용자에게 1회 경고 모달 표시.
+- "메모장 초기화" (다시하기) 버튼 🗑️ 추가. `AppAPI.confirm` 헬퍼로 취소/확인 모달 제공 (위험 액션은 빨간색). 초기화 시 IndexedDB도 함께 비움.
+- MemorySource 단위 테스트 4건 추가.
 - 마크다운 렌더링 추가. 외부 의존 없이 `src/markdown.js` 자체 파서(헤더/굵게/기울임/코드/리스트/링크/인용/수평선) 작성. XSS 방지 위해 HTML 이스케이프 후 처리, javascript: 스킴 차단. .md 파일 탭에서만 📖 미리보기 토글 버튼 노출. 17개 단위 테스트 통과. 테스트 러너를 `test/runner.js`로 분리.
 - 200KB 이상 파일 로드 시 ⏳ 오버레이 스피너 표시. `LOADING_SPINNER_THRESHOLD` 상수 추가. `loadFileFromDisk`/드래그앤드롭 분기 중복 코드를 `handleIncomingFile` 헬퍼로 통합. CSS `@keyframes spin` 추가.
 - 테스트 인프라 추가 (`test/` 폴더). 순수 함수 `src/utils.js` 신규 작성: `splitTextIntoChunks`, `joinTextChunks`, `findNextIndex`, `findPrevIndex`. 17개 단위 테스트 모두 통과. `notepad.js`의 `splitNoteIntoChunks`가 새 유틸 사용하도록 리팩터링.

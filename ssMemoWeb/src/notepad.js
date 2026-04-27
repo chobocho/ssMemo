@@ -676,6 +676,33 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         }
     },
 
+    async resetNotePad() {
+        if (fileTabs.currentTab !== 'main') {
+            await AppAPI.showMessage('메모장 초기화', '메인 메모장 탭에서만 초기화할 수 있습니다.');
+            return;
+        }
+        if (!noteEditor) return;
+
+        const ok = await AppAPI.confirm(
+            '메모장 초기화',
+            '메모장의 모든 내용을 지우시겠습니까?\n이 작업은 되돌릴 수 없습니다.'
+        );
+        if (!ok) return;
+
+        noteEditor.value = '';
+        state.notepad.isDirty = true;
+        try {
+            await AppAPI.saveOrUpdateNoteByDate(CONSTANTS.NOTEPAD_KEY, '');
+            state.notepad.lastSavedContent = '';
+            state.notepad.isDirty = false;
+        } catch (e) {
+            console.error('Failed to reset notepad:', e);
+        }
+        this.updateLineNumbers();
+        this.updateCharCount();
+        await AppAPI.showMessage('메모장 초기화', '메모장이 초기화되었습니다.');
+    },
+
     downloadNotePad() {
         let content = '';
         let fileName = 'ssMemo.txt';
@@ -773,3 +800,4 @@ window.closeFileTab = (index) => Notepad.closeFileTab(index);
 window.forceEnterToNote = () => Notepad.forceEnterToNote();
 window.downloadNotePad = () => Notepad.downloadNotePad();
 window.toggleMarkdownPreview = () => Notepad.toggleMarkdownPreview();
+window.resetNotePad = () => Notepad.resetNotePad();
