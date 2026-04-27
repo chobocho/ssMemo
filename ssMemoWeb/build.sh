@@ -18,5 +18,9 @@ cp "${ROOT_DIR}/src/"*.js             "${RELEASE_DIR}/src/"
 cp "${ROOT_DIR}/src/style.css"        "${RELEASE_DIR}/src/"
 cp "${ROOT_DIR}/src/data-sources/"*.js "${RELEASE_DIR}/src/data-sources/"
 
+echo "[ssMemoWeb] 단일 파일 번들 생성..."
+python3 "${ROOT_DIR}/bundle.py"
+
 echo "[ssMemoWeb] 빌드 완료: ${RELEASE_DIR}"
 echo "실행: cd release && python -m http.server 8001"
+echo "단일 파일: ${RELEASE_DIR}/index.single.html (브라우저로 직접 열기 가능)"
