@@ -60,3 +60,22 @@ assertNotContains(notTable, '<table>', '구분 행 없으면 표 아님');
 // 가운데 정렬
 const centered = renderMarkdown('| A |\n| :---: |\n| 가 |');
 assertContains(centered, 'text-align:center', '가운데 정렬');
+
+// details / summary 지원
+const det1 = renderMarkdown('<details>\n<summary>접기</summary>\n\n본문\n</details>');
+assertContains(det1, '<details>', 'details 시작 태그 통과');
+assertContains(det1, '</details>', 'details 종료 태그 통과');
+assertContains(det1, '<summary>접기</summary>', 'summary 인라인 형태 통과');
+assertContains(det1, '<p>본문</p>', 'details 내부 마크다운 처리');
+
+const det2 = renderMarkdown('<details open>\n<summary>**굵은 제목**</summary>\n</details>');
+assertContains(det2, '<details open>', 'details open 속성 허용');
+assertContains(det2, '<strong>굵은 제목</strong>', 'summary 내부 인라인 마크다운');
+
+// 임의 속성/스크립트 차단 (보안)
+const detEvil = renderMarkdown('<details onclick="x">\n</details>');
+assertNotContains(detEvil, '<details onclick', 'details 임의 속성 차단');
+assertContains(detEvil, '&lt;details onclick', '차단된 태그는 이스케이프됨');
+
+const sumEvil = renderMarkdown('<summary onclick="x">제목</summary>');
+assertNotContains(sumEvil, '<summary onclick', 'summary 임의 속성 차단');

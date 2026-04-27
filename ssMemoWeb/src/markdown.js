@@ -3,7 +3,8 @@
 // XSS 방지를 위해 모든 입력을 HTML 이스케이프 후 처리합니다.
 // 지원: 헤더(#~######), bold(**), italic(*/_), inline code(`),
 //       코드 블록(```), 순서/비순서 리스트, 링크[text](url),
-//       수평선(---), 인용(>), GFM 표(|---|), 단락
+//       수평선(---), 인용(>), GFM 표(|---|), 단락,
+//       <details>/<summary> 접기 (속성은 open만 허용)
 // ========================================
 
 export function escapeHtml(s) {
@@ -142,6 +143,40 @@ export function renderMarkdown(text) {
             flushParagraph();
             closeList();
             out.push(`<blockquote>${renderInline(line.replace(/^>\s?/, ''))}</blockquote>`);
+            continue;
+        }
+
+        // <details>/<summary> 접기 블록. 보안을 위해 정확한 패턴만 허용.
+        const trimmed = line.trim();
+        if (/^<details(\s+open)?>$/i.test(trimmed)) {
+            flushParagraph();
+            closeList();
+            out.push(/\sopen>$/i.test(trimmed) ? '<details open>' : '<details>');
+            continue;
+        }
+        if (/^<\/details>$/i.test(trimmed)) {
+            flushParagraph();
+            closeList();
+            out.push('</details>');
+            continue;
+        }
+        const inlineSummary = trimmed.match(/^<summary>([\s\S]*)<\/summary>$/i);
+        if (inlineSummary) {
+            flushParagraph();
+            closeList();
+            out.push(`<summary>${renderInline(inlineSummary[1])}</summary>`);
+            continue;
+        }
+        if (/^<summary>$/i.test(trimmed)) {
+            flushParagraph();
+            closeList();
+            out.push('<summary>');
+            continue;
+        }
+        if (/^<\/summary>$/i.test(trimmed)) {
+            flushParagraph();
+            closeList();
+            out.push('</summary>');
             continue;
         }
 
