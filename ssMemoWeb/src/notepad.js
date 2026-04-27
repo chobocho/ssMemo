@@ -8,6 +8,7 @@ import { AppAPI } from './app-api.js';
 import { splitTextIntoChunks, joinTextChunks, CHUNK_DELIMITER } from './utils.js';
 import { renderMarkdown } from './markdown.js';
 import { isAllowedTextFile, isOversized } from './file-utils.js';
+import { decodeKoreanText } from './encoding.js';
 
 // Cache DOM elements
 let notePanel = null;
@@ -364,21 +365,23 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         let resultTitle = '파일 불러오기';
         let resultMsg;
         try {
-            const rawContent = await file.text();
-            // CRLF/CR 파일을 LF로 정규화: 그렇지 않으면 split('\n')이 세는 줄 수와
-            // 브라우저가 textarea에 그리는 시각적 줄 수가 어긋나 마지막 줄이 잘못 표시될 수 있음.
-            const content = rawContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+            // ArrayBuffer로 읽어 한글 인코딩(UTF-8/CP949/Johab)을 자동 감지한다.
+            const buffer = await file.arrayBuffer();
+            const { text, encoding } = decodeKoreanText(buffer);
+            // CRLF/CR 파일을 LF로 정규화: split('\n')이 세는 줄 수와
+            // textarea가 그리는 시각적 줄 수를 일치시킨다.
+            const content = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
             const emptySlotIndex = fileTabs.slots.findIndex(slot => slot === null);
             if (emptySlotIndex === -1) {
                 resultTitle = '파일 불러오기 실패';
                 resultMsg = `최대 ${CONSTANTS.MAX_FILE_TABS}개의 파일만 열 수 있습니다.`;
             } else {
-                fileTabs.slots[emptySlotIndex] = { fileName: file.name, content };
+                fileTabs.slots[emptySlotIndex] = { fileName: file.name, content, encoding };
                 this.showFileTab(emptySlotIndex);
                 this.loadFileToEditor(emptySlotIndex);
                 this.switchTab(emptySlotIndex);
-                resultMsg = `파일 "${file.name}"을 불러왔습니다.`;
+                resultMsg = `파일 "${file.name}"을 ${encoding} 인코딩으로 불러왔습니다.`;
             }
         } catch (error) {
             console.error('Failed to read file:', error);

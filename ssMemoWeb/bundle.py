@@ -17,6 +17,7 @@ MODULE_ORDER = [
     'src/utils.js',
     'src/markdown.js',
     'src/file-utils.js',
+    'src/encoding.js',
     'src/data-sources/indexeddb.js',
     'src/data-sources/rest.js',
     'src/data-sources/memory.js',
