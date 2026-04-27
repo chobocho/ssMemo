@@ -79,3 +79,21 @@ assertContains(detEvil, '&lt;details onclick', '차단된 태그는 이스케이
 
 const sumEvil = renderMarkdown('<summary onclick="x">제목</summary>');
 assertNotContains(sumEvil, '<summary onclick', 'summary 임의 속성 차단');
+
+// 인라인 HTML 태그 허용: <b>, <i>, <u>, <br>
+assertContains(renderMarkdown('이것은 <b>굵게</b>'), '<b>굵게</b>', '<b> 태그 통과');
+assertContains(renderMarkdown('이것은 <i>기울임</i>'), '<i>기울임</i>', '<i> 태그 통과');
+assertContains(renderMarkdown('이것은 <u>밑줄</u>'), '<u>밑줄</u>', '<u> 태그 통과');
+assertContains(renderMarkdown('한 줄<br>다음 줄'), '<br>', '<br> 태그 통과');
+assertContains(renderMarkdown('한 줄<br/>다음 줄'), '<br>', '<br/> 자체닫힘 통과');
+assertContains(renderMarkdown('한 줄<br />다음 줄'), '<br>', '<br /> 자체닫힘 통과');
+
+// 임의 속성 차단 (XSS 방지)
+const bEvil = renderMarkdown('<b onclick="x">텍스트</b>');
+assertNotContains(bEvil, '<b onclick', '<b> 임의 속성 차단');
+assertContains(bEvil, '&lt;b onclick', '차단된 태그는 이스케이프됨');
+
+// 알 수 없는 태그는 여전히 이스케이프
+const unknown = renderMarkdown('<marquee>스크롤</marquee>');
+assertNotContains(unknown, '<marquee>', '알 수 없는 태그 차단');
+assertContains(unknown, '&lt;marquee&gt;', '알 수 없는 태그 이스케이프됨');

@@ -4,7 +4,8 @@
 // 지원: 헤더(#~######), bold(**), italic(*/_), inline code(`),
 //       코드 블록(```), 순서/비순서 리스트, 링크[text](url),
 //       수평선(---), 인용(>), GFM 표(|---|), 단락,
-//       <details>/<summary> 접기 (속성은 open만 허용)
+//       <details>/<summary> 접기 (속성은 open만 허용),
+//       인라인 HTML <b>/<i>/<u>/<br> (속성 없는 형태만)
 // ========================================
 
 export function escapeHtml(s) {
@@ -28,6 +29,11 @@ function renderInline(text) {
         if (!/^(https?:\/\/|mailto:|#|\/|\.\/|\.\.\/)/i.test(url)) return match;
         return `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`;
     });
+    // 안전한 인라인 HTML 태그 화이트리스트 (속성 없는 형태만).
+    // escapeHtml 이후의 리터럴 패턴만 복원하므로, 속성이 붙은 변형은
+    // 매치되지 않아 이스케이프된 상태로 유지되어 XSS를 차단합니다.
+    s = s.replace(/&lt;(\/?)([biu])&gt;/gi, '<$1$2>');
+    s = s.replace(/&lt;br\s*\/?&gt;/gi, '<br>');
     return s;
 }
 

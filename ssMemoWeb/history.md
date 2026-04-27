@@ -5,6 +5,7 @@
 
 ## 2026-04-27
 
+- 마크다운 인라인 HTML 태그 `<b>`/`<i>`/`<u>`/`<br>` 허용 (속성 없는 형태만). `renderInline()`에서 escapeHtml 후의 리터럴 패턴(`&lt;b&gt;` 등)만 원래 태그로 복원하므로, 속성이 붙은 변형(`<b onclick=...>`)은 복원되지 않고 이스케이프 상태로 남아 XSS 차단. `<br>`은 `<br>`/`<br/>`/`<br />` 모두 허용. 단위 테스트 9건 추가.
 - 마크다운 `<details>`/`<summary>` 접기 태그 지원. 기존 렌더러는 모든 HTML을 이스케이프해 접기가 동작하지 않던 문제. 정확한 패턴(`<details>`, `<details open>`, `</details>`, `<summary>...</summary>`)만 통과시키고 임의 속성은 차단. `<summary>` 내부는 인라인 마크다운 처리. 단위 테스트 9건 추가.
 - 한글 인코딩 자동 감지 추가. `src/encoding.js`에서 UTF-8 → 실패 시 0x84-0xA0 영역 분포로 Johab(조합형) 여부 판정 → 아니면 CP949(EUC-KR)로 폴백. UTF-8/EUC-KR은 브라우저 `TextDecoder`를 쓰고, Johab은 KS X 1001 부속서 3 비트 패턴(`1 IIIII MMMMM FFFFF`)을 직접 디코드. 파일 로드 후 알림 모달에 감지된 인코딩 표시. 단위 테스트 9건 추가.
 - 텍스트 파일 마지막 줄 정렬 버그 수정. (1) CRLF/CR 줄 끝을 LF로 정규화해 split 카운트와 textarea 시각 라인 수가 일치하도록 함. (2) `syncLineNumbersHeight` 추가 — 탭이 보이는 상태에서 textarea와 line-numbers의 scrollHeight를 측정해 차이만큼 line-numbers의 padding-bottom을 늘려 끝까지 스크롤해도 줄번호와 본문이 어긋나지 않도록 함. 탭 전환/줄바꿈 토글 후에도 재호출.
