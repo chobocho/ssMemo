@@ -360,28 +360,31 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
             await new Promise(r => requestAnimationFrame(r));
         }
 
+        // 메시지 모달이 떴을 때 스피너가 가리지 않도록, 모든 메시지 표시 전에 스피너를 닫는다.
+        let resultTitle = '파일 불러오기';
+        let resultMsg;
         try {
             const content = await file.text();
 
             const emptySlotIndex = fileTabs.slots.findIndex(slot => slot === null);
             if (emptySlotIndex === -1) {
-                await AppAPI.showMessage('파일 불러오기 실패',
-                    `최대 ${CONSTANTS.MAX_FILE_TABS}개의 파일만 열 수 있습니다.`);
-                return;
+                resultTitle = '파일 불러오기 실패';
+                resultMsg = `최대 ${CONSTANTS.MAX_FILE_TABS}개의 파일만 열 수 있습니다.`;
+            } else {
+                fileTabs.slots[emptySlotIndex] = { fileName: file.name, content };
+                this.showFileTab(emptySlotIndex);
+                this.loadFileToEditor(emptySlotIndex);
+                this.switchTab(emptySlotIndex);
+                resultMsg = `파일 "${file.name}"을 불러왔습니다.`;
             }
-
-            fileTabs.slots[emptySlotIndex] = { fileName: file.name, content };
-            this.showFileTab(emptySlotIndex);
-            this.loadFileToEditor(emptySlotIndex);
-            this.switchTab(emptySlotIndex);
-
-            await AppAPI.showMessage('파일 불러오기', `파일 "${file.name}"을 불러왔습니다.`);
         } catch (error) {
             console.error('Failed to read file:', error);
-            await AppAPI.showMessage('파일 불러오기 실패', '파일을 읽을 수 없습니다.');
-        } finally {
-            if (showSpinner) AppAPI.hideLoading();
+            resultTitle = '파일 불러오기 실패';
+            resultMsg = '파일을 읽을 수 없습니다.';
         }
+
+        if (showSpinner) AppAPI.hideLoading();
+        await AppAPI.showMessage(resultTitle, resultMsg);
     },
 
     showFileTab(index) {
