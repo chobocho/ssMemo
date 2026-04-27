@@ -5,6 +5,7 @@ import { state } from './state.js';
 import { CONSTANTS } from './constants.js';
 import { NoteSearchUI } from './note-search.js';
 import { AppAPI } from './app-api.js';
+import { splitTextIntoChunks, joinTextChunks, CHUNK_DELIMITER } from './utils.js';
 
 // Cache DOM elements
 let notePanel = null;
@@ -299,35 +300,20 @@ export const Notepad = {
         const content = noteEditor.value;
         if (!len || len <= 0 || content.length <= len) return;
 
-        const delimiter = "\n\n<----------[절취선]---------->\n\n";
         const btn = document.querySelector('button[onclick^="splitNoteIntoChunks"]');
-        
-        // 1. 구분자가 이미 존재하면 모두 없애기
-        if (content.includes(delimiter)) {
-            // escape special characters for regex
-            const escapedDelimiter = delimiter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            // Remove delimiters and potentially leading/trailing newlines added around them
-            // We'll use a simple replace first.
-            const newContent = content.split(delimiter).join('');
-            noteEditor.value = newContent;
+        const hasDelimiter = content.includes(CHUNK_DELIMITER);
 
+        if (hasDelimiter) {
+            noteEditor.value = joinTextChunks(content);
             if (btn) {
                 btn.textContent = '➗';
                 btn.title = `${len}자 크기로 나누기`;
             }
-            if ( state.elements.noteSearchInput.value === '절취선') {
+            if (state.elements.noteSearchInput.value === '절취선') {
                 state.elements.noteSearchInput.value = '';
             }
         } else {
-            let newContent = "";
-            for (let i = 0; i < content.length; i += len) {
-                if (i > 0) {
-                    newContent += delimiter;
-                }
-                newContent += content.substring(i, i + len);
-            }
-            noteEditor.value = newContent;
-
+            noteEditor.value = splitTextIntoChunks(content, len);
             if (btn) {
                 btn.textContent = '➕';
                 btn.title = '절취선 문구 삭제';
