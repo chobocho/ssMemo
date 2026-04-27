@@ -5,6 +5,7 @@
 
 ## 2026-04-27
 
+- build.sh / build.bat 추가. `release/` 폴더에 실행 파일만 복사. build.bat은 cp949(`chcp 949`)로 한글 안 깨지게 처리. `.gitignore`에 release/ 추가.
 - readme.md / history.md 신규 작성. CLAUDE.md 요구사항(한글 README 유지, 작업 이력 기록) 충족.
 
 ## 이전 이력 (git 로그 요약)
