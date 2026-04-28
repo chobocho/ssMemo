@@ -110,6 +110,46 @@ export const AppAPI = {
         });
     },
 
+    // 옵션 중 하나를 고르는 모달. options: [{value, label, isCurrent?}].
+    // 사용자가 선택하면 value를, 취소(취소 버튼/배경 클릭/ESC)하면 null을 반환.
+    async choose(title, message, options) {
+        return new Promise((resolve) => {
+            const modal = document.createElement('div');
+            modal.className = 'custom-modal-overlay';
+            modal.innerHTML = `
+                <div class="custom-modal">
+                    <div class="custom-modal-header"></div>
+                    <div class="custom-modal-body"></div>
+                    <div class="custom-modal-choices"></div>
+                    <div class="custom-modal-footer">
+                        <button class="custom-modal-btn custom-modal-btn-cancel">취소</button>
+                    </div>
+                </div>
+            `;
+            modal.querySelector('.custom-modal-header').textContent = title;
+            modal.querySelector('.custom-modal-body').textContent = message;
+            document.body.appendChild(modal);
+
+            const cleanup = (val) => { modal.remove(); resolve(val); };
+
+            const choicesEl = modal.querySelector('.custom-modal-choices');
+            (options || []).forEach((opt) => {
+                const btn = document.createElement('button');
+                btn.className = 'custom-modal-btn custom-modal-choice'
+                    + (opt.isCurrent ? ' is-current' : '');
+                btn.textContent = opt.label;
+                btn.addEventListener('click', () => cleanup(opt.value));
+                choicesEl.appendChild(btn);
+            });
+
+            modal.querySelector('.custom-modal-btn-cancel')
+                .addEventListener('click', () => cleanup(null));
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) cleanup(null);
+            });
+        });
+    },
+
     escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;

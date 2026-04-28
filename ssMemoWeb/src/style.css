@@ -306,6 +306,28 @@ body.dark-theme .note-editor::-webkit-scrollbar-thumb {
     border-top: 1px solid var(--search-border);
 }
 
+/* choose() 모달의 옵션 버튼 — body와 footer 사이에 세로로 쌓는다 */
+.custom-modal-choices {
+    padding: 8px 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.custom-modal-choices .custom-modal-btn {
+    width: 100%;
+    text-align: left;
+    padding: 10px 14px;
+}
+
+.custom-modal-choices .custom-modal-btn.is-current {
+    background: #4caf50;
+}
+
+.custom-modal-choices .custom-modal-btn.is-current:hover {
+    background: #388e3c;
+}
+
 .custom-modal-btn {
     padding: 8px 24px;
     background: #2196F3;

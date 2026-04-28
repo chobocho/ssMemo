@@ -8,7 +8,7 @@ import { AppAPI } from './app-api.js';
 import { splitTextIntoChunks, joinTextChunks, buildLineNumbersText, debounce, nextFrame, CHUNK_DELIMITER } from './utils.js';
 import { renderMarkdown } from './markdown.js';
 import { isAllowedTextFile, isOversized } from './file-utils.js';
-import { decodeKoreanText } from './encoding.js';
+import { decodeKoreanText, decodeWithEncoding } from './encoding.js';
 
 // Cache DOM elements
 let notePanel = null;
@@ -405,7 +405,8 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
                 resultTitle = '파일 불러오기 실패';
                 resultMsg = `최대 ${CONSTANTS.MAX_FILE_TABS}개의 파일만 열 수 있습니다.`;
             } else {
-                fileTabs.slots[emptySlotIndex] = { fileName: file.name, content, encoding };
+                // buffer는 사용자가 인코딩을 잘못 자동 감지했을 때 재디코딩에 쓰인다.
+                fileTabs.slots[emptySlotIndex] = { fileName: file.name, content, encoding, buffer };
                 this.showFileTab(emptySlotIndex);
                 await this.loadFileToEditor(emptySlotIndex, yieldIfBig);
                 if (yieldIfBig) await yieldIfBig();
@@ -558,6 +559,85 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         }
 
         this.updateMarkdownButtonVisibility(tabId);
+        this.updateEncodingButtonVisibility(tabId);
+    },
+
+    updateEncodingButtonVisibility(tabId) {
+        const btn = document.getElementById('encoding-btn');
+        if (!btn) return;
+        const slot = tabId !== 'main' ? fileTabs.slots[tabId] : null;
+        if (slot && slot.buffer) {
+            btn.classList.remove('hidden');
+            btn.title = `현재 인코딩: ${slot.encoding} (변경)`;
+        } else {
+            btn.classList.add('hidden');
+        }
+    },
+
+    async changeEncoding() {
+        const tabId = fileTabs.currentTab;
+        if (tabId === 'main') return;
+        const slot = fileTabs.slots[tabId];
+        if (!slot || !slot.buffer) {
+            await AppAPI.showMessage('인코딩 변경', '재디코딩할 원본 데이터가 없습니다.');
+            return;
+        }
+
+        const ENCODINGS = ['UTF-8', 'CP949', 'Johab'];
+        const options = ENCODINGS.map(enc => ({
+            value: enc,
+            label: enc + (enc === slot.encoding ? '  ✓ (현재)' : ''),
+            isCurrent: enc === slot.encoding,
+        }));
+        const chosen = await AppAPI.choose(
+            '인코딩 변경',
+            `현재: ${slot.encoding}\n다른 인코딩으로 다시 읽어옵니다.`,
+            options
+        );
+        if (!chosen || chosen === slot.encoding) return;
+
+        const showSpinner = slot.buffer.byteLength >= CONSTANTS.LOADING_SPINNER_THRESHOLD;
+        if (showSpinner) {
+            AppAPI.showLoading(`${chosen} 인코딩으로 다시 읽는 중...`);
+            await nextFrame();
+        }
+        // handleIncomingFile과 동일하게 큰 파일에서는 단계 사이마다 양보.
+        const yieldIfBig = showSpinner ? nextFrame : null;
+
+        let resultMsg;
+        try {
+            const text = decodeWithEncoding(slot.buffer, chosen);
+            if (yieldIfBig) await yieldIfBig();
+
+            const content = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+            if (yieldIfBig) await yieldIfBig();
+
+            slot.content = content;
+            slot.encoding = chosen;
+
+            const editor = document.getElementById(`note-editor-${tabId}`);
+            const lineNumEl = document.getElementById(`line-numbers-${tabId}`);
+            if (editor && lineNumEl) {
+                editor.value = content;
+                if (yieldIfBig) await yieldIfBig();
+                refreshLineNumbers(editor, lineNumEl);
+            }
+
+            // 마크다운 미리보기 활성 상태면 새 텍스트로 다시 렌더.
+            const previewEl = document.getElementById(`note-md-preview-${tabId}`);
+            if (previewEl && fileTabs.previewStates[tabId]) {
+                previewEl.innerHTML = renderMarkdown(content);
+            }
+
+            this.updateEncodingButtonVisibility(tabId);
+            resultMsg = `${chosen} 인코딩으로 다시 읽었습니다.`;
+        } catch (e) {
+            console.error('Failed to re-decode:', e);
+            resultMsg = '다시 디코딩하지 못했습니다.';
+        }
+
+        if (showSpinner) AppAPI.hideLoading();
+        await AppAPI.showMessage('인코딩 변경', resultMsg);
     },
 
     updateMarkdownButtonVisibility(tabId) {
@@ -821,4 +901,5 @@ window.closeFileTab = (index) => Notepad.closeFileTab(index);
 window.forceEnterToNote = () => Notepad.forceEnterToNote();
 window.downloadNotePad = () => Notepad.downloadNotePad();
 window.toggleMarkdownPreview = () => Notepad.toggleMarkdownPreview();
+window.changeEncoding = () => Notepad.changeEncoding();
 window.resetNotePad = () => Notepad.resetNotePad();
