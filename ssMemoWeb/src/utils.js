@@ -23,9 +23,15 @@ export function joinTextChunks(text, delimiter = CHUNK_DELIMITER) {
 
 // 다음 애니메이션 프레임까지 메인 스레드를 양보. 큰 파일을 단계별로
 // 처리할 때 각 단계 사이에 브라우저가 페인트/입력 처리할 시간을 주기 위해 사용.
-// 브라우저 환경 전용 (테스트 러너는 브라우저에서 실행).
+// 페이지가 백그라운드/숨김 상태라 rAF가 throttle되면 setTimeout fallback으로
+// 빠져나와 await가 영구 대기하는 것을 막는다 (스피너 잔류 방지).
 export function nextFrame() {
-    return new Promise(resolve => requestAnimationFrame(() => resolve()));
+    return new Promise(resolve => {
+        let done = false;
+        const finish = () => { if (done) return; done = true; resolve(); };
+        requestAnimationFrame(finish);
+        setTimeout(finish, 100);
+    });
 }
 
 // 호출이 ms 동안 멈출 때까지 fn 실행을 미루는 trailing-edge debounce.

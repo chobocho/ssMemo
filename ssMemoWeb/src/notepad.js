@@ -8,7 +8,7 @@ import { AppAPI } from './app-api.js';
 import { splitTextIntoChunks, joinTextChunks, buildLineNumbersText, debounce, nextFrame, CHUNK_DELIMITER } from './utils.js';
 import { renderMarkdown } from './markdown.js';
 import { isAllowedTextFile, isOversized } from './file-utils.js';
-import { decodeKoreanText, decodeWithEncoding } from './encoding.js';
+import { decodeKoreanText, decodeWithEncoding, looksGarbled } from './encoding.js';
 
 // Cache DOM elements
 let notePanel = null;
@@ -384,9 +384,9 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         // rAF로 양보해 브라우저가 페인트/입력을 처리할 틈을 만든다.
         const yieldIfBig = showSpinner ? nextFrame : null;
 
-        // 메시지 모달이 떴을 때 스피너가 가리지 않도록, 모든 메시지 표시 전에 스피너를 닫는다.
+        // 어떤 단계에서 던지더라도 스피너가 영구 잔류하지 않도록 finally로 hideLoading 보장.
         let resultTitle = '파일 불러오기';
-        let resultMsg;
+        let resultMsg = '파일을 읽을 수 없습니다.';
         try {
             // ArrayBuffer로 읽어 한글 인코딩(UTF-8/CP949/Johab)을 자동 감지한다.
             const buffer = await file.arrayBuffer();
@@ -411,15 +411,19 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
                 await this.loadFileToEditor(emptySlotIndex, yieldIfBig);
                 if (yieldIfBig) await yieldIfBig();
                 this.switchTab(emptySlotIndex);
-                resultMsg = `파일 "${file.name}"을 ${encoding} 인코딩으로 불러왔습니다.`;
+                const garbledHint = looksGarbled(content)
+                    ? '\n\n⚠️ 디코딩이 부정확할 수 있습니다. 툴바의 🔤 버튼으로 인코딩을 바꿔보세요.'
+                    : '';
+                resultMsg = `파일 "${file.name}"을 ${encoding} 인코딩으로 불러왔습니다.${garbledHint}`;
             }
         } catch (error) {
             console.error('Failed to read file:', error);
             resultTitle = '파일 불러오기 실패';
             resultMsg = '파일을 읽을 수 없습니다.';
+        } finally {
+            if (showSpinner) AppAPI.hideLoading();
         }
 
-        if (showSpinner) AppAPI.hideLoading();
         await AppAPI.showMessage(resultTitle, resultMsg);
     },
 
@@ -604,7 +608,7 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         // handleIncomingFile과 동일하게 큰 파일에서는 단계 사이마다 양보.
         const yieldIfBig = showSpinner ? nextFrame : null;
 
-        let resultMsg;
+        let resultMsg = '다시 디코딩하지 못했습니다.';
         try {
             const text = decodeWithEncoding(slot.buffer, chosen);
             if (yieldIfBig) await yieldIfBig();
@@ -630,13 +634,17 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
             }
 
             this.updateEncodingButtonVisibility(tabId);
-            resultMsg = `${chosen} 인코딩으로 다시 읽었습니다.`;
+            const garbledHint = looksGarbled(content)
+                ? '\n\n⚠️ 결과가 여전히 깨져 보이면 다른 인코딩을 시도해보세요.'
+                : '';
+            resultMsg = `${chosen} 인코딩으로 다시 읽었습니다.${garbledHint}`;
         } catch (e) {
             console.error('Failed to re-decode:', e);
             resultMsg = '다시 디코딩하지 못했습니다.';
+        } finally {
+            if (showSpinner) AppAPI.hideLoading();
         }
 
-        if (showSpinner) AppAPI.hideLoading();
         await AppAPI.showMessage('인코딩 변경', resultMsg);
     },
 

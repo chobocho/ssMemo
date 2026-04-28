@@ -1,7 +1,7 @@
 // ========================================
 // 한글 인코딩 디코더 단위 테스트
 // ========================================
-import { decodeKoreanText, decodeWithEncoding } from '../src/encoding.js';
+import { decodeKoreanText, decodeWithEncoding, looksGarbled } from '../src/encoding.js';
 import { assertEqual, section } from './runner.js';
 
 section('encoding.js');
@@ -57,3 +57,23 @@ assertEqual(decodeKoreanText(buf([])).text, '', '빈 버퍼는 빈 문자열');
     assertEqual(decodeWithEncoding(cp949bytes, 'CP949'), '안녕',
         '재디코딩 시나리오: 같은 buffer를 명시 CP949로 재디코딩하면 본문 회복');
 }
+
+// 큰 입력에서도 decodeJohab가 합리적 시간 안에 완료 (Uint16Array 최적화 회귀 방지)
+{
+    const word = [0xD0, 0x65, 0x8B, 0xAB]; // '한글'
+    const big = new Uint8Array(256 * 1024); // 256KB
+    for (let i = 0; i < big.length; i++) big[i] = word[i % 4];
+    const t0 = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    const r = decodeWithEncoding(big.buffer, 'Johab');
+    const dt = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0;
+    assertEqual(r.length, 128 * 1024, 'Johab 256KB → 128k 글자 (출력 길이 유지)');
+    // 정확한 시간 단언은 환경에 따라 flaky. 합리적 상한만 검사.
+    assertEqual(dt < 2000, true, `Johab 256KB 디코드 ${dt.toFixed(0)}ms < 2000ms`);
+}
+
+// looksGarbled 휴리스틱
+assertEqual(looksGarbled(''), false, 'looksGarbled: 빈 문자열은 false');
+assertEqual(looksGarbled('안녕하세요. 일반 한국어 본문입니다.'), false,
+    'looksGarbled: 정상 한국어는 false');
+assertEqual(looksGarbled('\uFFFD\uFFFD\uFFFD안녕\uFFFD\uFFFD'), true,
+    'looksGarbled: U+FFFD가 다수면 true');

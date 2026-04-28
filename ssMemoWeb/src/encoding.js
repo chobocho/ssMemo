@@ -66,29 +66,41 @@ function johabPairToUnicode(b1, b2) {
 
 function decodeJohab(buffer) {
     const bytes = new Uint8Array(buffer);
-    let out = '';
-    for (let i = 0; i < bytes.length; i++) {
+    const len = bytes.length;
+    // 매 글자마다 string concat (`out += ...`)을 하면 6MB 입력에서 수십 초가
+    // 걸려 메인 스레드가 잠긴다. Uint16Array에 codepoint를 채운 뒤 청크별로
+    // String.fromCharCode.apply 로 한 번에 합쳐 수십배 빠르다.
+    const codes = new Uint16Array(len); // 상한: 바이트당 1글자
+    let outLen = 0;
+    for (let i = 0; i < len; i++) {
         const b1 = bytes[i];
         if (b1 < 0x80) {
             // ASCII 영역은 그대로 통과.
-            out += String.fromCharCode(b1);
+            codes[outLen++] = b1;
             continue;
         }
-        const b2 = bytes[i + 1] ?? 0;
+        const b2 = i + 1 < len ? bytes[i + 1] : 0;
         if (isJohabHangulPair(b1, b2)) {
             const cp = johabPairToUnicode(b1, b2);
             if (cp != null) {
-                out += String.fromCharCode(cp);
+                codes[outLen++] = cp;
                 i++;
                 continue;
             }
         }
         // Johab 한글 음절이 아닌 2바이트(한자/특수기호 등)는 매핑이 까다로워
         // 대체 문자(U+FFFD)로 표시한다.
-        out += '\uFFFD';
+        codes[outLen++] = 0xFFFD;
         if (b2 !== 0) i++;
     }
-    return out;
+    // String.fromCharCode.apply 인자 한도(엔진별 ~64K)를 피하려고 청크로 나눈다.
+    const CHUNK = 0x8000;
+    let result = '';
+    for (let i = 0; i < outLen; i += CHUNK) {
+        const end = i + CHUNK < outLen ? i + CHUNK : outLen;
+        result += String.fromCharCode.apply(null, codes.subarray(i, end));
+    }
+    return result;
 }
 
 // 바이트 분포로 Johab 가능성을 가늠한다.
@@ -116,6 +128,20 @@ export function decodeKoreanText(buffer) {
         return { text: decodeJohab(buffer), encoding: 'Johab' };
     }
     return { text: decodeCp949(buffer), encoding: 'CP949' };
+}
+
+// 디코드 결과에 U+FFFD(대체 문자) 비율이 높으면 자동 감지가 빗나갔을 가능성이 높다.
+// 사용자에게 수동 인코딩 변경(🔤) 힌트를 띄우기 위해 사용.
+// 앞쪽 64KB만 표본 검사 — 큰 파일에서도 비용 일정.
+export function looksGarbled(text) {
+    if (!text) return false;
+    const sampleLen = text.length < 65536 ? text.length : 65536;
+    let replacements = 0;
+    for (let i = 0; i < sampleLen; i++) {
+        if (text.charCodeAt(i) === 0xFFFD) replacements++;
+    }
+    // 1% 이상이면 의심 (정상 한국어 텍스트는 U+FFFD가 거의 0)
+    return replacements > sampleLen * 0.01;
 }
 
 // 명시적 인코딩 지정용 헬퍼 (사용자 수동 선택 시).
