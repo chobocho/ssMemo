@@ -5,7 +5,7 @@ import { state } from './state.js';
 import { CONSTANTS, SYMBOL_SHORTCUTS } from './constants.js';
 import { NoteSearchUI } from './note-search.js';
 import { AppAPI } from './app-api.js';
-import { splitTextIntoChunks, joinTextChunks, buildLineNumbersText, debounce, CHUNK_DELIMITER } from './utils.js';
+import { splitTextIntoChunks, joinTextChunks, buildLineNumbersText, debounce, nextFrame, CHUNK_DELIMITER } from './utils.js';
 import { renderMarkdown } from './markdown.js';
 import { isAllowedTextFile, isOversized } from './file-utils.js';
 import { decodeKoreanText } from './encoding.js';
@@ -376,8 +376,13 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
             const sizeKb = Math.round(file.size / 1024);
             AppAPI.showLoading(`파일을 불러오는 중... (${sizeKb} KB)`);
             // 스피너가 실제로 그려지도록 한 프레임 양보
-            await new Promise(r => requestAnimationFrame(r));
+            await nextFrame();
         }
+
+        // 큰 파일에서 decode/normalize/value 적용/줄번호/탭 전환이 한 동기 블록으로
+        // 묶이면 메인 스레드가 수 초간 잠겨 터치/스크롤이 멈춘다. 단계 사이에
+        // rAF로 양보해 브라우저가 페인트/입력을 처리할 틈을 만든다.
+        const yieldIfBig = showSpinner ? nextFrame : null;
 
         // 메시지 모달이 떴을 때 스피너가 가리지 않도록, 모든 메시지 표시 전에 스피너를 닫는다.
         let resultTitle = '파일 불러오기';
@@ -385,10 +390,15 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         try {
             // ArrayBuffer로 읽어 한글 인코딩(UTF-8/CP949/Johab)을 자동 감지한다.
             const buffer = await file.arrayBuffer();
+            if (yieldIfBig) await yieldIfBig();
+
             const { text, encoding } = decodeKoreanText(buffer);
+            if (yieldIfBig) await yieldIfBig();
+
             // CRLF/CR 파일을 LF로 정규화: split('\n')이 세는 줄 수와
             // textarea가 그리는 시각적 줄 수를 일치시킨다.
             const content = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+            if (yieldIfBig) await yieldIfBig();
 
             const emptySlotIndex = fileTabs.slots.findIndex(slot => slot === null);
             if (emptySlotIndex === -1) {
@@ -397,7 +407,8 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
             } else {
                 fileTabs.slots[emptySlotIndex] = { fileName: file.name, content, encoding };
                 this.showFileTab(emptySlotIndex);
-                this.loadFileToEditor(emptySlotIndex);
+                await this.loadFileToEditor(emptySlotIndex, yieldIfBig);
+                if (yieldIfBig) await yieldIfBig();
                 this.switchTab(emptySlotIndex);
                 resultMsg = `파일 "${file.name}"을 ${encoding} 인코딩으로 불러왔습니다.`;
             }
@@ -439,7 +450,10 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         tab.classList.remove('note-tab-active');
     },
 
-    loadFileToEditor(index) {
+    // yieldFn이 주어지면 editor.value 적용 후 한 프레임 양보해 textarea가
+    // 페인트되고 터치 이벤트가 처리될 시간을 준 뒤 줄번호를 그린다.
+    // 큰 파일에서 메인 스레드가 한 번에 묶이는 것을 막기 위함.
+    async loadFileToEditor(index, yieldFn) {
         const fileInfo = fileTabs.slots[index];
         if (!fileInfo) return;
 
@@ -449,6 +463,7 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         if (!editor || !lineNumEl) return;
 
         editor.value = fileInfo.content;
+        if (yieldFn) await yieldFn();
 
         // 줄 번호 업데이트 (캐시로 중복 갱신 차단)
         refreshLineNumbers(editor, lineNumEl);

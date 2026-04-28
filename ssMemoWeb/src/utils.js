@@ -21,6 +21,13 @@ export function joinTextChunks(text, delimiter = CHUNK_DELIMITER) {
     return text.split(delimiter).join('');
 }
 
+// 다음 애니메이션 프레임까지 메인 스레드를 양보. 큰 파일을 단계별로
+// 처리할 때 각 단계 사이에 브라우저가 페인트/입력 처리할 시간을 주기 위해 사용.
+// 브라우저 환경 전용 (테스트 러너는 브라우저에서 실행).
+export function nextFrame() {
+    return new Promise(resolve => requestAnimationFrame(() => resolve()));
+}
+
 // 호출이 ms 동안 멈출 때까지 fn 실행을 미루는 trailing-edge debounce.
 // 큰 파일 입력 중 keystroke마다 발생하는 O(n) 줄수 스캔을 묶기 위해 사용.
 export function debounce(fn, ms) {
