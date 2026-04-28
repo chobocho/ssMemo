@@ -9,6 +9,7 @@ import {
     findNextIndex,
     findPrevIndex,
     buildLineNumbersText,
+    debounce,
     CHUNK_DELIMITER,
 } from '../src/utils.js';
 import { assertEqual, section } from './runner.js';
@@ -66,3 +67,17 @@ assertEqual(buildLineNumbersText(3), '1\n2\n3',
     'buildLineNumbersText: 3줄은 줄바꿈으로 연결, 끝에 newline 없음');
 assertEqual(buildLineNumbersText(5).split('\n').length, 5,
     'buildLineNumbersText: count==N이면 정확히 N줄 (textarea 줄 수와 1:1 매칭)');
+
+// debounce: trailing-edge 동작 검증 (timer 사용 → 비동기)
+await new Promise(resolve => {
+    let calls = 0;
+    let lastArg = null;
+    const inc = debounce((arg) => { calls++; lastArg = arg; }, 30);
+    inc('a'); inc('b'); inc('c');
+    assertEqual(calls, 0, 'debounce: 호출 직후에는 실행되지 않음');
+    setTimeout(() => {
+        assertEqual(calls, 1, 'debounce: 30ms 뒤 한 번만 실행 (3번 호출 → 1번)');
+        assertEqual(lastArg, 'c', 'debounce: 마지막 호출 인자로 실행');
+        resolve();
+    }, 80);
+});

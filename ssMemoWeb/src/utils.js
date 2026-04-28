@@ -21,6 +21,19 @@ export function joinTextChunks(text, delimiter = CHUNK_DELIMITER) {
     return text.split(delimiter).join('');
 }
 
+// 호출이 ms 동안 멈출 때까지 fn 실행을 미루는 trailing-edge debounce.
+// 큰 파일 입력 중 keystroke마다 발생하는 O(n) 줄수 스캔을 묶기 위해 사용.
+export function debounce(fn, ms) {
+    let timer = null;
+    return function debounced(...args) {
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(() => {
+            timer = null;
+            fn.apply(this, args);
+        }, ms);
+    };
+}
+
 // 줄 번호 표시용 단일 텍스트("1\n2\n...\nN")를 만든다.
 // `<div>` N개를 만들지 않고 한 번의 textContent 할당으로 끝내기 위한 헬퍼.
 // count<1이면 빈 문자열 반환.

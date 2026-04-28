@@ -5,7 +5,7 @@ import { state } from './state.js';
 import { CONSTANTS, SYMBOL_SHORTCUTS } from './constants.js';
 import { NoteSearchUI } from './note-search.js';
 import { AppAPI } from './app-api.js';
-import { splitTextIntoChunks, joinTextChunks, buildLineNumbersText, CHUNK_DELIMITER } from './utils.js';
+import { splitTextIntoChunks, joinTextChunks, buildLineNumbersText, debounce, CHUNK_DELIMITER } from './utils.js';
 import { renderMarkdown } from './markdown.js';
 import { isAllowedTextFile, isOversized } from './file-utils.js';
 import { decodeKoreanText } from './encoding.js';
@@ -25,6 +25,18 @@ function countLines(text) {
         if (text.charCodeAt(i) === 10) count++;
     }
     return count;
+}
+
+// 줄 번호 영역 갱신 + 줄 수 캐시. 줄 수가 그대로면 textContent를
+// 다시 쓰지 않아 큰 파일 입력 중 리플로우/리페인트 비용을 절감한다.
+function refreshLineNumbers(editor, lineNumbersEl) {
+    if (!editor || !lineNumbersEl) return;
+    const count = countLines(editor.value);
+    if (lineNumbersEl.__ssLineCount !== count) {
+        lineNumbersEl.textContent = buildLineNumbersText(count);
+        lineNumbersEl.__ssLineCount = count;
+    }
+    lineNumbersEl.scrollTop = editor.scrollTop;
 }
 
 // 파일 탭 관리 상태
@@ -61,8 +73,12 @@ export const Notepad = {
         this.updateLineNumbers();
         this.updateCharCount();
 
+        // 큰 파일에서 keystroke마다 전체 스캔(countLines)을 돌면 입력이 끊긴다.
+        // 줄번호 갱신은 50ms로 묶고, char count/scroll/isDirty는 즉시 반영.
+        const debouncedLineNumbers = debounce(() => this.updateLineNumbers(), 50);
+
         noteEditor.oninput = () => {
-            this.updateLineNumbers();
+            debouncedLineNumbers();
             this.updateCharCount();
             lineNumbers.scrollTop = noteEditor.scrollTop;
             state.notepad.isDirty = noteEditor.value !== state.notepad.lastSavedContent;
@@ -176,12 +192,7 @@ export const Notepad = {
     },
 
     updateLineNumbers() {
-        if (!noteEditor || !lineNumbers) return;
-        // 단일 텍스트 노드(textContent)로 5000+ 줄 파일도 빠르게 렌더.
-        // CSS의 white-space: pre + line-height 매칭으로 textarea와 시각적 1:1 동기.
-        const lineCount = countLines(noteEditor.value);
-        lineNumbers.textContent = buildLineNumbersText(lineCount);
-        lineNumbers.scrollTop = noteEditor.scrollTop;
+        refreshLineNumbers(noteEditor, lineNumbers);
     },
 
     handleContextMenu(e) {
@@ -439,9 +450,8 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
 
         editor.value = fileInfo.content;
 
-        // 줄 번호 업데이트 (단일 텍스트 노드 사용)
-        const lineCount = countLines(fileInfo.content);
-        lineNumEl.textContent = buildLineNumbersText(lineCount);
+        // 줄 번호 업데이트 (캐시로 중복 갱신 차단)
+        refreshLineNumbers(editor, lineNumEl);
 
         // 스크롤 동기화
         editor.onscroll = () => {
@@ -600,6 +610,7 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         }
         if (lineNumEl) {
             lineNumEl.textContent = '1';
+            lineNumEl.__ssLineCount = 1;
             lineNumEl.classList.remove('hidden');
         }
         if (previewEl) {
@@ -750,10 +761,7 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
     },
 
     updateLineNumbersForEditor(editor, lineNumbersEl) {
-        if (!editor || !lineNumbersEl) return;
-        const lineCount = countLines(editor.value);
-        lineNumbersEl.textContent = buildLineNumbersText(lineCount);
-        lineNumbersEl.scrollTop = editor.scrollTop;
+        refreshLineNumbers(editor, lineNumbersEl);
     },
 
     setupDragAndDrop() {

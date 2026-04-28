@@ -5,6 +5,7 @@
 
 ## 2026-04-28
 
+- 큰 파일 입력 중 줄번호 재계산 비용 추가 절감. (1) `refreshLineNumbers(editor, el)` 헬퍼 도입 — 요소에 `__ssLineCount`를 캐싱하고 줄 수가 같으면 `textContent` 재할당과 `buildLineNumbersText` 호출을 모두 생략. 줄을 추가/삭제하지 않는 일반 키 입력에서 DOM 변경 0회. (2) 메인 에디터 `oninput`의 줄번호 갱신을 50ms trailing-edge debounce로 묶음. 5MB 파일에서 keystroke마다 발생하던 O(n) `countLines` 스캔이 입력이 멈출 때까지 합쳐지므로 입력 끊김 제거. 글자수/스크롤 동기/`isDirty`는 즉시 반영해 사용자 체감 반응성은 그대로 유지. `src/utils.js`에 `debounce(fn, ms)` 순수 함수와 단위 테스트 3건 추가. `updateLineNumbers`/`updateLineNumbersForEditor`/`loadFileToEditor`/`closeFileTab` 4개 경로 모두 새 헬퍼로 통일.
 - 큰 파일 줄번호 렌더 성능 개선. 줄당 `<div>` N개 생성 + `innerHTML` 파싱(5000줄 기준 수백 ms 소요) 방식을 단일 텍스트 노드("1\n2\n...\nN")로 교체. `.line-numbers`에 `white-space: pre`를 추가하고 `line-height`(데스크톱 24px / 모바일 20px)를 textarea와 동일하게 유지해 시각적 1:1 정렬을 보존. `<div>`의 `padding-right`(8/6px)를 `.line-numbers` 자체로 이동. `src/utils.js`에 순수 함수 `buildLineNumbersText(count)`와 `notepad.js` 내 `countLines(text)` 헬퍼(`split` 배열 할당 없이 charCode 10 카운트) 추가. 3개 렌더 경로(`updateLineNumbers`/`loadFileToEditor`/`updateLineNumbersForEditor`) 및 `closeFileTab`의 `innerHTML='1'`까지 일괄 정리. 기존 `syncLineNumbersHeight`/스크롤 동기화/끝줄 패딩 보정 그대로 유효. 단위 테스트 4건 추가.
 
 ## 2026-04-27
