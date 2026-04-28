@@ -8,6 +8,7 @@ import {
     joinTextChunks,
     findNextIndex,
     findPrevIndex,
+    buildLineNumbersText,
     CHUNK_DELIMITER,
 } from '../src/utils.js';
 import { assertEqual, section } from './runner.js';
@@ -56,3 +57,12 @@ assertEqual(findPrevIndex('hello world hello', 'xyz', 16), -1,
     'findPrevIndex: 매치 없으면 -1');
 assertEqual(findPrevIndex('hello', 'h', -1), -1,
     'findPrevIndex: startIndex<0이면 -1');
+
+assertEqual(buildLineNumbersText(0), '',
+    'buildLineNumbersText: count 0이면 빈 문자열');
+assertEqual(buildLineNumbersText(1), '1',
+    'buildLineNumbersText: 1줄은 "1"');
+assertEqual(buildLineNumbersText(3), '1\n2\n3',
+    'buildLineNumbersText: 3줄은 줄바꿈으로 연결, 끝에 newline 없음');
+assertEqual(buildLineNumbersText(5).split('\n').length, 5,
+    'buildLineNumbersText: count==N이면 정확히 N줄 (textarea 줄 수와 1:1 매칭)');

@@ -5,7 +5,7 @@ import { state } from './state.js';
 import { CONSTANTS, SYMBOL_SHORTCUTS } from './constants.js';
 import { NoteSearchUI } from './note-search.js';
 import { AppAPI } from './app-api.js';
-import { splitTextIntoChunks, joinTextChunks, CHUNK_DELIMITER } from './utils.js';
+import { splitTextIntoChunks, joinTextChunks, buildLineNumbersText, CHUNK_DELIMITER } from './utils.js';
 import { renderMarkdown } from './markdown.js';
 import { isAllowedTextFile, isOversized } from './file-utils.js';
 import { decodeKoreanText } from './encoding.js';
@@ -15,6 +15,17 @@ let notePanel = null;
 let noteEditor = null;
 let lineNumbers = null;
 let charCountEl = null;
+
+// 빈 문자열도 textarea에서 1줄로 보이므로 최소 1로 보정.
+// split보다 빠르게 줄 수만 세는 헬퍼 — 5MB 파일에서 split 배열 할당 비용을 피한다.
+function countLines(text) {
+    if (!text) return 1;
+    let count = 1;
+    for (let i = 0; i < text.length; i++) {
+        if (text.charCodeAt(i) === 10) count++;
+    }
+    return count;
+}
 
 // 파일 탭 관리 상태
 const fileTabs = {
@@ -166,14 +177,10 @@ export const Notepad = {
 
     updateLineNumbers() {
         if (!noteEditor || !lineNumbers) return;
-
-        const lines = noteEditor.value.split('\n');
-        const lineCount = lines.length;
-        let lineNumbersHTML = '';
-        for (let i = 1; i <= lineCount; i++) {
-            lineNumbersHTML += `<div>${i}</div>`;
-        }
-        lineNumbers.innerHTML = lineNumbersHTML;
+        // 단일 텍스트 노드(textContent)로 5000+ 줄 파일도 빠르게 렌더.
+        // CSS의 white-space: pre + line-height 매칭으로 textarea와 시각적 1:1 동기.
+        const lineCount = countLines(noteEditor.value);
+        lineNumbers.textContent = buildLineNumbersText(lineCount);
         lineNumbers.scrollTop = noteEditor.scrollTop;
     },
 
@@ -432,14 +439,9 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
 
         editor.value = fileInfo.content;
 
-        // 줄 번호 업데이트
-        const lines = fileInfo.content.split('\n');
-        const lineCount = lines.length;
-        let lineNumbersHTML = '';
-        for (let i = 1; i <= lineCount; i++) {
-            lineNumbersHTML += `<div>${i}</div>`;
-        }
-        lineNumEl.innerHTML = lineNumbersHTML;
+        // 줄 번호 업데이트 (단일 텍스트 노드 사용)
+        const lineCount = countLines(fileInfo.content);
+        lineNumEl.textContent = buildLineNumbersText(lineCount);
 
         // 스크롤 동기화
         editor.onscroll = () => {
@@ -597,7 +599,7 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
             editor.classList.remove('hidden');
         }
         if (lineNumEl) {
-            lineNumEl.innerHTML = '1';
+            lineNumEl.textContent = '1';
             lineNumEl.classList.remove('hidden');
         }
         if (previewEl) {
@@ -749,14 +751,8 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
 
     updateLineNumbersForEditor(editor, lineNumbersEl) {
         if (!editor || !lineNumbersEl) return;
-
-        const lines = editor.value.split('\n');
-        const lineCount = lines.length;
-        let lineNumbersHTML = '';
-        for (let i = 1; i <= lineCount; i++) {
-            lineNumbersHTML += `<div>${i}</div>`;
-        }
-        lineNumbersEl.innerHTML = lineNumbersHTML;
+        const lineCount = countLines(editor.value);
+        lineNumbersEl.textContent = buildLineNumbersText(lineCount);
         lineNumbersEl.scrollTop = editor.scrollTop;
     },
 

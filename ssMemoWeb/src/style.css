@@ -180,7 +180,8 @@ body.dark-theme .note-search-controls button:hover {
 
 .line-numbers {
     width: 40px;
-    padding: 10px 0; /* 좌우 패딩 제거, 상하만 유지 */
+    /* 우측 8px = 숫자와 경계선 사이 간격. 좌측 0. 상하 10px(textarea padding과 일치). */
+    padding: 10px 8px 10px 0;
     text-align: right;
     background: rgba(0, 0, 0, 0.03);
     border-right: 1px solid var(--search-border);
@@ -188,15 +189,13 @@ body.dark-theme .note-search-controls button:hover {
     font-family: monospace;
     font-size: 14px;
     line-height: 24px;
+    /* 단일 텍스트 노드("1\n2\n...")로 줄번호를 그린다.
+       white-space: pre 로 \n을 줄바꿈으로 보존, line-height(24px)가
+       textarea와 동일해 시각적으로 1:1 정렬. <div> N개 생성 비용을 제거 */
+    white-space: pre;
     user-select: none;
     overflow: hidden;
     box-sizing: border-box;
-}
-
-.line-numbers div {
-    padding-right: 8px; /* 숫자와 경계선 사이 간격 */
-    height: 24px;
-    line-height: 24px;
 }
 
 .note-editor {
@@ -623,12 +622,7 @@ body.dark-theme .note-editor-readonly .note-editor {
         width: 32px;
         font-size: 12px;
         line-height: 20px;
-    }
-
-    .line-numbers div {
-        padding-right: 6px;
-        height: 20px;
-        line-height: 20px;
+        padding-right: 6px; /* 모바일은 6px로 좁힘 (데스크톱 8px 오버라이드) */
     }
 
     .note-editor {

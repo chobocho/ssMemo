@@ -3,6 +3,10 @@
 날짜는 git 커밋 기준이 아닌 작업 항목 단위로 기록합니다.
 신규 변경은 위쪽에 추가합니다.
 
+## 2026-04-28
+
+- 큰 파일 줄번호 렌더 성능 개선. 줄당 `<div>` N개 생성 + `innerHTML` 파싱(5000줄 기준 수백 ms 소요) 방식을 단일 텍스트 노드("1\n2\n...\nN")로 교체. `.line-numbers`에 `white-space: pre`를 추가하고 `line-height`(데스크톱 24px / 모바일 20px)를 textarea와 동일하게 유지해 시각적 1:1 정렬을 보존. `<div>`의 `padding-right`(8/6px)를 `.line-numbers` 자체로 이동. `src/utils.js`에 순수 함수 `buildLineNumbersText(count)`와 `notepad.js` 내 `countLines(text)` 헬퍼(`split` 배열 할당 없이 charCode 10 카운트) 추가. 3개 렌더 경로(`updateLineNumbers`/`loadFileToEditor`/`updateLineNumbersForEditor`) 및 `closeFileTab`의 `innerHTML='1'`까지 일괄 정리. 기존 `syncLineNumbersHeight`/스크롤 동기화/끝줄 패딩 보정 그대로 유효. 단위 테스트 4건 추가.
+
 ## 2026-04-27
 
 - 마크다운 인라인 HTML 태그 `<b>`/`<i>`/`<u>`/`<br>` 허용 (속성 없는 형태만). `renderInline()`에서 escapeHtml 후의 리터럴 패턴(`&lt;b&gt;` 등)만 원래 태그로 복원하므로, 속성이 붙은 변형(`<b onclick=...>`)은 복원되지 않고 이스케이프 상태로 남아 XSS 차단. `<br>`은 `<br>`/`<br/>`/`<br />` 모두 허용. 단위 테스트 9건 추가.

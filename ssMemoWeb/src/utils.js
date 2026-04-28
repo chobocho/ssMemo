@@ -21,6 +21,18 @@ export function joinTextChunks(text, delimiter = CHUNK_DELIMITER) {
     return text.split(delimiter).join('');
 }
 
+// 줄 번호 표시용 단일 텍스트("1\n2\n...\nN")를 만든다.
+// `<div>` N개를 만들지 않고 한 번의 textContent 할당으로 끝내기 위한 헬퍼.
+// count<1이면 빈 문자열 반환.
+export function buildLineNumbersText(count) {
+    if (!count || count < 1) return '';
+    let buf = '1';
+    for (let i = 2; i <= count; i++) {
+        buf += '\n' + i;
+    }
+    return buf;
+}
+
 // content 안에서 query를 정방향 검색. 없으면 -1.
 // startIndex 이후에서 못 찾고 startIndex>0이면 처음부터 다시 시도(랩어라운드).
 export function findNextIndex(content, query, startIndex = 0) {
