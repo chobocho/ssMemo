@@ -11,6 +11,7 @@
     <div id="note-panel" class="note-panel">
         <div class="note-panel-header">
             <span class="note-panel-title">📝 ssMemo</span>
+            <span id="current-memo-title" class="current-memo-title" title="">―</span>
             <span id="note-char-count" class="note-char-count-panel">글자수: 0</span>
             <div class="note-search-controls">
                 <input id="noteSearchInput" type="text" placeholder="검색 (Ctrl + I)">
@@ -19,6 +20,7 @@
                 <button id="noteSearchNextBtn" type="button" title="Ctrl + >">➡️</button>
             </div>
 
+            <button onclick="openMemoManager()" class="note-icon-btn" title="메모 목록/이름변경/삭제">📋</button>
             <button onclick="LoadFileFromDisk()" class="note-icon-btn" title="불러오기">🗂️</button>
             <button onclick="splitNoteIntoChunks(2000)" class="note-icon-btn" title="2000자 크기로 나누기">➗</button>
             <button onclick="forceEnterToNote()" class="note-icon-btn" title="강제 줄 바꿈">⬇️</button>

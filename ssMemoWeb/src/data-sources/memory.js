@@ -26,4 +26,22 @@ export class MemorySource {
         this.store.set(key, record);
         return record;
     }
+
+    async listKeys(prefix = '') {
+        const out = [];
+        for (const [key, rec] of this.store.entries()) {
+            if (!prefix || key.startsWith(prefix)) {
+                out.push({
+                    key,
+                    content: rec.content,
+                    updatedAt: rec.updatedAt,
+                });
+            }
+        }
+        return out;
+    }
+
+    async deleteKey(key) {
+        return this.store.delete(key);
+    }
 }

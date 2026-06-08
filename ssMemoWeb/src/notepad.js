@@ -10,6 +10,10 @@ import { renderMarkdown } from './markdown.js';
 import { isAllowedTextFile, isOversized } from './file-utils.js';
 import { decodeKoreanText, decodeWithEncoding, looksGarbled } from './encoding.js';
 import { runCode, serializeEnv, deserializeEnv } from './calc.js';
+import {
+    listMemos, loadMemo, saveMemo, deleteMemo, renameMemo,
+    ensureAtLeastOneMemo, validateTitle,
+} from './memo-store.js';
 
 // Cache DOM elements
 let notePanel = null;
@@ -86,15 +90,20 @@ export const Notepad = {
         noteEditor.focus();
 
         try {
-            const note = await AppAPI.getNoteByDate(CONSTANTS.NOTEPAD_KEY);
-            noteEditor.value = note.content || '';
+            // 레거시 NOTEPAD → memo:기본 메모 마이그레이션 (이미 메모가 있으면 스킵).
+            const firstTitle = await ensureAtLeastOneMemo();
+            const memo = await loadMemo(firstTitle);
+            noteEditor.value = memo.content || '';
+            state.notepad.currentMemoTitle = firstTitle;
         } catch (e) {
             console.error('Failed to load notepad content:', e);
             noteEditor.value = '';
+            state.notepad.currentMemoTitle = CONSTANTS.DEFAULT_MEMO_TITLE;
         }
 
         state.notepad.lastSavedContent = noteEditor.value;
         state.notepad.isDirty = false;
+        this.refreshTitleDisplay();
 
         // 저장된 코드 블럭 메모리를 읽어 calcMemory에 채운다.
         // 이후 runCodeBlock에서 즉시 사용 가능하도록 await로 동기화.
@@ -148,12 +157,15 @@ export const Notepad = {
             return "변경된 내용이 없습니다.";
         }
 
+        const title = state.notepad.currentMemoTitle;
+        if (!title) return "현재 메모를 알 수 없어 저장하지 못했습니다.";
+
         let retMsg = "저장에 성공했습니다.";
         try {
-            await AppAPI.saveOrUpdateNoteByDate(CONSTANTS.NOTEPAD_KEY, content);
+            await saveMemo(title, content);
             state.notepad.lastSavedContent = content;
             state.notepad.isDirty = false;
-            console.log('Notepad auto-saved');
+            console.log(`Notepad auto-saved: ${title}`);
         } catch (e) {
             console.error('Failed to save notepad:', e);
             retMsg = "저장에 실패했습니다.";
@@ -373,6 +385,11 @@ export const Notepad = {
 
     showHelpPanel() {
         const helpText = `메모장 단축키
+
+📋 메모 관리 — 여러 개의 메모를 만들고 전환/이름변경/삭제 가능.
+  헤더의 메모 이름 옆 📋 버튼을 누르면 목록이 열린다.
+  자동 저장은 현재 표시된 메모로 향한다.
+
 Alt + B - 페이지 위로
 Alt + F - 페이지 아래로
 
@@ -881,7 +898,12 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         noteEditor.value = '';
         state.notepad.isDirty = true;
         try {
-            await AppAPI.saveOrUpdateNoteByDate(CONSTANTS.NOTEPAD_KEY, '');
+            // 현재 메모를 비운다 — 메모 자체는 유지되고 본문만 빈 상태로.
+            // 메모를 삭제하려면 메모 관리 📋의 [삭제] 버튼을 사용.
+            const title = state.notepad.currentMemoTitle;
+            if (title) {
+                await saveMemo(title, '');
+            }
             state.notepad.lastSavedContent = '';
             state.notepad.isDirty = false;
         } catch (e) {
@@ -1059,6 +1081,289 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         this.updateLineNumbers();
         this.updateCharCount();
         state.notepad.isDirty = editor.value !== state.notepad.lastSavedContent;
+    },
+
+    // 현재 메모 제목을 헤더에 표시.
+    refreshTitleDisplay() {
+        const el = document.getElementById('current-memo-title');
+        if (!el) return;
+        const title = state.notepad.currentMemoTitle || '―';
+        el.textContent = title;
+        el.title = `현재 메모: ${title}`;
+    },
+
+    // 메인 탭의 콘텐츠를 currentMemoTitle 메모로 저장하고, target 메모로 전환.
+    // 더티 상태면 먼저 저장. 전환 후 화면/상태/메모리 모두 갱신.
+    async switchToMemo(title) {
+        if (!noteEditor) return;
+        if (title === state.notepad.currentMemoTitle) return;
+        if (state.notepad.isDirty) await this.save();
+        try {
+            const memo = await loadMemo(title);
+            noteEditor.value = memo.content || '';
+        } catch (e) {
+            console.error('Failed to load memo:', e);
+            await AppAPI.showMessage('메모 열기 실패', '메모를 불러오지 못했습니다.');
+            return;
+        }
+        state.notepad.currentMemoTitle = title;
+        state.notepad.lastSavedContent = noteEditor.value;
+        state.notepad.isDirty = false;
+        this.refreshTitleDisplay();
+        this.updateLineNumbers();
+        this.updateCharCount();
+        this.syncSplitButtonState();
+        // 메인 탭으로 강제 전환 (다른 파일 탭이 열려 있을 수 있음).
+        this.switchToMainTabIfNeeded();
+    },
+
+    // 현재 활성 탭이 메인이 아니면 메인으로 전환.
+    switchToMainTabIfNeeded() {
+        if (fileTabs.currentTab !== 'main' && typeof this.switchTab === 'function') {
+            this.switchTab('main');
+        }
+    },
+
+    // 메모 관리 모달. 사용자가 메모 목록과 액션(열기/이름변경/삭제/새 메모)을 다룰 수 있음.
+    async openMemoManager() {
+        // 진입 직전 더티 상태면 먼저 저장해 목록의 updatedAt이 최신을 반영하도록.
+        if (state.notepad.isDirty) await this.save();
+
+        let memos;
+        try {
+            memos = await listMemos();
+        } catch (e) {
+            await AppAPI.showMessage('메모 목록 오류', '메모 목록을 불러오지 못했습니다.');
+            return;
+        }
+
+        const action = await this.showMemoManagerModal(memos);
+        if (!action) return;
+
+        if (action.type === 'open') {
+            await this.switchToMemo(action.title);
+        } else if (action.type === 'new') {
+            await this.createNewMemo();
+        } else if (action.type === 'rename') {
+            await this.promptRename(action.title);
+        } else if (action.type === 'delete') {
+            await this.promptDelete(action.title);
+        }
+    },
+
+    // 메모 관리 모달 렌더링. 사용자 선택을 액션 객체로 반환.
+    async showMemoManagerModal(memos) {
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.className = 'custom-modal-overlay';
+            const modal = document.createElement('div');
+            modal.className = 'custom-modal memo-manager-modal';
+            modal.innerHTML = `
+                <div class="custom-modal-header">📋 메모 관리</div>
+                <div class="custom-modal-body memo-manager-body"></div>
+                <div class="custom-modal-footer">
+                    <button class="custom-modal-btn custom-modal-btn-cancel">닫기</button>
+                </div>
+            `;
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            const body = modal.querySelector('.memo-manager-body');
+            const cleanup = (val) => { overlay.remove(); resolve(val); };
+
+            // "새 메모" 버튼 (목록 위)
+            const newBtn = document.createElement('button');
+            newBtn.className = 'custom-modal-btn memo-manager-new-btn';
+            newBtn.textContent = '➕ 새 메모';
+            newBtn.addEventListener('click', () => cleanup({ type: 'new' }));
+            body.appendChild(newBtn);
+
+            // 목록
+            const list = document.createElement('div');
+            list.className = 'memo-manager-list';
+            const currentTitle = state.notepad.currentMemoTitle;
+            memos.forEach((m) => {
+                const row = document.createElement('div');
+                row.className = 'memo-manager-row' + (m.title === currentTitle ? ' is-current' : '');
+
+                const titleSpan = document.createElement('span');
+                titleSpan.className = 'memo-manager-title';
+                titleSpan.textContent = (m.title === currentTitle ? '✓ ' : '') + m.title;
+                row.appendChild(titleSpan);
+
+                const actions = document.createElement('span');
+                actions.className = 'memo-manager-actions';
+
+                const openBtn = document.createElement('button');
+                openBtn.className = 'memo-manager-action';
+                openBtn.textContent = '열기';
+                openBtn.disabled = (m.title === currentTitle);
+                openBtn.addEventListener('click', () => cleanup({ type: 'open', title: m.title }));
+                actions.appendChild(openBtn);
+
+                const renameBtn = document.createElement('button');
+                renameBtn.className = 'memo-manager-action';
+                renameBtn.textContent = '이름변경';
+                renameBtn.addEventListener('click', () => cleanup({ type: 'rename', title: m.title }));
+                actions.appendChild(renameBtn);
+
+                const delBtn = document.createElement('button');
+                delBtn.className = 'memo-manager-action memo-manager-action-danger';
+                delBtn.textContent = '삭제';
+                delBtn.addEventListener('click', () => cleanup({ type: 'delete', title: m.title }));
+                actions.appendChild(delBtn);
+
+                row.appendChild(actions);
+                list.appendChild(row);
+            });
+            if (memos.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'memo-manager-empty';
+                empty.textContent = '저장된 메모가 없습니다.';
+                list.appendChild(empty);
+            }
+            body.appendChild(list);
+
+            modal.querySelector('.custom-modal-btn-cancel')
+                .addEventListener('click', () => cleanup(null));
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) cleanup(null);
+            });
+        });
+    },
+
+    // 텍스트 입력 모달. 취소/잘못된 입력 시 null 반환, 성공 시 trim된 문자열 반환.
+    // validator는 (string) => string|null 형태: null이면 통과, 문자열이면 에러 메시지.
+    async promptText(title, message, defaultValue, validator) {
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.className = 'custom-modal-overlay';
+            const modal = document.createElement('div');
+            modal.className = 'custom-modal';
+            modal.innerHTML = `
+                <div class="custom-modal-header"></div>
+                <div class="custom-modal-body">
+                    <div class="prompt-message"></div>
+                    <input type="text" class="prompt-input" />
+                    <div class="prompt-error"></div>
+                </div>
+                <div class="custom-modal-footer">
+                    <button class="custom-modal-btn custom-modal-btn-cancel">취소</button>
+                    <button class="custom-modal-btn">확인</button>
+                </div>
+            `;
+            overlay.appendChild(modal);
+            modal.querySelector('.custom-modal-header').textContent = title;
+            modal.querySelector('.prompt-message').textContent = message;
+            const input = modal.querySelector('.prompt-input');
+            input.value = defaultValue || '';
+            const errEl = modal.querySelector('.prompt-error');
+            document.body.appendChild(overlay);
+            setTimeout(() => { input.focus(); input.select(); }, 10);
+
+            const cleanup = (val) => { overlay.remove(); resolve(val); };
+            const tryConfirm = () => {
+                const v = input.value.trim();
+                const err = validator ? validator(v) : null;
+                if (err) { errEl.textContent = err; return; }
+                cleanup(v);
+            };
+
+            modal.querySelectorAll('.custom-modal-btn')[1]
+                .addEventListener('click', tryConfirm);
+            modal.querySelector('.custom-modal-btn-cancel')
+                .addEventListener('click', () => cleanup(null));
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) cleanup(null);
+            });
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); tryConfirm(); }
+                if (e.key === 'Escape') { e.preventDefault(); cleanup(null); }
+            });
+        });
+    },
+
+    // 새 메모 생성. 제목 입력 → 빈 콘텐츠로 저장 → 해당 메모로 전환.
+    async createNewMemo() {
+        const existing = (await listMemos()).map((m) => m.title);
+        const newTitle = await this.promptText(
+            '➕ 새 메모', '새 메모 제목을 입력하세요.', '',
+            (t) => {
+                const v = validateTitle(t);
+                if (v) return v;
+                if (existing.includes(t)) return '같은 제목의 메모가 이미 존재합니다.';
+                return null;
+            }
+        );
+        if (!newTitle) return;
+        try {
+            await saveMemo(newTitle, '');
+            await this.switchToMemo(newTitle);
+        } catch (e) {
+            console.error('Failed to create memo:', e);
+            await AppAPI.showMessage('새 메모 생성 실패', '메모를 생성하지 못했습니다.');
+        }
+    },
+
+    // 메모 이름 변경. 현재 메모를 변경할 경우 currentMemoTitle도 갱신.
+    async promptRename(oldTitle) {
+        const existing = (await listMemos()).map((m) => m.title).filter((t) => t !== oldTitle);
+        const newTitle = await this.promptText(
+            '✏️ 이름 변경', `"${oldTitle}" → 새 제목`, oldTitle,
+            (t) => {
+                const v = validateTitle(t);
+                if (v) return v;
+                if (t === oldTitle) return '기존 제목과 같습니다.';
+                if (existing.includes(t)) return '같은 제목의 메모가 이미 존재합니다.';
+                return null;
+            }
+        );
+        if (!newTitle) return;
+        try {
+            // 현재 메모 이름 변경 직전, 더티 콘텐츠가 있으면 옛 키로 먼저 저장.
+            if (oldTitle === state.notepad.currentMemoTitle && state.notepad.isDirty) {
+                await this.save();
+            }
+            await renameMemo(oldTitle, newTitle);
+            if (oldTitle === state.notepad.currentMemoTitle) {
+                state.notepad.currentMemoTitle = newTitle;
+                this.refreshTitleDisplay();
+            }
+        } catch (e) {
+            console.error('Failed to rename memo:', e);
+            await AppAPI.showMessage('이름 변경 실패', e.message || '메모 이름을 변경하지 못했습니다.');
+        }
+    },
+
+    // 메모 삭제. 현재 메모를 삭제하면 남은 첫 메모로 전환, 없으면 기본 메모 생성.
+    async promptDelete(title) {
+        const ok = await AppAPI.confirm(
+            '🗑️ 메모 삭제',
+            `"${title}" 메모를 영구 삭제합니다.\n이 작업은 되돌릴 수 없습니다.`
+        );
+        if (!ok) return;
+        try {
+            await deleteMemo(title);
+        } catch (e) {
+            console.error('Failed to delete memo:', e);
+            await AppAPI.showMessage('삭제 실패', '메모를 삭제하지 못했습니다.');
+            return;
+        }
+        // 현재 메모를 삭제한 경우 다음 메모로 전환 (없으면 기본 메모 새로 생성).
+        if (title === state.notepad.currentMemoTitle) {
+            const memos = await listMemos();
+            if (memos.length > 0) {
+                state.notepad.isDirty = false; // 삭제됐으므로 저장 시도 막기
+                state.notepad.currentMemoTitle = '';
+                await this.switchToMemo(memos[0].title);
+            } else {
+                const newTitle = CONSTANTS.DEFAULT_MEMO_TITLE;
+                await saveMemo(newTitle, '');
+                state.notepad.isDirty = false;
+                state.notepad.currentMemoTitle = '';
+                await this.switchToMemo(newTitle);
+            }
+        }
     }
 };
 
@@ -1076,3 +1381,4 @@ window.toggleMarkdownPreview = () => Notepad.toggleMarkdownPreview();
 window.changeEncoding = () => Notepad.changeEncoding();
 window.resetNotePad = () => Notepad.resetNotePad();
 window.runCodeBlock = () => Notepad.runCodeBlock();
+window.openMemoManager = () => Notepad.openMemoManager();

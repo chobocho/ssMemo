@@ -24,6 +24,7 @@ MODULE_ORDER = [
     'src/data-sources/memory.js',
     'src/data-sources/index.js',
     'src/app-api.js',
+    'src/memo-store.js',
     'src/note-search.js',
     'src/notepad.js',
     'src/main.js',

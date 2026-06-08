@@ -105,6 +105,26 @@ body.dark-theme .note-panel.drag-over {
     flex: 0 0 auto;
 }
 
+.current-memo-title {
+    flex: 0 1 auto;
+    margin-left: 8px;
+    padding: 2px 8px;
+    font-size: 13px;
+    color: #555;
+    border: 1px solid var(--search-border, #cfd8dc);
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.03);
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body.dark-theme .current-memo-title {
+    color: #ddd;
+    background: rgba(255, 255, 255, 0.05);
+}
+
 .note-search-controls {
     display: flex;
     align-items: center;
@@ -299,6 +319,120 @@ body.dark-theme .note-editor::-webkit-scrollbar-thumb {
     word-break: break-word;
     max-height: 60vh;
     overflow-y: auto;
+}
+
+/* 메모 관리 모달 */
+.memo-manager-modal {
+    max-width: 600px;
+}
+
+.memo-manager-body {
+    white-space: normal;
+}
+
+.memo-manager-new-btn {
+    width: 100%;
+    margin-bottom: 12px;
+    background: #4caf50;
+}
+
+.memo-manager-new-btn:hover {
+    background: #388e3c;
+}
+
+.memo-manager-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.memo-manager-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--search-border, #cfd8dc);
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.02);
+}
+
+body.dark-theme .memo-manager-row {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.memo-manager-row.is-current {
+    border-color: #4caf50;
+    background: rgba(76, 175, 80, 0.08);
+}
+
+.memo-manager-title {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 14px;
+}
+
+.memo-manager-actions {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 4px;
+}
+
+.memo-manager-action {
+    padding: 4px 10px;
+    font-size: 12px;
+    background: #2196F3;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.memo-manager-action:hover:not(:disabled) {
+    background: #1976D2;
+}
+
+.memo-manager-action:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.memo-manager-action-danger {
+    background: #e53935;
+}
+
+.memo-manager-action-danger:hover:not(:disabled) {
+    background: #c62828;
+}
+
+.memo-manager-empty {
+    padding: 16px;
+    color: #888;
+    text-align: center;
+}
+
+/* 텍스트 입력 모달 */
+.prompt-message {
+    margin-bottom: 10px;
+}
+
+.prompt-input {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 14px;
+    border: 1px solid var(--search-border, #cfd8dc);
+    border-radius: 4px;
+    box-sizing: border-box;
+    color: var(--modal-text);
+    background: var(--modal-bg);
+}
+
+.prompt-error {
+    margin-top: 6px;
+    min-height: 18px;
+    color: #e53935;
+    font-size: 12px;
 }
 
 .custom-modal-footer {

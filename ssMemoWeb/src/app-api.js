@@ -47,6 +47,24 @@ export const AppAPI = {
         }
     },
 
+    async listKeys(prefix = '') {
+        try {
+            return await dataSource.listKeys(prefix);
+        } catch (err) {
+            await fallbackToMemory(err);
+            return dataSource.listKeys(prefix);
+        }
+    },
+
+    async deleteKey(key) {
+        try {
+            return await dataSource.deleteKey(key);
+        } catch (err) {
+            await fallbackToMemory(err);
+            return dataSource.deleteKey(key);
+        }
+    },
+
     isUsingFallback() {
         return usingFallback;
     },

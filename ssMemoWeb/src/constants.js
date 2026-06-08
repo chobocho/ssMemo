@@ -6,7 +6,9 @@ export const CONSTANTS = {
     WAILS_CHECK_INTERVAL: 100,
     SEARCH_MISS_DURATION: 450,
     DIVIDER_LENGTH: 50,
-    NOTEPAD_KEY: 'NOTEPAD',
+    NOTEPAD_KEY: 'NOTEPAD',              // 레거시 단일 메모 키 (마이그레이션 대상)
+    MEMO_KEY_PREFIX: 'memo:',            // 멀티 메모 키 prefix — memo:${title}
+    DEFAULT_MEMO_TITLE: '기본 메모',      // 첫 실행/마이그레이션 시 기본 메모 이름
     CALC_MEMORY_KEY: '__CALC_MEMORY__', // 코드 블럭 세션 메모리 영속 저장 키
     LOADING_SPINNER_THRESHOLD: 200 * 1024, // 200KB 이상 파일 로드 시 스피너 표시
     MAX_FILE_SIZE: 10 * 1024 * 1024,       // 10MB 업로드 상한

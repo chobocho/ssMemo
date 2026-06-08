@@ -15,5 +15,6 @@ export const state = {
         lastSavedContent: '',
         isDirty: false,
         autoSaveTimer: null,
+        currentMemoTitle: '', // 현재 편집 중인 메모 제목
     },
 };

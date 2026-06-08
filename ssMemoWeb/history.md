@@ -14,6 +14,7 @@
 - 코드 블럭 메모리를 IndexedDB에 영속 저장. `calc.js`에 `serializeEnv`/`deserializeEnv` 추가 — BigInt는 `{_big: "12345"}`, Number는 `{_num: 3.14}` 마커로 JSON 직렬화해 5000자리 정수까지 손실 없이 보존. 기존 `AppAPI.saveOrUpdateNoteByDate`/`getNoteByDate`를 `CALC_MEMORY_KEY` 키로 재사용 (IndexedDB 실패 시 메모리 폴백 그대로 동작). `Notepad.open()`에서 `await loadCalcMemory()`로 페이지 로드 직후 메모리 복원, 💾/🗑️ 액션 직후 `persistCalcMemory()`로 즉시 저장. 직렬화 라운드트립/잘못된 JSON 방어 단위 테스트 8건 추가.
 - `readme.md` 갱신. 주요 기능에 마크다운 미리보기/인코딩 변경/코드 블럭 실행기 항목 추가. 단축키 표에 `Ctrl + Enter` 추가. "코드 블럭 실행 🧮" 섹션 신설(문법/모달 옵션/예시). 폴더 구조에 누락됐던 utils/markdown/encoding/file-utils/calc/data-sources(memory) 등 모듈 보강.
 - 절취선(2000자 분할) 버튼 버그 2건 수정. ①절취선이 이미 들어간 메모를 다시 열면 버튼이 ➗(분할)로 잘못 표시되던 문제 — `Notepad.open()`/`resetNotePad()` 끝에 `syncSplitButtonState()`를 추가해 콘텐츠와 버튼 상태를 항상 동기화. ②절취선이 있는 메모를 2000자 이하로 줄이면 ➕ 클릭해도 절취선이 제거되지 않던 문제 — `splitNoteIntoChunks`의 `content.length <= len` 조기 반환이 join 경로까지 막던 것을 분리해, 절취선이 있으면 길이와 무관하게 항상 제거하도록 분기 재구성.
+- 멀티 메모 기능 추가 (저장/불러오기/이름 변경/삭제). `src/memo-store.js` 신규 — IndexedDB에 `memo:${title}` 키로 저장, 제목 검증/리스트(최근 수정 순)/CRUD/리네임을 캡슐화. 데이터 소스(`IndexedDbSource`/`MemorySource`/`RestSource`)에 `listKeys(prefix)`/`deleteKey(key)` 추가, `AppAPI`에 폴백 처리 포함해 노출. 헤더에 현재 메모 제목 표시(`#current-memo-title`), 툴바 `📋 메모 관리` 버튼 추가 → 모달에서 [➕ 새 메모]/[열기/이름변경/삭제] 액션 제공. 텍스트 입력용 `promptText` 헬퍼 작성. `state.notepad.currentMemoTitle` 추가, 자동 저장은 현재 메모로 향함. 레거시 `NOTEPAD` 단일 메모는 첫 실행 시 `memo:기본 메모`로 마이그레이션 후 옛 키 제거(재실행 안전). `resetNotePad`는 메모 삭제 대신 현재 메모 본문만 비우도록 변경. `validateTitle` 단위 테스트 7건 + 브라우저 라이브 메모 CRUD 테스트 추가.
 
 ## 2026-04-28
 
