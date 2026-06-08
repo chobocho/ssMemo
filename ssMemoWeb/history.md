@@ -13,6 +13,7 @@
 - 코드 블럭 실행기에 세션 메모리 추가. 모달 옵션 `💾 메모리에 저장`/`🗑️ 메모리 초기화` 신설. 매 실행 시 `calcMemory`가 `initialEnv`로 자동 주입되어 저장된 변수는 다음 실행에서 그대로 사용 가능 (읽기 자동, 쓰기는 명시적 저장만). 메모리에 변수가 있으면 결과 모달 본문 상단에 `[메모리: x, y]` 표기. 페이지 새로고침 시 초기화 (영속 저장 아님). `runCode(source, initialEnv)`가 원본 env를 변형하지 않음을 보장하는 단위 테스트 6건 추가.
 - 코드 블럭 메모리를 IndexedDB에 영속 저장. `calc.js`에 `serializeEnv`/`deserializeEnv` 추가 — BigInt는 `{_big: "12345"}`, Number는 `{_num: 3.14}` 마커로 JSON 직렬화해 5000자리 정수까지 손실 없이 보존. 기존 `AppAPI.saveOrUpdateNoteByDate`/`getNoteByDate`를 `CALC_MEMORY_KEY` 키로 재사용 (IndexedDB 실패 시 메모리 폴백 그대로 동작). `Notepad.open()`에서 `await loadCalcMemory()`로 페이지 로드 직후 메모리 복원, 💾/🗑️ 액션 직후 `persistCalcMemory()`로 즉시 저장. 직렬화 라운드트립/잘못된 JSON 방어 단위 테스트 8건 추가.
 - `readme.md` 갱신. 주요 기능에 마크다운 미리보기/인코딩 변경/코드 블럭 실행기 항목 추가. 단축키 표에 `Ctrl + Enter` 추가. "코드 블럭 실행 🧮" 섹션 신설(문법/모달 옵션/예시). 폴더 구조에 누락됐던 utils/markdown/encoding/file-utils/calc/data-sources(memory) 등 모듈 보강.
+- 절취선(2000자 분할) 버튼 버그 2건 수정. ①절취선이 이미 들어간 메모를 다시 열면 버튼이 ➗(분할)로 잘못 표시되던 문제 — `Notepad.open()`/`resetNotePad()` 끝에 `syncSplitButtonState()`를 추가해 콘텐츠와 버튼 상태를 항상 동기화. ②절취선이 있는 메모를 2000자 이하로 줄이면 ➕ 클릭해도 절취선이 제거되지 않던 문제 — `splitNoteIntoChunks`의 `content.length <= len` 조기 반환이 join 경로까지 막던 것을 분리해, 절취선이 있으면 길이와 무관하게 항상 제거하도록 분기 재구성.
 
 ## 2026-04-28
 

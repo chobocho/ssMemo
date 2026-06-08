@@ -102,6 +102,8 @@ export const Notepad = {
 
         this.updateLineNumbers();
         this.updateCharCount();
+        // 로드된 메모에 이미 절취선이 있을 수 있으므로 버튼 상태 동기화.
+        this.syncSplitButtonState();
 
         // 큰 파일에서 keystroke마다 전체 스캔(countLines)을 돌면 입력이 끊긴다.
         // 줄번호 갱신은 50ms로 묶고, char count/scroll/isDirty는 즉시 반영.
@@ -326,33 +328,44 @@ export const Notepad = {
         }
     },
 
+    // 절취선 토글 버튼의 텍스트/툴팁을 현재 메모 내용에 맞춘다.
+    // 메모 로드/리셋/분할 토글 직후 호출해 시각과 콘텐츠 상태를 일치시킨다.
+    syncSplitButtonState(len = 2000) {
+        const btn = document.querySelector('button[onclick^="splitNoteIntoChunks"]');
+        if (!btn || !noteEditor) return;
+        const hasDelimiter = noteEditor.value.includes(CHUNK_DELIMITER);
+        if (hasDelimiter) {
+            btn.textContent = '➕';
+            btn.title = '절취선 문구 삭제';
+        } else {
+            btn.textContent = '➗';
+            btn.title = `${len}자 크기로 나누기`;
+        }
+    },
+
     splitNoteIntoChunks(len) {
-        if (!noteEditor) return;
+        if (!noteEditor || !len || len <= 0) return;
 
         const content = noteEditor.value;
-        if (!len || len <= 0 || content.length <= len) return;
-
-        const btn = document.querySelector('button[onclick^="splitNoteIntoChunks"]');
         const hasDelimiter = content.includes(CHUNK_DELIMITER);
 
         if (hasDelimiter) {
+            // 절취선이 있으면 길이와 무관하게 제거(토글) — 짧아진 메모에서도 동작.
             noteEditor.value = joinTextChunks(content);
-            if (btn) {
-                btn.textContent = '➗';
-                btn.title = `${len}자 크기로 나누기`;
-            }
-            if (state.elements.noteSearchInput.value === '절취선') {
+            if (state.elements.noteSearchInput &&
+                state.elements.noteSearchInput.value === '절취선') {
                 state.elements.noteSearchInput.value = '';
             }
         } else {
+            // 절취선이 없을 때만 길이 조건으로 분할 여부 결정.
+            if (content.length <= len) return;
             noteEditor.value = splitTextIntoChunks(content, len);
-            if (btn) {
-                btn.textContent = '➕';
-                btn.title = '절취선 문구 삭제';
+            if (state.elements.noteSearchInput) {
+                state.elements.noteSearchInput.value = '절취선';
             }
-            state.elements.noteSearchInput.value = '절취선';
         }
 
+        this.syncSplitButtonState(len);
         this.updateLineNumbers();
         this.updateCharCount();
         state.notepad.isDirty = noteEditor.value !== state.notepad.lastSavedContent;
@@ -876,6 +889,7 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         }
         this.updateLineNumbers();
         this.updateCharCount();
+        this.syncSplitButtonState();
         await AppAPI.showMessage('메모장 초기화', '메모장이 초기화되었습니다.');
     },
 
