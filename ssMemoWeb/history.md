@@ -3,6 +3,10 @@
 날짜는 git 커밋 기준이 아닌 작업 항목 단위로 기록합니다.
 신규 변경은 위쪽에 추가합니다.
 
+## 2026-06-08
+
+- 빌드 산출물을 `release/index.html` 단일 파일로 단순화. `build.sh`에서 다중 파일 복사 단계(index.html / readme.md / src/*.js / style.css / data-sources/*.js) 제거하고 `bundle.py`만 실행. `bundle.py` 출력 파일명을 `index.single.html` → `index.html`로 변경. `build.bat`도 동일하게 정리하고 cp949 + CRLF로 저장해 Windows cmd 한글 깨짐 방지. 산출물 91.1KB 단일 파일로 검증 완료.
+
 ## 2026-04-28
 
 - 6MB 한글 파일 로드 시 "디코딩 실패 + 로딩 애니메이션 무한 잔류" 버그 수정. 원인 1: `decodeJohab`의 `out += String.fromCharCode(...)` 누적이 6M번 반복되며 모바일 WebView에서 수십 초 동안 메인 스레드를 잠가 사용자 체감으론 "영구 멈춤". → `Uint16Array`에 codepoint를 채운 뒤 청크별 `String.fromCharCode.apply`로 한 번에 합치도록 재작성 (Node 기준 284ms → 71ms, 4배). 원인 2: `nextFrame()`이 페이지 백그라운드 등으로 rAF가 throttle되면 영구 pending → spinner 잔류. `setTimeout(100ms)` fallback 추가. 원인 3: `hideLoading()`이 `try/catch` 밖에 있어 그 사이 다른 예외가 발생하면 도달 못 함. `handleIncomingFile`/`changeEncoding` 모두 `finally` 블록으로 이동. 추가로 `looksGarbled(text)` 휴리스틱(앞 64KB의 U+FFFD 비율 1% 초과)을 도입해 자동 감지가 빗나갔다고 판단되면 결과 메시지에 "🔤 버튼으로 인코딩을 바꿔보세요" 힌트 표시. 단위 테스트 5건 추가.

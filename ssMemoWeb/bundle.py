@@ -72,7 +72,7 @@ def main() -> None:
         html,
     )
 
-    out = ROOT / 'release' / 'index.single.html'
+    out = ROOT / 'release' / 'index.html'
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html, encoding='utf-8')
     size_kb = out.stat().st_size / 1024

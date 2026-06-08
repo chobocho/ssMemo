@@ -1,30 +1,21 @@
 @echo off
-REM ssMemoWeb ë¹Œë“œ ìŠ¤í¬ë¦½íŠ¸ (Windows)
-REM ì‹¤í–‰ì— í•„ìš”í•œ íŒŒì¼ë§Œ release í´ë”ë¡œ ë³µì‚¬í•©ë‹ˆë‹¤.
+REM ssMemoWeb ºôµå ½ºÅ©¸³Æ® (Windows)
+REM release Æú´õ¿¡ ´ÜÀÏ index.html ÆÄÀÏÀ» »êÃâÇÕ´Ï´Ù.
 chcp 949 > nul
 setlocal
 
 set "ROOT_DIR=%~dp0"
 set "RELEASE_DIR=%ROOT_DIR%release"
 
-echo [ssMemoWeb] release í´ë” ì •ë¦¬...
+echo [ssMemoWeb] release Æú´õ Á¤¸®...
 if exist "%RELEASE_DIR%" rmdir /S /Q "%RELEASE_DIR%"
 mkdir "%RELEASE_DIR%"
-mkdir "%RELEASE_DIR%\src"
-mkdir "%RELEASE_DIR%\src\data-sources"
 
-echo [ssMemoWeb] íŒŒì¼ ë³µì‚¬...
-copy /Y "%ROOT_DIR%index.html"               "%RELEASE_DIR%\"            > nul
-copy /Y "%ROOT_DIR%readme.md"                "%RELEASE_DIR%\"            > nul
-copy /Y "%ROOT_DIR%src\*.js"                 "%RELEASE_DIR%\src\"        > nul
-copy /Y "%ROOT_DIR%src\style.css"            "%RELEASE_DIR%\src\"        > nul
-copy /Y "%ROOT_DIR%src\data-sources\*.js"    "%RELEASE_DIR%\src\data-sources\" > nul
-
-echo [ssMemoWeb] ë‹¨ì¼ íŒŒì¼ ë²ˆë“¤ ìƒì„±...
+echo [ssMemoWeb] ´ÜÀÏ ÆÄÀÏ ¹øµé »ı¼º...
 python "%ROOT_DIR%bundle.py"
 
-echo [ssMemoWeb] ë¹Œë“œ ì™„ë£Œ: %RELEASE_DIR%
-echo ì‹¤í–‰: cd release ^&^& python -m http.server 8001
-echo ë‹¨ì¼ íŒŒì¼: %RELEASE_DIR%\index.single.html (ë¸Œë¼ìš°ì €ë¡œ ì§ì ‘ ì—´ê¸° ê°€ëŠ¥)
+echo [ssMemoWeb] ºôµå ¿Ï·á: %RELEASE_DIR%\index.html
+echo ½ÇÇà: ºê¶ó¿ìÀú·Î %RELEASE_DIR%\index.html Á÷Á¢ ¿­±â
+echo       ¶Ç´Â cd release ^&^& python -m http.server 8001
 
 endlocal
