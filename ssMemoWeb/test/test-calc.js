@@ -82,6 +82,21 @@ assertThrows(() => runCode('unknown'), '정의되지 않은', '미정의 변수'
 assertThrows(() => runCode('foo(1)'), '알 수 없는 함수', '미정의 함수');
 assertThrows(() => runCode('1 +'), '예상치 못한', '불완전 표현식');
 
+section('calc.js — initialEnv (메모리)');
+
+// 외부에서 주입한 변수가 코드에서 사용 가능
+assertEqual(runCode('x + 5', { x: 10n }).outputs, ['15'], 'initialEnv의 BigInt 변수 사용');
+assertEqual(runCode('y * 2', { y: 3.14 }).outputs, ['6.28'], 'initialEnv의 Number 변수 사용');
+
+// initialEnv는 원본이 보존(불변)되어야 함
+const memBefore = { a: 1n };
+const r = runCode('a = 99\nb = 2', memBefore);
+assertEqual(memBefore.a, 1n, 'initialEnv 원본 a는 보존됨');
+assertEqual('b' in memBefore, false, 'initialEnv에 새 변수가 새지 않음');
+// 반환된 env에는 신/구 변수 모두 포함
+assertEqual(r.env.a, 99n, '반환 env에 갱신된 변수 포함');
+assertEqual(r.env.b, 2n, '반환 env에 신규 변수 포함');
+
 section('calc.js — formatValue');
 
 assertEqual(formatValue(42n), '42', 'BigInt 포맷');

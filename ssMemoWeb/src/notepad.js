@@ -48,6 +48,10 @@ const fileTabs = {
     previewStates: { 0: false, 1: false, 2: false, 3: false, 4: false, 5: false, 6: false } // .md 미리보기 상태
 };
 
+// 코드 블럭 실행기의 세션 메모리 — "메모리에 저장" 옵션을 선택했을 때만 갱신됨.
+// 페이지 새로고침 시 초기화 (영속 저장 아님).
+const calcMemory = {};
+
 export const Notepad = {
     async open() {
         notePanel = document.getElementById('note-panel');
@@ -341,7 +345,12 @@ Ctrl + > - 다음 검색 결과로 이동
 Ctrl + L - 구분선 삽입
 Ctrl + Enter - 선택한 코드 실행 🧮
   (드래그로 선택 후 실행. 선택 없으면 현재 줄 실행)
-  결과 모달에서 📥 버튼으로 코드 다음 줄에 # 주석으로 삽입 가능
+  결과 모달 옵션:
+    📥 메모에 삽입 — 코드 다음 줄에 # 주석으로 결과 삽입
+    💾 메모리에 저장 — 이번 실행의 변수를 세션 메모리에 보존
+    🗑️ 메모리 초기화 — 저장된 변수 모두 삭제
+  저장된 메모리 변수는 다음 실행에서 자동으로 읽혀 사용 가능
+  (메모리는 페이지 새로고침 시 초기화)
   지원: 변수, +,-,*,/,//, 괄호, sin/cos/tan,
         factorial(n≤1000), # 주석
   정수는 5000자리 이상도 정확.
@@ -922,8 +931,11 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
     },
 
     // 선택된 텍스트(또는 커서가 위치한 줄)를 코드로 실행해 결과를 모달로 표시.
-    // 메인 메모장에서 실행한 경우, 모달에서 "메모에 삽입"을 선택하면 코드 다음
-    // 줄에 `# ...` 주석 형태로 결과를 끼워 넣는다 (재실행 시 주석으로 무시됨).
+    // 모달 옵션:
+    //   - 📥 메모에 삽입 (메인 탭 + 출력 있을 때)
+    //   - 💾 메모리에 저장 (항상)
+    //   - 🗑️ 메모리 초기화 (메모리에 변수가 있을 때)
+    // 메모리는 매 실행 시 initialEnv로 자동 주입(읽기)되지만, 쓰기는 명시적 저장만.
     async runCodeBlock() {
         const currentTab = fileTabs.currentTab;
         const isMainTab = currentTab === 'main';
@@ -955,27 +967,39 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
             return;
         }
 
-        let outputs;
+        let outputs, env;
         try {
-            outputs = runCode(code).outputs;
+            const r = runCode(code, calcMemory);
+            outputs = r.outputs;
+            env = r.env;
         } catch (err) {
             await AppAPI.showMessage('🧮 실행 오류', err.message || String(err));
             return;
         }
 
-        const body = outputs.length > 0 ? outputs.join('\n') : '(출력 없음)';
-        // 메인 탭에서 출력이 있을 때만 "메모에 삽입" 옵션 제공.
-        // 읽기 전용 파일 탭에서는 삽입 불가 → 단순 결과 모달만 표시.
-        const canInsert = isMainTab && outputs.length > 0;
-        if (!canInsert) {
-            await AppAPI.showMessage('🧮 실행 결과', body);
-            return;
+        const memKeys = Object.keys(calcMemory);
+        const memHeader = memKeys.length > 0
+            ? `[메모리: ${memKeys.join(', ')}]\n\n`
+            : '';
+        const body = memHeader + (outputs.length > 0 ? outputs.join('\n') : '(출력 없음)');
+
+        const options = [];
+        if (isMainTab && outputs.length > 0) {
+            options.push({ value: 'insert', label: '📥 메모에 삽입' });
         }
-        const action = await AppAPI.choose('🧮 실행 결과', body, [
-            { value: 'insert', label: '📥 메모에 삽입' },
-        ]);
+        options.push({ value: 'save', label: '💾 메모리에 저장' });
+        if (memKeys.length > 0) {
+            options.push({ value: 'clear', label: '🗑️ 메모리 초기화' });
+        }
+
+        const action = await AppAPI.choose('🧮 실행 결과', body, options);
         if (action === 'insert') {
             this.insertCodeResult(editor, codeEnd, outputs);
+        } else if (action === 'save') {
+            // 실행 후의 env(initialEnv + 신규 대입) 전체를 메모리에 병합.
+            Object.assign(calcMemory, env);
+        } else if (action === 'clear') {
+            for (const k of Object.keys(calcMemory)) delete calcMemory[k];
         }
     },
 
