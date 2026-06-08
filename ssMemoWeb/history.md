@@ -7,6 +7,7 @@
 
 - 빌드 산출물을 `release/index.html` 단일 파일로 단순화. `build.sh`에서 다중 파일 복사 단계(index.html / readme.md / src/*.js / style.css / data-sources/*.js) 제거하고 `bundle.py`만 실행. `bundle.py` 출력 파일명을 `index.single.html` → `index.html`로 변경. `build.bat`도 동일하게 정리하고 cp949 + CRLF로 저장해 Windows cmd 한글 깨짐 방지. 산출물 91.1KB 단일 파일로 검증 완료.
 - `readme.md` 빌드 안내를 단일 파일 산출 구조에 맞춰 갱신 (멀티 파일/`index.single.html` 표기 제거).
+- 코드 블럭 실행 기능 추가 🧮. 에디터에서 텍스트를 드래그로 선택한 뒤 🧮 버튼 또는 Ctrl+Enter로 실행. 선택이 없으면 커서가 있는 줄을 자동 사용. 결과는 모달로 표시. `src/calc.js` 신규 작성 — 토크나이저/재귀하강 파서/평가기로 구성, 외부 의존 없음. 정수 연산은 BigInt로 5000자리 이상 정확. 지원: 변수 대입(`x = 1+2`), `+`/`-`/`*`/`/`(정확하면 BigInt, 아니면 부동소수점)/`//`(정수 몫), 괄호, 단항 부호, `sin`/`cos`/`tan`(라디안), `factorial(n)` (n ≤ 1000), `#` 주석. 36개 단위 테스트 모두 통과. 모달 본문에 `max-height: 60vh; overflow-y: auto` 추가해 큰 수 결과도 스크롤로 확인 가능.
 
 ## 2026-04-28
 

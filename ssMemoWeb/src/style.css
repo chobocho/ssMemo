@@ -297,6 +297,8 @@ body.dark-theme .note-editor::-webkit-scrollbar-thumb {
     line-height: 1.6;
     white-space: pre-wrap;
     word-break: break-word;
+    max-height: 60vh;
+    overflow-y: auto;
 }
 
 .custom-modal-footer {

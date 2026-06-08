@@ -9,6 +9,7 @@ import { splitTextIntoChunks, joinTextChunks, buildLineNumbersText, debounce, ne
 import { renderMarkdown } from './markdown.js';
 import { isAllowedTextFile, isOversized } from './file-utils.js';
 import { decodeKoreanText, decodeWithEncoding, looksGarbled } from './encoding.js';
+import { runCode } from './calc.js';
 
 // Cache DOM elements
 let notePanel = null;
@@ -279,6 +280,12 @@ export const Notepad = {
             return;
         }
 
+        if (e.ctrlKey && e.key === 'Enter') {
+            e.preventDefault();
+            this.runCodeBlock();
+            return;
+        }
+
         if (e.ctrlKey && e.shiftKey && e.key) {
             const upperKey = e.key.toUpperCase();
             const symbol = SYMBOL_SHORTCUTS[upperKey];
@@ -332,6 +339,9 @@ Ctrl + < - 이전 검색 결과로 이동
 Ctrl + > - 다음 검색 결과로 이동
 
 Ctrl + L - 구분선 삽입
+Ctrl + Enter - 선택한 코드 실행 🧮
+  (드래그로 선택 후 실행. 변수/+,-,*,/,//, 괄호,
+   sin/cos/tan, factorial(n≤1000), # 주석 지원)
 
 기호 삽입:
 Ctrl + Shift + A - →
@@ -895,6 +905,46 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
             if (files.length === 0) return;
             await this.handleIncomingFile(files[0]);
         });
+    },
+
+    // 선택된 텍스트(또는 커서가 위치한 줄)를 코드로 실행해 결과를 모달로 표시.
+    // 변수/연산은 한 번의 실행 안에서만 유효 (저장되지 않음).
+    async runCodeBlock() {
+        const currentTab = fileTabs.currentTab;
+        const editor = currentTab === 'main'
+            ? noteEditor
+            : document.getElementById(`note-editor-${currentTab}`);
+        if (!editor) return;
+
+        const start = editor.selectionStart;
+        const end = editor.selectionEnd;
+        let code;
+        if (start !== end) {
+            code = editor.value.substring(start, end);
+        } else {
+            // 선택이 없으면 커서가 있는 줄을 사용
+            const text = editor.value;
+            let ls = start;
+            while (ls > 0 && text[ls - 1] !== '\n') ls--;
+            let le = start;
+            while (le < text.length && text[le] !== '\n') le++;
+            code = text.substring(ls, le);
+        }
+
+        if (!code.trim()) {
+            await AppAPI.showMessage('🧮 코드 실행', '실행할 코드를 드래그로 선택하거나 코드 라인에 커서를 두세요.');
+            return;
+        }
+
+        try {
+            const { outputs } = runCode(code);
+            const body = outputs.length > 0
+                ? outputs.join('\n')
+                : '(출력 없음)';
+            await AppAPI.showMessage('🧮 실행 결과', body);
+        } catch (err) {
+            await AppAPI.showMessage('🧮 실행 오류', err.message || String(err));
+        }
     }
 };
 
@@ -911,3 +961,4 @@ window.downloadNotePad = () => Notepad.downloadNotePad();
 window.toggleMarkdownPreview = () => Notepad.toggleMarkdownPreview();
 window.changeEncoding = () => Notepad.changeEncoding();
 window.resetNotePad = () => Notepad.resetNotePad();
+window.runCodeBlock = () => Notepad.runCodeBlock();
