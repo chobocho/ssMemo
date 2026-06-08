@@ -12,6 +12,7 @@
 - 코드 실행 결과 모달에 "📥 메모에 삽입" 옵션 추가. 클릭하면 코드 영역 끝에 `# 결과` 주석 라인으로 삽입 — 재실행 시 주석으로 자동 무시되므로 부작용 없음. `AppAPI.choose`를 재사용해 별도 모달 헬퍼 없이 구현. 메인 메모장에서만 활성, 읽기 전용 파일 탭은 단순 결과 모달만 표시. 도움말 패널에도 해당 동작 안내 한 줄 추가.
 - 코드 블럭 실행기에 세션 메모리 추가. 모달 옵션 `💾 메모리에 저장`/`🗑️ 메모리 초기화` 신설. 매 실행 시 `calcMemory`가 `initialEnv`로 자동 주입되어 저장된 변수는 다음 실행에서 그대로 사용 가능 (읽기 자동, 쓰기는 명시적 저장만). 메모리에 변수가 있으면 결과 모달 본문 상단에 `[메모리: x, y]` 표기. 페이지 새로고침 시 초기화 (영속 저장 아님). `runCode(source, initialEnv)`가 원본 env를 변형하지 않음을 보장하는 단위 테스트 6건 추가.
 - 코드 블럭 메모리를 IndexedDB에 영속 저장. `calc.js`에 `serializeEnv`/`deserializeEnv` 추가 — BigInt는 `{_big: "12345"}`, Number는 `{_num: 3.14}` 마커로 JSON 직렬화해 5000자리 정수까지 손실 없이 보존. 기존 `AppAPI.saveOrUpdateNoteByDate`/`getNoteByDate`를 `CALC_MEMORY_KEY` 키로 재사용 (IndexedDB 실패 시 메모리 폴백 그대로 동작). `Notepad.open()`에서 `await loadCalcMemory()`로 페이지 로드 직후 메모리 복원, 💾/🗑️ 액션 직후 `persistCalcMemory()`로 즉시 저장. 직렬화 라운드트립/잘못된 JSON 방어 단위 테스트 8건 추가.
+- `readme.md` 갱신. 주요 기능에 마크다운 미리보기/인코딩 변경/코드 블럭 실행기 항목 추가. 단축키 표에 `Ctrl + Enter` 추가. "코드 블럭 실행 🧮" 섹션 신설(문법/모달 옵션/예시). 폴더 구조에 누락됐던 utils/markdown/encoding/file-utils/calc/data-sources(memory) 등 모듈 보강.
 
 ## 2026-04-28
 
