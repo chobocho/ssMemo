@@ -101,10 +101,6 @@ body.dark-theme .note-panel.drag-over {
     min-height: 44px;
 }
 
-.note-panel-title {
-    flex: 0 0 auto;
-}
-
 .current-memo-title {
     flex: 0 1 auto;
     margin-left: 8px;
@@ -747,10 +743,6 @@ body.dark-theme .note-editor-readonly .note-editor {
         min-height: auto;
     }
 
-    .note-panel-title {
-        font-size: 14px;
-    }
-
     .note-search-controls input {
         width: 100px;
         height: 30px;
@@ -835,12 +827,6 @@ body.dark-theme .note-editor-readonly .note-editor {
         justify-content: center;
     }
 
-    .note-panel-title {
-        width: 100%;
-        text-align: center;
-        margin-bottom: 4px;
-        font-size: 13px;
-    }
 
     .note-search-controls {
         order: 2;
