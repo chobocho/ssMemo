@@ -1,0 +1,3957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ssMemo V0.126.1e1</title>
+    <style>
+/* [추가/수정] CSS 변수 정의 (기본 라이트 모드) */
+:root {
+    --modal-bg: #ffffff;
+    --modal-text: #000000;
+    --search-border: #cfd8dc;
+}
+
+/* [추가] 다크 테마 클래스 */
+body.dark-theme {
+    --modal-bg: #2d2d2d;
+    --modal-text: #ffffff;
+    --search-border: #444444;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: transparent;
+    font-family: sans-serif;
+    user-select: none;
+    overflow: hidden;
+    /* transition 추가하여 테마 변경 시 부드럽게 */
+    transition: background-color 0.3s;
+}
+
+/* 다크모드에서 입력창과 버튼 가시성 확보 */
+body.dark-theme textarea {
+    background-color: #404040;
+    color: white;
+    border: 1px solid #555;
+}
+
+#app {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+button {
+    cursor: pointer;
+    -webkit-app-region: no-drag;
+}
+
+#note-tooltip {
+    position: fixed;
+    max-width: 260px;
+    padding: 6px 8px;
+    background: rgba(230, 230, 230, 0.9);
+    color: #000000;
+    font-size: 12px;
+    border-radius: 6px;
+    pointer-events: none;
+    white-space: pre-wrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+}
+
+.hidden { display: none !important; }
+
+/* 메모장 패널 스타일 */
+.note-panel {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--modal-bg);
+    border: 1px solid var(--search-border);
+    border-radius: 0;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    z-index: 150;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+/* 드래그 오버 시 시각적 효과 */
+.note-panel.drag-over {
+    background: rgba(33, 150, 243, 0.1);
+    border: 2px dashed #2196F3;
+}
+
+body.dark-theme .note-panel.drag-over {
+    background: rgba(33, 150, 243, 0.15);
+    border: 2px dashed #64B5F6;
+}
+
+.note-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 8px;
+    background: rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid var(--search-border);
+    color: var(--modal-text);
+    font-weight: bold;
+    gap: 6px;
+    flex-wrap: wrap;
+    min-height: 44px;
+}
+
+.current-memo-title {
+    flex: 0 1 auto;
+    margin-left: 8px;
+    padding: 2px 8px;
+    font-size: 13px;
+    color: #555;
+    border: 1px solid var(--search-border, #cfd8dc);
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.03);
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body.dark-theme .current-memo-title {
+    color: #ddd;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.note-search-controls {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex: 1 1 auto;
+    justify-content: center;
+    min-width: 0;
+}
+
+.note-search-controls input {
+    width: 150px;
+    max-width: 100%;
+    height: 32px;
+    padding: 0 8px;
+    border-radius: 6px;
+    border: 1px solid var(--search-border);
+    background: transparent;
+    color: var(--modal-text);
+    outline: none;
+    font-weight: normal;
+    font-size: 14px;
+}
+
+.note-search-controls button {
+    background: none;
+    border: none;
+    font-size: 18px;
+    padding: 6px;
+    min-width: 36px;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.note-search-controls button:hover {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+body.dark-theme .note-search-controls button:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.note-search-controls input.note-search-miss {
+    border-color: #d32f2f;
+}
+
+.note-icon-btn {
+    background: none;
+    border: none;
+    padding: 6px;
+    color: var(--modal-text);
+    font-size: 18px;
+    cursor: pointer;
+    min-width: 36px;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.note-icon-btn:hover {
+    background: rgba(0, 0, 0, 0.08);
+    border-radius: 30%;
+}
+
+.note-editor-container {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+}
+
+.line-numbers {
+    width: 40px;
+    /* 우측 8px = 숫자와 경계선 사이 간격. 좌측 0. 상하 10px(textarea padding과 일치). */
+    padding: 10px 8px 10px 0;
+    text-align: right;
+    background: rgba(0, 0, 0, 0.03);
+    border-right: 1px solid var(--search-border);
+    color: #888;
+    font-family: monospace;
+    font-size: 14px;
+    line-height: 24px;
+    /* 단일 텍스트 노드("1\n2\n...")로 줄번호를 그린다.
+       white-space: pre 로 \n을 줄바꿈으로 보존, line-height(24px)가
+       textarea와 동일해 시각적으로 1:1 정렬. <div> N개 생성 비용을 제거 */
+    white-space: pre;
+    user-select: none;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.note-editor {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 10px;
+    margin: 0;
+    resize: none;
+    font-family: monospace;
+    font-size: 14px;
+    line-height: 24px; /* line-numbers와 동일하게 설정 */
+    background: transparent;
+    color: var(--modal-text);
+    overflow-y: auto;
+    box-sizing: border-box;
+    white-space: pre;
+    overflow-x: auto;
+    height: 100%;
+}
+
+/* 22줄이 넘어가면 스크롤바 표시 (기존에는 항상 숨김이었으나 변경) */
+.note-editor::-webkit-scrollbar {
+    display: initial;
+    width: 8px;
+}
+
+.note-editor::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+body.dark-theme .note-editor::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.note-char-count-panel {
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 8px;
+    color: var(--modal-text);
+    font-weight: lighter;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+/* 커스텀 모달 스타일 */
+.custom-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.custom-modal {
+    background: var(--modal-bg);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    min-width: 320px;
+    max-width: 500px;
+    animation: slideIn 0.2s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.custom-modal-header {
+    padding: 16px 20px;
+    font-weight: bold;
+    font-size: 16px;
+    color: var(--modal-text);
+    border-bottom: 1px solid var(--search-border);
+}
+
+.custom-modal-body {
+    padding: 20px;
+    color: var(--modal-text);
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+/* 메모 관리 모달 */
+.memo-manager-modal {
+    max-width: 600px;
+}
+
+.memo-manager-body {
+    white-space: normal;
+}
+
+.memo-manager-new-btn {
+    width: 100%;
+    margin-bottom: 12px;
+    background: #4caf50;
+}
+
+.memo-manager-new-btn:hover {
+    background: #388e3c;
+}
+
+.memo-manager-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.memo-manager-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--search-border, #cfd8dc);
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.02);
+}
+
+body.dark-theme .memo-manager-row {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.memo-manager-row.is-current {
+    border-color: #4caf50;
+    background: rgba(76, 175, 80, 0.08);
+}
+
+.memo-manager-title {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 14px;
+}
+
+.memo-manager-actions {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 4px;
+}
+
+.memo-manager-action {
+    padding: 4px 10px;
+    font-size: 12px;
+    background: #2196F3;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.memo-manager-action:hover:not(:disabled) {
+    background: #1976D2;
+}
+
+.memo-manager-action:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.memo-manager-action-danger {
+    background: #e53935;
+}
+
+.memo-manager-action-danger:hover:not(:disabled) {
+    background: #c62828;
+}
+
+.memo-manager-empty {
+    padding: 16px;
+    color: #888;
+    text-align: center;
+}
+
+/* 텍스트 입력 모달 */
+.prompt-message {
+    margin-bottom: 10px;
+}
+
+.prompt-input {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 14px;
+    border: 1px solid var(--search-border, #cfd8dc);
+    border-radius: 4px;
+    box-sizing: border-box;
+    color: var(--modal-text);
+    background: var(--modal-bg);
+}
+
+.prompt-error {
+    margin-top: 6px;
+    min-height: 18px;
+    color: #e53935;
+    font-size: 12px;
+}
+
+.custom-modal-footer {
+    padding: 12px 20px;
+    display: flex;
+    justify-content: flex-end;
+    border-top: 1px solid var(--search-border);
+}
+
+/* choose() 모달의 옵션 버튼 — body와 footer 사이에 세로로 쌓는다 */
+.custom-modal-choices {
+    padding: 8px 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.custom-modal-choices .custom-modal-btn {
+    width: 100%;
+    text-align: left;
+    padding: 10px 14px;
+}
+
+.custom-modal-choices .custom-modal-btn.is-current {
+    background: #4caf50;
+}
+
+.custom-modal-choices .custom-modal-btn.is-current:hover {
+    background: #388e3c;
+}
+
+.custom-modal-btn {
+    padding: 8px 24px;
+    background: #2196F3;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.custom-modal-btn:hover {
+    background: #1976D2;
+}
+
+.custom-modal-footer .custom-modal-btn-cancel {
+    background: #757575;
+    margin-right: 8px;
+}
+.custom-modal-footer .custom-modal-btn-cancel:hover {
+    background: #616161;
+}
+
+.custom-modal-footer .custom-modal-btn-danger {
+    background: #d32f2f;
+}
+.custom-modal-footer .custom-modal-btn-danger:hover {
+    background: #b71c1c;
+}
+
+.custom-modal-btn:active {
+    transform: scale(0.98);
+}
+
+/* 큰 파일 로드 중 표시되는 오버레이 스피너 */
+.loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-size: 14px;
+    gap: 12px;
+}
+
+.loading-overlay-icon {
+    font-size: 48px;
+    animation: spin 1.2s linear infinite;
+}
+
+.loading-overlay-message {
+    background: rgba(0, 0, 0, 0.5);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
+/* Markdown 미리보기 */
+.note-md-preview {
+    flex: 1;
+    height: 100%;
+    min-height: 0;          /* flex 부모 안에서 overflow가 동작하도록 */
+    overflow-y: auto;
+    padding: 14px 20px 32px; /* 마지막 줄이 잘려 보이지 않도록 하단 여유 */
+    color: var(--modal-text);
+    background: var(--modal-bg);
+    line-height: 1.55;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.note-md-preview > *:last-child {
+    margin-bottom: 0;
+}
+
+.note-md-preview h1,
+.note-md-preview h2,
+.note-md-preview h3,
+.note-md-preview h4,
+.note-md-preview h5,
+.note-md-preview h6 {
+    margin: 1em 0 0.4em;
+    line-height: 1.25;
+    color: var(--modal-text);
+}
+
+.note-md-preview h1 { font-size: 1.7em; border-bottom: 1px solid var(--search-border); padding-bottom: 0.2em; }
+.note-md-preview h2 { font-size: 1.4em; border-bottom: 1px solid var(--search-border); padding-bottom: 0.2em; }
+.note-md-preview h3 { font-size: 1.2em; }
+.note-md-preview p  { margin: 0.6em 0; }
+.note-md-preview ul,
+.note-md-preview ol { padding-left: 1.6em; margin: 0.4em 0; }
+.note-md-preview li { margin: 0.15em 0; }
+
+.note-md-preview code {
+    font-family: monospace;
+    background: rgba(0, 0, 0, 0.08);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.9em;
+}
+
+.note-md-preview pre {
+    background: rgba(0, 0, 0, 0.08);
+    padding: 10px 12px;
+    border-radius: 6px;
+    overflow-x: auto;
+}
+.note-md-preview pre code {
+    background: transparent;
+    padding: 0;
+    font-size: 0.9em;
+}
+
+body.dark-theme .note-md-preview code,
+body.dark-theme .note-md-preview pre {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.note-md-preview blockquote {
+    margin: 0.6em 0;
+    padding: 0.2em 0.9em;
+    border-left: 3px solid var(--search-border);
+    color: inherit;
+    opacity: 0.85;
+}
+
+.note-md-preview hr {
+    border: none;
+    border-top: 1px solid var(--search-border);
+    margin: 1em 0;
+}
+
+.note-md-preview a {
+    color: #2196F3;
+    text-decoration: none;
+}
+.note-md-preview a:hover { text-decoration: underline; }
+
+.note-md-preview table {
+    border-collapse: collapse;
+    margin: 0.8em 0;
+    display: block;
+    overflow-x: auto;
+    max-width: 100%;
+}
+.note-md-preview th,
+.note-md-preview td {
+    border: 1px solid var(--search-border);
+    padding: 6px 10px;
+    text-align: left;
+}
+.note-md-preview thead th {
+    background: rgba(0, 0, 0, 0.06);
+    font-weight: 600;
+}
+body.dark-theme .note-md-preview thead th {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* 탭 UI 스타일 */
+.note-tabs-container {
+    display: flex;
+    gap: 4px;
+    padding: 8px 8px 0 8px;
+    background: rgba(0, 0, 0, 0.02);
+    border-bottom: 1px solid var(--search-border);
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+}
+
+.note-tabs-container::-webkit-scrollbar {
+    height: 4px;
+}
+
+.note-tabs-container::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
+}
+
+body.dark-theme .note-tabs-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.note-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--search-border);
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s;
+    min-width: 100px;
+    flex-shrink: 0;
+}
+
+.note-tab:hover {
+    background: rgba(0, 0, 0, 0.15);
+}
+
+body.dark-theme .note-tab:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.note-tab-active {
+    background: var(--modal-bg) !important;
+    border-bottom: 1px solid var(--modal-bg);
+    font-weight: bold;
+}
+
+.note-tab-hidden {
+    display: none;
+}
+
+.note-tab-label {
+    color: var(--modal-text);
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.note-tab-close {
+    background: none;
+    border: none;
+    color: var(--modal-text);
+    font-size: 14px;
+    padding: 0;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.note-tab-close:hover {
+    opacity: 1;
+}
+
+/* 탭별 색상 구분 */
+.note-tab[data-tab="0"] { border-top: 3px solid #FF6B6B; }
+.note-tab[data-tab="1"] { border-top: 3px solid #4ECDC4; }
+.note-tab[data-tab="2"] { border-top: 3px solid #FFE66D; }
+.note-tab[data-tab="3"] { border-top: 3px solid #95E1D3; }
+.note-tab[data-tab="4"] { border-top: 3px solid #FFA07A; }
+.note-tab[data-tab="5"] { border-top: 3px solid #87CEEB; }
+.note-tab[data-tab="6"] { border-top: 3px solid #DDA0DD; }
+
+/* 읽기 전용 에디터 스타일 */
+.note-editor-readonly {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.note-editor-readonly .note-editor {
+    background: rgba(0, 0, 0, 0.02);
+    cursor: default;
+}
+
+body.dark-theme .note-editor-readonly .note-editor {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* 모바일 최적화 미디어 쿼리 */
+@media (max-width: 768px) {
+    .note-panel-header {
+        padding: 6px;
+        gap: 4px;
+        min-height: auto;
+    }
+
+    .note-search-controls input {
+        width: 100px;
+        height: 30px;
+        font-size: 13px;
+    }
+
+    .note-search-controls button {
+        font-size: 16px;
+        padding: 4px;
+        min-width: 32px;
+        min-height: 32px;
+    }
+
+    .note-icon-btn {
+        font-size: 16px;
+        padding: 4px;
+        min-width: 32px;
+        min-height: 32px;
+    }
+
+    .note-char-count-panel {
+        font-size: 10px;
+        padding: 4px 6px;
+    }
+
+    .line-numbers {
+        width: 32px;
+        font-size: 12px;
+        line-height: 20px;
+        padding-right: 6px; /* 모바일은 6px로 좁힘 (데스크톱 8px 오버라이드) */
+    }
+
+    .note-editor {
+        font-size: 13px;
+        line-height: 20px;
+        padding: 8px;
+    }
+
+    .note-tab {
+        padding: 6px 10px;
+        min-width: 80px;
+        font-size: 12px;
+    }
+
+    .note-tab-label {
+        font-size: 12px;
+    }
+
+    .note-tab-close {
+        font-size: 12px;
+    }
+
+    .custom-modal {
+        min-width: 280px;
+        max-width: 90%;
+        margin: 0 10px;
+    }
+
+    .custom-modal-header {
+        padding: 12px 16px;
+        font-size: 14px;
+    }
+
+    .custom-modal-body {
+        padding: 16px;
+        font-size: 13px;
+    }
+
+    .custom-modal-footer {
+        padding: 10px 16px;
+    }
+
+    .custom-modal-btn {
+        padding: 6px 20px;
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 480px) {
+    .note-panel-header {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+
+    .note-search-controls {
+        order: 2;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .note-search-controls input {
+        width: 80px;
+    }
+
+    .note-char-count-panel {
+        order: 1;
+        width: auto;
+    }
+
+    .note-icon-btn {
+        order: 3;
+    }
+}
+</style>
+</head>
+<body>
+<div id="app">
+    <div id="note-panel" class="note-panel">
+        <div class="note-panel-header">
+            <span id="current-memo-title" class="current-memo-title" title="">―</span>
+            <span id="note-char-count" class="note-char-count-panel">글자수: 0</span>
+            <div class="note-search-controls">
+                <input id="noteSearchInput" type="text" placeholder="검색 (Ctrl + I)">
+                <button id="noteSearchBtn" type="button" title="">🔍</button>
+                <button id="noteSearchPrevBtn" type="button" title="Ctrl + <">⬅️</button>
+                <button id="noteSearchNextBtn" type="button" title="Ctrl + >">➡️</button>
+            </div>
+
+            <button onclick="openFileMenu()" class="note-icon-btn" title="파일 메뉴 (메모 관리/불러오기/저장/다운로드/초기화)">📁</button>
+            <button onclick="splitNoteIntoChunks(2000)" class="note-icon-btn" title="2000자 크기로 나누기">➗</button>
+            <button onclick="forceEnterToNote()" class="note-icon-btn" title="강제 줄 바꿈">⬇️</button>
+            <button onclick="toggleMarkdownPreview()" class="note-icon-btn hidden" id="md-preview-btn" title="마크다운 미리보기">📖</button>
+            <button onclick="changeEncoding()" class="note-icon-btn hidden" id="encoding-btn" title="인코딩 변경">🔤</button>
+            <button onclick="runCodeBlock()" class="note-icon-btn" title="선택한 코드 실행 (Ctrl+Enter)">🧮</button>
+            <button onclick="showNoteHelpPanel()" class="note-icon-btn" title="도움말">❓</button>
+        </div>
+        <!-- 탭 UI -->
+        <div class="note-tabs-container">
+            <div class="note-tab note-tab-active" data-tab="main">
+                <span class="note-tab-label">메모장</span>
+            </div>
+            <div class="note-tab note-tab-hidden" data-tab="0">
+                <span class="note-tab-label">파일 1</span>
+                <button class="note-tab-close" onclick="closeFileTab(0)">❌</button>
+            </div>
+            <div class="note-tab note-tab-hidden" data-tab="1">
+                <span class="note-tab-label">파일 2</span>
+                <button class="note-tab-close" onclick="closeFileTab(1)">❌</button>
+            </div>
+            <div class="note-tab note-tab-hidden" data-tab="2">
+                <span class="note-tab-label">파일 3</span>
+                <button class="note-tab-close" onclick="closeFileTab(2)">❌</button>
+            </div>
+            <div class="note-tab note-tab-hidden" data-tab="3">
+                <span class="note-tab-label">파일 4</span>
+                <button class="note-tab-close" onclick="closeFileTab(3)">❌</button>
+            </div>
+            <div class="note-tab note-tab-hidden" data-tab="4">
+                <span class="note-tab-label">파일 5</span>
+                <button class="note-tab-close" onclick="closeFileTab(4)">❌</button>
+            </div>
+            <div class="note-tab note-tab-hidden" data-tab="5">
+                <span class="note-tab-label">파일 6</span>
+                <button class="note-tab-close" onclick="closeFileTab(5)">❌</button>
+            </div>
+            <div class="note-tab note-tab-hidden" data-tab="6">
+                <span class="note-tab-label">파일 7</span>
+                <button class="note-tab-close" onclick="closeFileTab(6)">❌</button>
+            </div>
+        </div>
+
+        <!-- 메인 에디터 (기존) -->
+        <div class="note-editor-container" id="note-container-main">
+            <div id="line-numbers" class="line-numbers">1</div>
+            <textarea id="note-editor" class="note-editor" spellcheck="false"></textarea>
+        </div>
+
+        <!-- 읽기 전용 파일 에디터 7개 -->
+        <div class="note-editor-container note-editor-readonly hidden" id="note-container-0">
+            <div class="line-numbers" id="line-numbers-0">1</div>
+            <textarea class="note-editor" id="note-editor-0" spellcheck="false" readonly></textarea>
+            <div class="note-md-preview hidden" id="note-md-preview-0"></div>
+        </div>
+        <div class="note-editor-container note-editor-readonly hidden" id="note-container-1">
+            <div class="line-numbers" id="line-numbers-1">1</div>
+            <textarea class="note-editor" id="note-editor-1" spellcheck="false" readonly></textarea>
+            <div class="note-md-preview hidden" id="note-md-preview-1"></div>
+        </div>
+        <div class="note-editor-container note-editor-readonly hidden" id="note-container-2">
+            <div class="line-numbers" id="line-numbers-2">1</div>
+            <textarea class="note-editor" id="note-editor-2" spellcheck="false" readonly></textarea>
+            <div class="note-md-preview hidden" id="note-md-preview-2"></div>
+        </div>
+        <div class="note-editor-container note-editor-readonly hidden" id="note-container-3">
+            <div class="line-numbers" id="line-numbers-3">1</div>
+            <textarea class="note-editor" id="note-editor-3" spellcheck="false" readonly></textarea>
+            <div class="note-md-preview hidden" id="note-md-preview-3"></div>
+        </div>
+        <div class="note-editor-container note-editor-readonly hidden" id="note-container-4">
+            <div class="line-numbers" id="line-numbers-4">1</div>
+            <textarea class="note-editor" id="note-editor-4" spellcheck="false" readonly></textarea>
+            <div class="note-md-preview hidden" id="note-md-preview-4"></div>
+        </div>
+        <div class="note-editor-container note-editor-readonly hidden" id="note-container-5">
+            <div class="line-numbers" id="line-numbers-5">1</div>
+            <textarea class="note-editor" id="note-editor-5" spellcheck="false" readonly></textarea>
+            <div class="note-md-preview hidden" id="note-md-preview-5"></div>
+        </div>
+        <div class="note-editor-container note-editor-readonly hidden" id="note-container-6">
+            <div class="line-numbers" id="line-numbers-6">1</div>
+            <textarea class="note-editor" id="note-editor-6" spellcheck="false" readonly></textarea>
+            <div class="note-md-preview hidden" id="note-md-preview-6"></div>
+        </div>
+    </div>
+</div>
+<script>
+
+/* === src/state.js === */
+// ========================================
+// State Management
+// ========================================
+const state = {
+    // UI Elements
+    elements: {
+        noteSearchInput: null,
+        noteSearchBtn: null,
+        noteSearchPrevBtn: null,
+        noteSearchNextBtn: null,
+    },
+
+    // Notepad state
+    notepad: {
+        lastSavedContent: '',
+        isDirty: false,
+        autoSaveTimer: null,
+        currentMemoTitle: '', // 현재 편집 중인 메모 제목
+    },
+};
+
+
+/* === src/constants.js === */
+// ========================================
+// Constants
+// ========================================
+const CONSTANTS = {
+    AUTO_SAVE_INTERVAL: 180000, // 3 minutes
+    WAILS_CHECK_INTERVAL: 100,
+    SEARCH_MISS_DURATION: 450,
+    DIVIDER_LENGTH: 50,
+    NOTEPAD_KEY: 'NOTEPAD',              // 레거시 단일 메모 키 (마이그레이션 대상)
+    MEMO_KEY_PREFIX: 'memo:',            // 멀티 메모 키 prefix — memo:${title}
+    DEFAULT_MEMO_TITLE: '기본 메모',      // 첫 실행/마이그레이션 시 기본 메모 이름
+    CALC_MEMORY_KEY: '__CALC_MEMORY__', // 코드 블럭 세션 메모리 영속 저장 키
+    LOADING_SPINNER_THRESHOLD: 200 * 1024, // 200KB 이상 파일 로드 시 스피너 표시
+    MAX_FILE_SIZE: 10 * 1024 * 1024,       // 10MB 업로드 상한
+    MAX_FILE_TABS: 7,                       // 동시 열 수 있는 보조 파일 탭 수
+};
+
+// 텍스트로 허용되는 확장자 (소문자, 점 포함)
+const ALLOWED_TEXT_EXTENSIONS = [
+    '.txt', '.md', '.py', '.java', '.go',
+    '.c', '.cpp', '.js', '.json', '.html',
+];
+
+// Ctrl+Shift+키 → 삽입할 기호 매핑 (대문자 키만 정의, handler에서 toUpperCase로 비교)
+const SYMBOL_SHORTCUTS = {
+    A: '→',
+    C: '✅',
+    O: '□',
+    R: '※',
+    Z: '🟩',
+    X: '❎',
+};
+
+
+/* === src/storage-config.js === */
+// ========================================
+// Storage Configuration
+// ========================================
+const STORAGE_CONFIG = {
+    mode: 'indexeddb', // 'indexeddb' | 'rest'
+    indexedDB: {
+        dbName: 'ssMemo',
+        storeName: 'notes',
+        version: 1,
+    },
+    rest: {
+        baseUrl: '/api',
+        timeoutMs: 10000,
+    },
+};
+
+
+/* === src/utils.js === */
+// ========================================
+// Pure utility helpers (DOM-free, testable)
+// ========================================
+
+const CHUNK_DELIMITER = "\n\n<----------[절취선]---------->\n\n";
+
+// 입력 문자열을 len 글자 단위로 잘라 delimiter로 이어 붙입니다.
+function splitTextIntoChunks(text, len, delimiter = CHUNK_DELIMITER) {
+    if (!text || !len || len <= 0 || text.length <= len) return text;
+    let result = '';
+    for (let i = 0; i < text.length; i += len) {
+        if (i > 0) result += delimiter;
+        result += text.substring(i, i + len);
+    }
+    return result;
+}
+
+// splitTextIntoChunks가 삽입한 delimiter를 모두 제거합니다.
+function joinTextChunks(text, delimiter = CHUNK_DELIMITER) {
+    if (!text || !text.includes(delimiter)) return text;
+    return text.split(delimiter).join('');
+}
+
+// 절취선 토글 버튼이 클릭됐을 때 어떤 동작을 해야 하는지 결정.
+// - delimiter가 이미 있으면 길이와 무관하게 'join' (짧아진 메모에서도 토글 가능)
+// - delimiter가 없을 때는 text가 len보다 길어야 'split', 아니면 'noop'
+// 분기 로직을 순수 함수로 두어 단위 테스트가 가능하도록 분리.
+function decideChunkAction(text, len, delimiter = CHUNK_DELIMITER) {
+    if (typeof text !== 'string' || !len || len <= 0) return 'noop';
+    if (text.includes(delimiter)) return 'join';
+    return text.length > len ? 'split' : 'noop';
+}
+
+// 다음 애니메이션 프레임까지 메인 스레드를 양보. 큰 파일을 단계별로
+// 처리할 때 각 단계 사이에 브라우저가 페인트/입력 처리할 시간을 주기 위해 사용.
+// 페이지가 백그라운드/숨김 상태라 rAF가 throttle되면 setTimeout fallback으로
+// 빠져나와 await가 영구 대기하는 것을 막는다 (스피너 잔류 방지).
+function nextFrame() {
+    return new Promise(resolve => {
+        let done = false;
+        const finish = () => { if (done) return; done = true; resolve(); };
+        requestAnimationFrame(finish);
+        setTimeout(finish, 100);
+    });
+}
+
+// 호출이 ms 동안 멈출 때까지 fn 실행을 미루는 trailing-edge debounce.
+// 큰 파일 입력 중 keystroke마다 발생하는 O(n) 줄수 스캔을 묶기 위해 사용.
+function debounce(fn, ms) {
+    let timer = null;
+    return function debounced(...args) {
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(() => {
+            timer = null;
+            fn.apply(this, args);
+        }, ms);
+    };
+}
+
+// 줄 번호 표시용 단일 텍스트("1\n2\n...\nN")를 만든다.
+// `<div>` N개를 만들지 않고 한 번의 textContent 할당으로 끝내기 위한 헬퍼.
+// count<1이면 빈 문자열 반환.
+function buildLineNumbersText(count) {
+    if (!count || count < 1) return '';
+    let buf = '1';
+    for (let i = 2; i <= count; i++) {
+        buf += '\n' + i;
+    }
+    return buf;
+}
+
+// content 안에서 query를 정방향 검색. 없으면 -1.
+// startIndex 이후에서 못 찾고 startIndex>0이면 처음부터 다시 시도(랩어라운드).
+function findNextIndex(content, query, startIndex = 0) {
+    if (!content || !query) return -1;
+    const safeStart = Math.max(0, startIndex);
+    let idx = content.indexOf(query, safeStart);
+    if (idx === -1 && safeStart > 0) {
+        idx = content.indexOf(query, 0);
+    }
+    return idx;
+}
+
+// content 안에서 query를 역방향 검색. 없으면 -1.
+// 못 찾으면 끝에서부터 다시 시도(랩어라운드).
+function findPrevIndex(content, query, startIndex) {
+    if (!content || !query) return -1;
+    if (startIndex < 0) return -1;
+    let idx = content.lastIndexOf(query, startIndex);
+    if (idx === -1) {
+        idx = content.lastIndexOf(query, content.length);
+    }
+    return idx;
+}
+
+
+/* === src/markdown.js === */
+// ========================================
+// 외부 의존성 없는 경량 Markdown 렌더러
+// XSS 방지를 위해 모든 입력을 HTML 이스케이프 후 처리합니다.
+// 지원: 헤더(#~######), bold(**), italic(*/_), inline code(`),
+//       코드 블록(```), 순서/비순서 리스트, 링크[text](url),
+//       수평선(---), 인용(>), GFM 표(|---|), 단락,
+//       <details>/<summary> 접기 (속성은 open만 허용),
+//       인라인 HTML <b>/<i>/<u>/<br> (속성 없는 형태만)
+// ========================================
+
+function escapeHtml(s) {
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function renderInline(text) {
+    let s = escapeHtml(text);
+    s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+    s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+    s = s.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>');
+    s = s.replace(/(^|[^_])_([^_\n]+)_(?!_)/g, '$1<em>$2</em>');
+    s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, label, url) => {
+        // 안전한 스킴만 허용 (javascript: 등 차단)
+        if (!/^(https?:\/\/|mailto:|#|\/|\.\/|\.\.\/)/i.test(url)) return match;
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+    });
+    // 안전한 인라인 HTML 태그 화이트리스트 (속성 없는 형태만).
+    // escapeHtml 이후의 리터럴 패턴만 복원하므로, 속성이 붙은 변형은
+    // 매치되지 않아 이스케이프된 상태로 유지되어 XSS를 차단합니다.
+    s = s.replace(/&lt;(\/?)([biu])&gt;/gi, '<$1$2>');
+    s = s.replace(/&lt;br\s*\/?&gt;/gi, '<br>');
+    return s;
+}
+
+// 표 한 행의 셀들을 추출. `|` 경계를 가진 행과 그렇지 않은 행 모두 처리.
+function parseTableRow(line) {
+    let s = line.trim();
+    if (s.startsWith('|')) s = s.slice(1);
+    if (s.endsWith('|')) s = s.slice(0, -1);
+    return s.split('|').map(c => c.trim());
+}
+
+// 표 구분 행 여부: `|---|:---:|---:|` 형태. 셀 정렬 배열을 반환하거나 null.
+function parseTableSeparator(line) {
+    if (!/\|/.test(line)) return null;
+    const cells = parseTableRow(line);
+    if (cells.length === 0) return null;
+    const aligns = [];
+    for (const cell of cells) {
+        if (!/^:?-{3,}:?$/.test(cell)) return null;
+        const left = cell.startsWith(':');
+        const right = cell.endsWith(':');
+        aligns.push(left && right ? 'center' : right ? 'right' : left ? 'left' : null);
+    }
+    return aligns;
+}
+
+function renderTable(headerLine, aligns, bodyLines) {
+    const headers = parseTableRow(headerLine);
+    const colCount = headers.length;
+    const headHtml = headers
+        .map((h, i) => {
+            const a = aligns[i];
+            const styleAttr = a ? ` style="text-align:${a}"` : '';
+            return `<th${styleAttr}>${renderInline(h)}</th>`;
+        })
+        .join('');
+    const bodyHtml = bodyLines.map(line => {
+        const cells = parseTableRow(line);
+        // 부족한 셀은 빈 문자열로 채우고, 초과는 잘라냅니다.
+        const padded = cells.slice(0, colCount);
+        while (padded.length < colCount) padded.push('');
+        const tds = padded
+            .map((c, i) => {
+                const a = aligns[i];
+                const styleAttr = a ? ` style="text-align:${a}"` : '';
+                return `<td${styleAttr}>${renderInline(c)}</td>`;
+            })
+            .join('');
+        return `<tr>${tds}</tr>`;
+    }).join('');
+    return `<table><thead><tr>${headHtml}</tr></thead><tbody>${bodyHtml}</tbody></table>`;
+}
+
+function renderMarkdown(text) {
+    if (!text) return '';
+    const lines = text.split('\n');
+    const out = [];
+    let inCode = false;
+    let codeBuffer = [];
+    let listType = null;
+    let paragraphBuffer = [];
+
+    const flushParagraph = () => {
+        if (paragraphBuffer.length) {
+            out.push('<p>' + paragraphBuffer.map(renderInline).join('<br>') + '</p>');
+            paragraphBuffer = [];
+        }
+    };
+    const closeList = () => {
+        if (listType) {
+            out.push(`</${listType}>`);
+            listType = null;
+        }
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        if (inCode) {
+            if (/^```/.test(line)) {
+                out.push(`<pre><code>${codeBuffer.map(escapeHtml).join('\n')}</code></pre>`);
+                codeBuffer = [];
+                inCode = false;
+            } else {
+                codeBuffer.push(line);
+            }
+            continue;
+        }
+        if (/^```/.test(line)) {
+            flushParagraph();
+            closeList();
+            inCode = true;
+            continue;
+        }
+
+        const heading = line.match(/^(#{1,6})\s+(.+)$/);
+        if (heading) {
+            flushParagraph();
+            closeList();
+            const level = heading[1].length;
+            out.push(`<h${level}>${renderInline(heading[2])}</h${level}>`);
+            continue;
+        }
+
+        if (/^(-{3,}|\*{3,}|_{3,})$/.test(line.trim())) {
+            flushParagraph();
+            closeList();
+            out.push('<hr>');
+            continue;
+        }
+
+        if (/^>\s?/.test(line)) {
+            flushParagraph();
+            closeList();
+            out.push(`<blockquote>${renderInline(line.replace(/^>\s?/, ''))}</blockquote>`);
+            continue;
+        }
+
+        // <details>/<summary> 접기 블록. 보안을 위해 정확한 패턴만 허용.
+        const trimmed = line.trim();
+        if (/^<details(\s+open)?>$/i.test(trimmed)) {
+            flushParagraph();
+            closeList();
+            out.push(/\sopen>$/i.test(trimmed) ? '<details open>' : '<details>');
+            continue;
+        }
+        if (/^<\/details>$/i.test(trimmed)) {
+            flushParagraph();
+            closeList();
+            out.push('</details>');
+            continue;
+        }
+        const inlineSummary = trimmed.match(/^<summary>([\s\S]*)<\/summary>$/i);
+        if (inlineSummary) {
+            flushParagraph();
+            closeList();
+            out.push(`<summary>${renderInline(inlineSummary[1])}</summary>`);
+            continue;
+        }
+        if (/^<summary>$/i.test(trimmed)) {
+            flushParagraph();
+            closeList();
+            out.push('<summary>');
+            continue;
+        }
+        if (/^<\/summary>$/i.test(trimmed)) {
+            flushParagraph();
+            closeList();
+            out.push('</summary>');
+            continue;
+        }
+
+        // 표: 현재 줄에 `|`가 있고 다음 줄이 구분 행이면 표로 처리
+        if (/\|/.test(line) && i + 1 < lines.length) {
+            const aligns = parseTableSeparator(lines[i + 1]);
+            if (aligns) {
+                flushParagraph();
+                closeList();
+                const bodyLines = [];
+                let j = i + 2;
+                while (j < lines.length && /\|/.test(lines[j]) && lines[j].trim() !== '') {
+                    bodyLines.push(lines[j]);
+                    j++;
+                }
+                out.push(renderTable(line, aligns, bodyLines));
+                i = j - 1;
+                continue;
+            }
+        }
+
+        const ul = line.match(/^\s*[-*+]\s+(.+)$/);
+        if (ul) {
+            flushParagraph();
+            if (listType !== 'ul') {
+                closeList();
+                out.push('<ul>');
+                listType = 'ul';
+            }
+            out.push(`<li>${renderInline(ul[1])}</li>`);
+            continue;
+        }
+
+        const ol = line.match(/^\s*\d+\.\s+(.+)$/);
+        if (ol) {
+            flushParagraph();
+            if (listType !== 'ol') {
+                closeList();
+                out.push('<ol>');
+                listType = 'ol';
+            }
+            out.push(`<li>${renderInline(ol[1])}</li>`);
+            continue;
+        }
+
+        if (line.trim() === '') {
+            flushParagraph();
+            closeList();
+            continue;
+        }
+
+        closeList();
+        paragraphBuffer.push(line);
+    }
+
+    if (inCode) {
+        out.push(`<pre><code>${codeBuffer.map(escapeHtml).join('\n')}</code></pre>`);
+    }
+    flushParagraph();
+    closeList();
+    return out.join('\n');
+}
+
+
+/* === src/file-utils.js === */
+// ========================================
+// 파일 검증 헬퍼 (DOM-free, testable)
+// ========================================
+
+// 파일명이 허용된 텍스트 확장자 목록 중 하나로 끝나는지 검사 (대소문자 무시)
+function hasAllowedExtension(fileName) {
+    if (!fileName) return false;
+    const lower = fileName.toLowerCase();
+    return ALLOWED_TEXT_EXTENSIONS.some(ext => lower.endsWith(ext));
+}
+
+// File 객체가 텍스트로 허용되는지: 확장자 OR MIME이 text/plain
+function isAllowedTextFile(file) {
+    if (!file) return false;
+    if (hasAllowedExtension(file.name)) return true;
+    return file.type === 'text/plain';
+}
+
+// 파일 크기가 업로드 상한을 넘는지
+function isOversized(file) {
+    if (!file) return false;
+    return file.size > CONSTANTS.MAX_FILE_SIZE;
+}
+
+
+/* === src/encoding.js === */
+// ========================================
+// 한글 인코딩 자동 감지/디코딩
+// 지원: UTF-8, CP949(EUC-KR 호환), Johab(조합형)
+// 외부 라이브러리 없음. UTF-8/EUC-KR은 브라우저의 TextDecoder를 사용하고,
+// Johab은 KS X 1001 부속서 3의 조합형 한글 음절 비트 패턴을 직접 디코딩한다.
+// ========================================
+
+// UTF-8 디코드. 잘못된 바이트 시퀀스가 있으면 null 반환.
+function tryUtf8(buffer) {
+    try {
+        return new TextDecoder('utf-8', { fatal: true }).decode(buffer);
+    } catch {
+        return null;
+    }
+}
+
+function decodeCp949(buffer) {
+    // 브라우저의 'euc-kr' 디코더는 실제로 windows-949(=CP949)를 사용한다.
+    return new TextDecoder('euc-kr').decode(buffer);
+}
+
+// ----- Johab(조합형) 디코더 -----
+// Hangul syllable bit layout: 1 IIIII MMMMM FFFFF (16-bit, MSB=1)
+// 5-bit 인덱스 → 모던 한글 인덱스 변환 (-1 = 정의 안 됨)
+
+const JOHAB_INITIAL = new Int8Array(32).fill(-1);
+[[0x02,0],[0x03,1],[0x04,2],[0x05,3],[0x06,4],
+ [0x07,5],[0x08,6],[0x09,7],[0x0A,8],[0x0B,9],
+ [0x0C,10],[0x0D,11],[0x0E,12],[0x0F,13],[0x10,14],
+ [0x11,15],[0x12,16],[0x13,17],[0x14,18]
+].forEach(([k, v]) => { JOHAB_INITIAL[k] = v; });
+
+const JOHAB_MEDIAL = new Int8Array(32).fill(-1);
+[[0x03,0],[0x04,1],[0x05,2],[0x06,3],[0x07,4],
+ [0x0A,5],[0x0B,6],[0x0C,7],[0x0D,8],[0x0E,9],
+ [0x12,10],[0x13,11],[0x14,12],[0x15,13],[0x16,14],
+ [0x1A,15],[0x1B,16],[0x1C,17],[0x1D,18],[0x1E,19],[0x1F,20]
+].forEach(([k, v]) => { JOHAB_MEDIAL[k] = v; });
+
+const JOHAB_FINAL = new Int8Array(32).fill(-1);
+[[0x01,0],
+ [0x02,1],[0x03,2],[0x04,3],[0x05,4],[0x06,5],[0x07,6],
+ [0x0A,7],[0x0B,8],[0x0C,9],[0x0D,10],[0x0E,11],[0x0F,12],
+ [0x12,13],[0x13,14],[0x14,15],[0x15,16],[0x16,17],[0x17,18],
+ [0x1A,19],[0x1B,20],[0x1C,21],[0x1D,22],[0x1E,23],[0x1F,24]
+].forEach(([k, v]) => { JOHAB_FINAL[k] = v; });
+
+// 두 바이트가 Johab 한글 음절 영역인지 검사.
+function isJohabHangulPair(b1, b2) {
+    if (b1 < 0x84 || b1 > 0xD3) return false;
+    return (b2 >= 0x41 && b2 <= 0x7E) || (b2 >= 0x81 && b2 <= 0xFE);
+}
+
+// Johab 2바이트 → Unicode codepoint, 매핑 안 되면 null.
+function johabPairToUnicode(b1, b2) {
+    const v = (b1 << 8) | b2;
+    const init = (v >> 10) & 0x1F;
+    const med = (v >> 5) & 0x1F;
+    const fin = v & 0x1F;
+    const ci = JOHAB_INITIAL[init];
+    const mi = JOHAB_MEDIAL[med];
+    const fi = JOHAB_FINAL[fin];
+    if (ci < 0 || mi < 0 || fi < 0) return null;
+    return 0xAC00 + ci * 588 + mi * 28 + fi;
+}
+
+function decodeJohab(buffer) {
+    const bytes = new Uint8Array(buffer);
+    const len = bytes.length;
+    // 매 글자마다 string concat (`out += ...`)을 하면 6MB 입력에서 수십 초가
+    // 걸려 메인 스레드가 잠긴다. Uint16Array에 codepoint를 채운 뒤 청크별로
+    // String.fromCharCode.apply 로 한 번에 합쳐 수십배 빠르다.
+    const codes = new Uint16Array(len); // 상한: 바이트당 1글자
+    let outLen = 0;
+    for (let i = 0; i < len; i++) {
+        const b1 = bytes[i];
+        if (b1 < 0x80) {
+            // ASCII 영역은 그대로 통과.
+            codes[outLen++] = b1;
+            continue;
+        }
+        const b2 = i + 1 < len ? bytes[i + 1] : 0;
+        if (isJohabHangulPair(b1, b2)) {
+            const cp = johabPairToUnicode(b1, b2);
+            if (cp != null) {
+                codes[outLen++] = cp;
+                i++;
+                continue;
+            }
+        }
+        // Johab 한글 음절이 아닌 2바이트(한자/특수기호 등)는 매핑이 까다로워
+        // 대체 문자(U+FFFD)로 표시한다.
+        codes[outLen++] = 0xFFFD;
+        if (b2 !== 0) i++;
+    }
+    // String.fromCharCode.apply 인자 한도(엔진별 ~64K)를 피하려고 청크로 나눈다.
+    const CHUNK = 0x8000;
+    let result = '';
+    for (let i = 0; i < outLen; i += CHUNK) {
+        const end = i + CHUNK < outLen ? i + CHUNK : outLen;
+        result += String.fromCharCode.apply(null, codes.subarray(i, end));
+    }
+    return result;
+}
+
+// 바이트 분포로 Johab 가능성을 가늠한다.
+// CP949(EUC-KR)는 보통 lead byte가 0xA1-0xFE에 분포하지만,
+// Johab은 0x84-0xA0 영역도 활발히 사용한다.
+function looksLikeJohab(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let johabRange = 0; // 0x84-0xA0
+    let euckrLeadOnly = 0; // 0xA1-0xFE
+    for (let i = 0; i < bytes.length; i++) {
+        const b = bytes[i];
+        if (b >= 0x84 && b <= 0xA0) johabRange++;
+        else if (b >= 0xA1 && b <= 0xFE) euckrLeadOnly++;
+    }
+    // 0x84-0xA0 영역 바이트가 충분히 많고 EUC-KR 영역과 비슷하거나 많으면 Johab으로 판단.
+    return johabRange >= 4 && johabRange >= euckrLeadOnly * 0.4;
+}
+
+function decodeKoreanText(buffer) {
+    const utf8 = tryUtf8(buffer);
+    if (utf8 !== null) {
+        return { text: utf8, encoding: 'UTF-8' };
+    }
+    if (looksLikeJohab(buffer)) {
+        return { text: decodeJohab(buffer), encoding: 'Johab' };
+    }
+    return { text: decodeCp949(buffer), encoding: 'CP949' };
+}
+
+// 디코드 결과에 U+FFFD(대체 문자) 비율이 높으면 자동 감지가 빗나갔을 가능성이 높다.
+// 사용자에게 수동 인코딩 변경(🔤) 힌트를 띄우기 위해 사용.
+// 앞쪽 64KB만 표본 검사 — 큰 파일에서도 비용 일정.
+function looksGarbled(text) {
+    if (!text) return false;
+    const sampleLen = text.length < 65536 ? text.length : 65536;
+    let replacements = 0;
+    for (let i = 0; i < sampleLen; i++) {
+        if (text.charCodeAt(i) === 0xFFFD) replacements++;
+    }
+    // 1% 이상이면 의심 (정상 한국어 텍스트는 U+FFFD가 거의 0)
+    return replacements > sampleLen * 0.01;
+}
+
+// 명시적 인코딩 지정용 헬퍼 (사용자 수동 선택 시).
+function decodeWithEncoding(buffer, encoding) {
+    switch (encoding) {
+        case 'UTF-8':
+            return tryUtf8(buffer) ?? new TextDecoder('utf-8').decode(buffer);
+        case 'CP949':
+            return decodeCp949(buffer);
+        case 'Johab':
+            return decodeJohab(buffer);
+        default:
+            throw new Error(`알 수 없는 인코딩: ${encoding}`);
+    }
+}
+
+
+/* === src/calc.js === */
+// ========================================
+// ssMemo 코드 블럭 실행기
+// 지원: 변수 대입, +, -, *, /, //, 괄호, sin/cos/tan, factorial(n<=1000), # 주석
+// 정수는 BigInt로 처리해 5000자리 이상도 정확.
+// 외부 라이브러리 의존 없이 순수 함수로 구현.
+// ========================================
+
+const FACTORIAL_LIMIT = 1000;
+
+// ---- Tokenizer ----
+function tokenize(source) {
+    const tokens = [];
+    let i = 0;
+    const len = source.length;
+    while (i < len) {
+        const ch = source[i];
+        if (ch === '#') {
+            while (i < len && source[i] !== '\n') i++;
+            continue;
+        }
+        if (ch === '\n') { tokens.push({ type: 'NL' }); i++; continue; }
+        if (ch === ' ' || ch === '\t' || ch === '\r') { i++; continue; }
+
+        if (ch >= '0' && ch <= '9') {
+            let j = i;
+            let hasDot = false;
+            while (j < len) {
+                const c = source[j];
+                if (c >= '0' && c <= '9') { j++; continue; }
+                if (c === '.' && !hasDot) { hasDot = true; j++; continue; }
+                break;
+            }
+            if (j < len && (source[j] === 'e' || source[j] === 'E')) {
+                hasDot = true;
+                j++;
+                if (j < len && (source[j] === '+' || source[j] === '-')) j++;
+                while (j < len && source[j] >= '0' && source[j] <= '9') j++;
+            }
+            tokens.push({ type: 'NUM', value: source.slice(i, j), isFloat: hasDot });
+            i = j;
+            continue;
+        }
+
+        if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch === '_') {
+            let j = i;
+            while (j < len) {
+                const c = source[j];
+                if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                    (c >= '0' && c <= '9') || c === '_') { j++; continue; }
+                break;
+            }
+            tokens.push({ type: 'ID', value: source.slice(i, j) });
+            i = j;
+            continue;
+        }
+
+        if (ch === '/' && source[i + 1] === '/') {
+            tokens.push({ type: 'OP', value: '//' });
+            i += 2;
+            continue;
+        }
+        if ('+-*/()=,'.indexOf(ch) >= 0) {
+            tokens.push({ type: 'OP', value: ch });
+            i++;
+            continue;
+        }
+        throw new Error(`알 수 없는 문자: "${ch}"`);
+    }
+    tokens.push({ type: 'EOF' });
+    return tokens;
+}
+
+// ---- Parser (recursive descent) ----
+function parse(tokens) {
+    let pos = 0;
+    const peek = (off = 0) => tokens[pos + off];
+    const consume = () => tokens[pos++];
+    const expect = (type, value) => {
+        const t = peek();
+        if (t.type !== type || (value !== undefined && t.value !== value)) {
+            throw new Error(`기대한 토큰: ${value || type}, 실제: ${t.value || t.type}`);
+        }
+        return consume();
+    };
+
+    function parsePrimary() {
+        const t = peek();
+        if (t.type === 'NUM') {
+            consume();
+            return { type: 'Num', value: t.value, isFloat: t.isFloat };
+        }
+        if (t.type === 'ID') {
+            consume();
+            if (peek().type === 'OP' && peek().value === '(') {
+                consume();
+                const args = [];
+                if (!(peek().type === 'OP' && peek().value === ')')) {
+                    args.push(parseExpr());
+                    while (peek().type === 'OP' && peek().value === ',') {
+                        consume();
+                        args.push(parseExpr());
+                    }
+                }
+                expect('OP', ')');
+                return { type: 'Call', name: t.value, args };
+            }
+            return { type: 'Var', name: t.value };
+        }
+        if (t.type === 'OP' && t.value === '(') {
+            consume();
+            const expr = parseExpr();
+            expect('OP', ')');
+            return expr;
+        }
+        throw new Error(`예상치 못한 토큰: ${t.value || t.type}`);
+    }
+
+    function parseUnary() {
+        if (peek().type === 'OP' && (peek().value === '-' || peek().value === '+')) {
+            const op = consume().value;
+            return { type: 'Unary', op, expr: parseUnary() };
+        }
+        return parsePrimary();
+    }
+
+    function parseMul() {
+        let left = parseUnary();
+        while (peek().type === 'OP' &&
+               (peek().value === '*' || peek().value === '/' || peek().value === '//')) {
+            const op = consume().value;
+            const right = parseUnary();
+            left = { type: 'Bin', op, left, right };
+        }
+        return left;
+    }
+
+    function parseAdd() {
+        let left = parseMul();
+        while (peek().type === 'OP' && (peek().value === '+' || peek().value === '-')) {
+            const op = consume().value;
+            const right = parseMul();
+            left = { type: 'Bin', op, left, right };
+        }
+        return left;
+    }
+
+    function parseExpr() { return parseAdd(); }
+
+    function parseStatement() {
+        // ID '=' ... 패턴이면 대입문
+        if (peek().type === 'ID' && peek(1).type === 'OP' && peek(1).value === '=') {
+            const name = consume().value;
+            consume(); // '='
+            return { type: 'Assign', name, expr: parseExpr() };
+        }
+        return { type: 'ExprStmt', expr: parseExpr() };
+    }
+
+    function parseProgram() {
+        const statements = [];
+        while (peek().type === 'NL') consume();
+        while (peek().type !== 'EOF') {
+            statements.push(parseStatement());
+            while (peek().type === 'NL') consume();
+        }
+        return { type: 'Program', statements };
+    }
+
+    return parseProgram();
+}
+
+// ---- Evaluator ----
+const isBig = (v) => typeof v === 'bigint';
+
+function add(a, b) {
+    if (isBig(a) && isBig(b)) return a + b;
+    return Number(a) + Number(b);
+}
+function sub(a, b) {
+    if (isBig(a) && isBig(b)) return a - b;
+    return Number(a) - Number(b);
+}
+function mul(a, b) {
+    if (isBig(a) && isBig(b)) return a * b;
+    return Number(a) * Number(b);
+}
+function div(a, b) {
+    if (isBig(a) && isBig(b)) {
+        if (b === 0n) throw new Error('0으로 나눌 수 없습니다');
+        if (a % b === 0n) return a / b;
+        return Number(a) / Number(b);
+    }
+    const bn = Number(b);
+    if (bn === 0) throw new Error('0으로 나눌 수 없습니다');
+    return Number(a) / bn;
+}
+function floorDiv(a, b) {
+    if (isBig(a) && isBig(b)) {
+        if (b === 0n) throw new Error('0으로 나눌 수 없습니다');
+        return a / b;
+    }
+    const bn = Number(b);
+    if (bn === 0) throw new Error('0으로 나눌 수 없습니다');
+    return Math.trunc(Number(a) / bn);
+}
+function neg(a) { return isBig(a) ? -a : -Number(a); }
+
+function factorial(n) {
+    const big = isBig(n) ? n : (Number.isInteger(n) ? BigInt(n) : null);
+    if (big === null) throw new Error('factorial 인자는 정수여야 합니다');
+    if (big < 0n) throw new Error('factorial은 음수에 대해 정의되지 않습니다');
+    if (big > BigInt(FACTORIAL_LIMIT)) {
+        throw new Error(`factorial은 ${FACTORIAL_LIMIT}까지만 지원합니다`);
+    }
+    let r = 1n;
+    for (let i = 2n; i <= big; i++) r *= i;
+    return r;
+}
+
+const FUNCTIONS = {
+    sin: (n) => Math.sin(Number(n)),
+    cos: (n) => Math.cos(Number(n)),
+    tan: (n) => Math.tan(Number(n)),
+    factorial,
+};
+
+function evalNode(node, env) {
+    switch (node.type) {
+        case 'Num':
+            return node.isFloat ? Number(node.value) : BigInt(node.value);
+        case 'Var':
+            if (!(node.name in env)) throw new Error(`정의되지 않은 변수: ${node.name}`);
+            return env[node.name];
+        case 'Call': {
+            const fn = FUNCTIONS[node.name];
+            if (!fn) throw new Error(`알 수 없는 함수: ${node.name}`);
+            if (node.args.length !== 1) throw new Error(`${node.name}은 인자 1개를 받습니다`);
+            return fn(evalNode(node.args[0], env));
+        }
+        case 'Unary': {
+            const v = evalNode(node.expr, env);
+            return node.op === '-' ? neg(v) : v;
+        }
+        case 'Bin': {
+            const l = evalNode(node.left, env);
+            const r = evalNode(node.right, env);
+            switch (node.op) {
+                case '+':  return add(l, r);
+                case '-':  return sub(l, r);
+                case '*':  return mul(l, r);
+                case '/':  return div(l, r);
+                case '//': return floorDiv(l, r);
+            }
+            throw new Error(`알 수 없는 연산자: ${node.op}`);
+        }
+        case 'Assign': {
+            const v = evalNode(node.expr, env);
+            env[node.name] = v;
+            return v;
+        }
+        case 'ExprStmt':
+            return evalNode(node.expr, env);
+    }
+    throw new Error(`알 수 없는 노드: ${node.type}`);
+}
+
+function formatValue(v) {
+    if (typeof v === 'bigint') return v.toString();
+    if (Number.isInteger(v)) return v.toString();
+    return Number(v).toString();
+}
+
+// 변수 환경을 영속 저장(IndexedDB 등 텍스트 스토리지)에 보관할 수 있도록
+// JSON 문자열로 직렬화. BigInt는 _big 마커로 보존해 복원 시 정확.
+function serializeEnv(env) {
+    const out = {};
+    for (const [k, v] of Object.entries(env)) {
+        if (typeof v === 'bigint') out[k] = { _big: v.toString() };
+        else if (typeof v === 'number' && Number.isFinite(v)) out[k] = { _num: v };
+        // 이외 타입(undefined/NaN/Infinity/객체)은 저장 대상 아님 → 스킵
+    }
+    return JSON.stringify(out);
+}
+
+function deserializeEnv(str) {
+    const out = {};
+    if (!str) return out;
+    let parsed;
+    try { parsed = JSON.parse(str); } catch { return out; }
+    if (!parsed || typeof parsed !== 'object') return out;
+    for (const [k, v] of Object.entries(parsed)) {
+        if (!v || typeof v !== 'object') continue;
+        if (typeof v._big === 'string') {
+            try { out[k] = BigInt(v._big); } catch { /* skip */ }
+        } else if (typeof v._num === 'number') {
+            out[k] = v._num;
+        }
+    }
+    return out;
+}
+
+function runCode(source, initialEnv = {}) {
+    const tokens = tokenize(source);
+    const ast = parse(tokens);
+    const env = { ...initialEnv };
+    const outputs = [];
+    let last;
+    for (const stmt of ast.statements) {
+        const v = evalNode(stmt, env);
+        last = v;
+        if (stmt.type === 'Assign') {
+            outputs.push(`${stmt.name} = ${formatValue(v)}`);
+        } else {
+            outputs.push(formatValue(v));
+        }
+    }
+    return { result: last, env, outputs };
+}
+
+
+/* === src/data-sources/indexeddb.js === */
+// ========================================
+// IndexedDB Data Source
+// ========================================
+class IndexedDbSource {
+    constructor(options) {
+        this.options = options;
+        this.db = null;
+    }
+
+    async init() {
+        this.db = await this.openDb();
+    }
+
+    async getNoteByDate(key) {
+        const db = await this.ensureDb();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(this.options.storeName, 'readonly');
+            const store = tx.objectStore(this.options.storeName);
+            const req = store.get(key);
+
+            req.onsuccess = () => {
+                const record = req.result;
+                resolve({
+                    key,
+                    content: record?.content ?? '',
+                    updatedAt: record?.updatedAt ?? null,
+                });
+            };
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async saveOrUpdateNoteByDate(key, content) {
+        const db = await this.ensureDb();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(this.options.storeName, 'readwrite');
+            const store = tx.objectStore(this.options.storeName);
+            const record = {
+                key,
+                content,
+                updatedAt: new Date().toISOString(),
+            };
+            const req = store.put(record);
+
+            req.onsuccess = () => resolve(record);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    // prefix와 일치하는 키를 가진 레코드 목록을 반환. prefix가 없으면 전체.
+    async listKeys(prefix = '') {
+        const db = await this.ensureDb();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(this.options.storeName, 'readonly');
+            const store = tx.objectStore(this.options.storeName);
+            const req = store.openCursor();
+            const out = [];
+            req.onsuccess = (e) => {
+                const cursor = e.target.result;
+                if (!cursor) { resolve(out); return; }
+                if (!prefix || cursor.key.startsWith(prefix)) {
+                    const v = cursor.value;
+                    out.push({
+                        key: cursor.key,
+                        content: v?.content ?? '',
+                        updatedAt: v?.updatedAt ?? null,
+                    });
+                }
+                cursor.continue();
+            };
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async deleteKey(key) {
+        const db = await this.ensureDb();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(this.options.storeName, 'readwrite');
+            const store = tx.objectStore(this.options.storeName);
+            const req = store.delete(key);
+            req.onsuccess = () => resolve(true);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async ensureDb() {
+        if (!this.db) {
+            this.db = await this.openDb();
+        }
+        return this.db;
+    }
+
+    openDb() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(this.options.dbName, this.options.version);
+
+            request.onupgradeneeded = () => {
+                const db = request.result;
+                if (!db.objectStoreNames.contains(this.options.storeName)) {
+                    db.createObjectStore(this.options.storeName, { keyPath: 'key' });
+                }
+            };
+
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+    }
+}
+
+
+/* === src/data-sources/rest.js === */
+// ========================================
+// REST Data Source (placeholder for server DB)
+// ========================================
+class RestSource {
+    constructor(options) {
+        this.options = options;
+    }
+
+    async init() {
+        return;
+    }
+
+    async _fetchWithTimeout(url, options) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), this.options.timeoutMs);
+
+        try {
+            const response = await fetch(url, {
+                ...options,
+                signal: controller.signal,
+            });
+            return response;
+        } finally {
+            clearTimeout(timeout);
+        }
+    }
+
+    async getNoteByDate(key) {
+        const url = `${this.options.baseUrl}/notes/${encodeURIComponent(key)}`;
+        const res = await this._fetchWithTimeout(url, { method: 'GET' });
+        if (!res.ok) {
+            throw new Error(`REST get failed: ${res.status}`);
+        }
+        return res.json();
+    }
+
+    async saveOrUpdateNoteByDate(key, content) {
+        const url = `${this.options.baseUrl}/notes/${encodeURIComponent(key)}`;
+        const res = await this._fetchWithTimeout(url, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content }),
+        });
+        if (!res.ok) {
+            throw new Error(`REST save failed: ${res.status}`);
+        }
+        return res.json();
+    }
+
+    async listKeys(prefix = '') {
+        const url = `${this.options.baseUrl}/notes?prefix=${encodeURIComponent(prefix)}`;
+        const res = await this._fetchWithTimeout(url, { method: 'GET' });
+        if (!res.ok) throw new Error(`REST list failed: ${res.status}`);
+        return res.json();
+    }
+
+    async deleteKey(key) {
+        const url = `${this.options.baseUrl}/notes/${encodeURIComponent(key)}`;
+        const res = await this._fetchWithTimeout(url, { method: 'DELETE' });
+        if (!res.ok) throw new Error(`REST delete failed: ${res.status}`);
+        return true;
+    }
+}
+
+
+/* === src/data-sources/memory.js === */
+// ========================================
+// In-memory 데이터 소스 (IndexedDB 폴백용)
+// ========================================
+class MemorySource {
+    constructor() {
+        this.store = new Map();
+    }
+
+    async init() { /* nothing */ }
+
+    async getNoteByDate(key) {
+        const record = this.store.get(key);
+        return {
+            key,
+            content: record?.content ?? '',
+            updatedAt: record?.updatedAt ?? null,
+        };
+    }
+
+    async saveOrUpdateNoteByDate(key, content) {
+        const record = {
+            key,
+            content,
+            updatedAt: new Date().toISOString(),
+        };
+        this.store.set(key, record);
+        return record;
+    }
+
+    async listKeys(prefix = '') {
+        const out = [];
+        for (const [key, rec] of this.store.entries()) {
+            if (!prefix || key.startsWith(prefix)) {
+                out.push({
+                    key,
+                    content: rec.content,
+                    updatedAt: rec.updatedAt,
+                });
+            }
+        }
+        return out;
+    }
+
+    async deleteKey(key) {
+        return this.store.delete(key);
+    }
+}
+
+
+/* === src/data-sources/index.js === */
+// ========================================
+// Data Source Factory
+// ========================================
+
+
+function createDataSource(config) {
+    if (config.mode === 'rest') {
+        return new RestSource(config.rest);
+    }
+    return new IndexedDbSource(config.indexedDB);
+}
+
+
+/* === src/app-api.js === */
+// ========================================
+// Application API Wrapper
+// ========================================
+
+
+
+let dataSource = createDataSource(STORAGE_CONFIG);
+let usingFallback = false;
+
+async function fallbackToMemory(reason) {
+    if (usingFallback) return;
+    usingFallback = true;
+    console.warn('[ssMemo] IndexedDB 실패 → 메모리 저장소로 폴백:', reason);
+    dataSource = new MemorySource();
+    await dataSource.init();
+    AppAPI.showMessage(
+        '저장소 경고',
+        '브라우저 저장소(IndexedDB)에 접근할 수 없어 임시 메모리 저장으로 동작합니다. 새로고침 시 변경 내용이 유지되지 않을 수 있습니다.'
+    );
+}
+
+const AppAPI = {
+    async init() {
+        try {
+            if (dataSource?.init) await dataSource.init();
+        } catch (err) {
+            await fallbackToMemory(err);
+        }
+    },
+
+    async getNoteByDate(key) {
+        try {
+            return await dataSource.getNoteByDate(key);
+        } catch (err) {
+            await fallbackToMemory(err);
+            return dataSource.getNoteByDate(key);
+        }
+    },
+
+    async saveOrUpdateNoteByDate(key, content) {
+        try {
+            return await dataSource.saveOrUpdateNoteByDate(key, content);
+        } catch (err) {
+            await fallbackToMemory(err);
+            return dataSource.saveOrUpdateNoteByDate(key, content);
+        }
+    },
+
+    async listKeys(prefix = '') {
+        try {
+            return await dataSource.listKeys(prefix);
+        } catch (err) {
+            await fallbackToMemory(err);
+            return dataSource.listKeys(prefix);
+        }
+    },
+
+    async deleteKey(key) {
+        try {
+            return await dataSource.deleteKey(key);
+        } catch (err) {
+            await fallbackToMemory(err);
+            return dataSource.deleteKey(key);
+        }
+    },
+
+    isUsingFallback() {
+        return usingFallback;
+    },
+
+    async showMessage(title, message) {
+        return new Promise((resolve) => {
+            const modal = document.createElement('div');
+            modal.className = 'custom-modal-overlay';
+            modal.innerHTML = `
+                <div class="custom-modal">
+                    <div class="custom-modal-header">${this.escapeHtml(title)}</div>
+                    <div class="custom-modal-body">${this.escapeHtml(message)}</div>
+                    <div class="custom-modal-footer">
+                        <button class="custom-modal-btn">확인</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            const btn = modal.querySelector('.custom-modal-btn');
+            const closeModal = () => {
+                modal.remove();
+                resolve();
+            };
+
+            btn.addEventListener('click', closeModal);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeModal();
+            });
+        });
+    },
+
+    async confirm(title, message) {
+        return new Promise((resolve) => {
+            const modal = document.createElement('div');
+            modal.className = 'custom-modal-overlay';
+            modal.innerHTML = `
+                <div class="custom-modal">
+                    <div class="custom-modal-header">${this.escapeHtml(title)}</div>
+                    <div class="custom-modal-body">${this.escapeHtml(message)}</div>
+                    <div class="custom-modal-footer">
+                        <button class="custom-modal-btn custom-modal-btn-cancel">취소</button>
+                        <button class="custom-modal-btn custom-modal-btn-danger">확인</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            const cleanup = (result) => {
+                modal.remove();
+                resolve(result);
+            };
+
+            modal.querySelector('.custom-modal-btn-cancel')
+                .addEventListener('click', () => cleanup(false));
+            modal.querySelector('.custom-modal-btn-danger')
+                .addEventListener('click', () => cleanup(true));
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) cleanup(false);
+            });
+        });
+    },
+
+    // 옵션 중 하나를 고르는 모달. options: [{value, label, isCurrent?}].
+    // 사용자가 선택하면 value를, 취소(취소 버튼/배경 클릭/ESC)하면 null을 반환.
+    async choose(title, message, options) {
+        return new Promise((resolve) => {
+            const modal = document.createElement('div');
+            modal.className = 'custom-modal-overlay';
+            modal.innerHTML = `
+                <div class="custom-modal">
+                    <div class="custom-modal-header"></div>
+                    <div class="custom-modal-body"></div>
+                    <div class="custom-modal-choices"></div>
+                    <div class="custom-modal-footer">
+                        <button class="custom-modal-btn custom-modal-btn-cancel">취소</button>
+                    </div>
+                </div>
+            `;
+            modal.querySelector('.custom-modal-header').textContent = title;
+            modal.querySelector('.custom-modal-body').textContent = message;
+            document.body.appendChild(modal);
+
+            const cleanup = (val) => { modal.remove(); resolve(val); };
+
+            const choicesEl = modal.querySelector('.custom-modal-choices');
+            (options || []).forEach((opt) => {
+                const btn = document.createElement('button');
+                btn.className = 'custom-modal-btn custom-modal-choice'
+                    + (opt.isCurrent ? ' is-current' : '');
+                btn.textContent = opt.label;
+                btn.addEventListener('click', () => cleanup(opt.value));
+                choicesEl.appendChild(btn);
+            });
+
+            modal.querySelector('.custom-modal-btn-cancel')
+                .addEventListener('click', () => cleanup(null));
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) cleanup(null);
+            });
+        });
+    },
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    },
+
+    openURL(url) {
+        if (window?.go?.main?.App?.OpenURL) {
+            return window.go.main.App.OpenURL(url);
+        }
+        window.open(url, '_blank', 'noopener');
+    },
+
+    showLoading(message = '파일을 불러오는 중...') {
+        let overlay = document.getElementById('loading-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'loading-overlay';
+            overlay.className = 'loading-overlay';
+            overlay.innerHTML = `
+                <div class="loading-overlay-icon">⏳</div>
+                <div class="loading-overlay-message"></div>
+            `;
+            document.body.appendChild(overlay);
+        }
+        overlay.querySelector('.loading-overlay-message').textContent = message;
+        overlay.style.display = 'flex';
+    },
+
+    hideLoading() {
+        const overlay = document.getElementById('loading-overlay');
+        if (overlay) overlay.remove();
+    },
+};
+
+
+/* === src/memo-store.js === */
+// ========================================
+// 멀티 메모 저장소
+// - IndexedDB(또는 폴백)에 `memo:${title}` 키로 저장.
+// - 레거시 NOTEPAD 단일 메모를 첫 실행 시 기본 메모로 마이그레이션.
+// - 외부에는 title 기반 API만 노출. 키 형식은 본 모듈 내부에서만 다룬다.
+// ========================================
+
+
+const PREFIX = CONSTANTS.MEMO_KEY_PREFIX;
+
+const toKey = (title) => PREFIX + title;
+const fromKey = (key) => key.startsWith(PREFIX) ? key.slice(PREFIX.length) : key;
+
+// 제목 검증 — 빈 문자열/공백만/내부 키와 충돌 가능한 문자 금지.
+function validateTitle(title) {
+    if (typeof title !== 'string') return '제목이 문자열이 아닙니다.';
+    const t = title.trim();
+    if (!t) return '제목은 비어 있을 수 없습니다.';
+    if (t.length > 100) return '제목은 100자 이내여야 합니다.';
+    if (t.includes('\n') || t.includes('\r')) return '제목에 줄바꿈을 포함할 수 없습니다.';
+    return null;
+}
+
+// 모든 메모 목록 반환. updatedAt 내림차순(최근 수정 먼저).
+async function listMemos() {
+    const records = await AppAPI.listKeys(PREFIX);
+    return records
+        .map((r) => ({ title: fromKey(r.key), content: r.content, updatedAt: r.updatedAt }))
+        .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+}
+
+async function loadMemo(title) {
+    const rec = await AppAPI.getNoteByDate(toKey(title));
+    return { title, content: rec?.content || '', updatedAt: rec?.updatedAt || null };
+}
+
+async function saveMemo(title, content) {
+    return AppAPI.saveOrUpdateNoteByDate(toKey(title), content);
+}
+
+async function deleteMemo(title) {
+    return AppAPI.deleteKey(toKey(title));
+}
+
+// 제목 변경 — 새 키로 저장 후 옛 키 삭제 (원자성 X, 단일 사용자 로컬 환경에서 허용).
+// 새 제목이 이미 존재하면 거부.
+async function renameMemo(oldTitle, newTitle) {
+    if (oldTitle === newTitle) return;
+    const existing = await AppAPI.getNoteByDate(toKey(newTitle));
+    if (existing?.updatedAt) {
+        throw new Error('같은 제목의 메모가 이미 존재합니다.');
+    }
+    const cur = await AppAPI.getNoteByDate(toKey(oldTitle));
+    await AppAPI.saveOrUpdateNoteByDate(toKey(newTitle), cur?.content || '');
+    await AppAPI.deleteKey(toKey(oldTitle));
+}
+
+// 레거시 NOTEPAD 단일 메모를 멀티 메모로 마이그레이션.
+// 이미 멀티 메모가 하나라도 있으면 스킵 (재실행 안전).
+// NOTEPAD에 콘텐츠가 있으면 DEFAULT_MEMO_TITLE로 이전, 비어 있어도 빈 기본 메모 생성.
+// 반환값: 마이그레이션 후 사용할 기본 메모 title.
+async function ensureAtLeastOneMemo() {
+    const memos = await listMemos();
+    if (memos.length > 0) return memos[0].title;
+
+    const legacy = await AppAPI.getNoteByDate(CONSTANTS.NOTEPAD_KEY);
+    const content = legacy?.content || '';
+    const title = CONSTANTS.DEFAULT_MEMO_TITLE;
+    await saveMemo(title, content);
+    // 레거시 키는 마이그레이션 후 제거 — 다음 부팅에서 빈 회귀 방지.
+    try { await AppAPI.deleteKey(CONSTANTS.NOTEPAD_KEY); } catch { /* ignore */ }
+    return title;
+}
+
+
+/* === src/note-search.js === */
+// ========================================
+// Note Search UI
+// ========================================
+
+
+const NoteSearchUI = {
+    setup() {
+        state.elements.noteSearchInput = document.getElementById('noteSearchInput');
+        state.elements.noteSearchBtn = document.getElementById('noteSearchBtn');
+        state.elements.noteSearchPrevBtn = document.getElementById('noteSearchPrevBtn');
+        state.elements.noteSearchNextBtn = document.getElementById('noteSearchNextBtn');
+
+        if (!state.elements.noteSearchInput || !state.elements.noteSearchBtn ||
+            !state.elements.noteSearchPrevBtn || !state.elements.noteSearchNextBtn) return;
+
+        state.elements.noteSearchBtn.addEventListener('click', () => {
+            this.find({ startFromBeginning: true });
+        });
+
+        state.elements.noteSearchPrevBtn.addEventListener('click', () => {
+            this.findPrev();
+        });
+
+        state.elements.noteSearchNextBtn.addEventListener('click', () => {
+            this.find({ startFromBeginning: false });
+        });
+
+        state.elements.noteSearchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.find({ startFromBeginning: true });
+            }
+        });
+    },
+
+    find({ startFromBeginning }) {
+        const noteEditor = this.getCurrentEditor();
+        if (!noteEditor || !state.elements.noteSearchInput) return;
+
+        const query = state.elements.noteSearchInput.value;
+        if (!query) return;
+
+        const content = noteEditor.value;
+        const startIndex = startFromBeginning ? 0 : noteEditor.selectionEnd;
+        let matchIndex = content.indexOf(query, startIndex);
+
+        if (matchIndex === -1 && startIndex > 0) {
+            matchIndex = content.indexOf(query, 0);
+        }
+
+        if (matchIndex === -1) {
+            this.showMiss();
+            return;
+        }
+
+        state.elements.noteSearchInput.classList.remove('note-search-miss');
+        noteEditor.focus();
+        noteEditor.setSelectionRange(matchIndex, matchIndex + query.length);
+        this.scrollToIndex(noteEditor, matchIndex);
+    },
+
+    findPrev() {
+        const noteEditor = this.getCurrentEditor();
+        if (!noteEditor || !state.elements.noteSearchInput) return;
+
+        const query = state.elements.noteSearchInput.value;
+        if (!query) return;
+
+        const content = noteEditor.value;
+        const startIndex = noteEditor.selectionStart - 1;
+
+        if (startIndex < 0) return;
+
+        let matchIndex = content.lastIndexOf(query, startIndex);
+
+        if (matchIndex === -1) {
+            matchIndex = content.lastIndexOf(query, content.length);
+        }
+
+        if (matchIndex === -1) {
+            this.showMiss();
+            return;
+        }
+
+        state.elements.noteSearchInput.classList.remove('note-search-miss');
+        noteEditor.focus();
+        noteEditor.setSelectionRange(matchIndex, matchIndex + query.length);
+        this.scrollToIndex(noteEditor, matchIndex);
+    },
+
+    getCurrentEditor() {
+        // 현재 활성화된 에디터를 찾습니다
+        const activeContainer = document.querySelector('.note-editor-container:not(.hidden)');
+        if (!activeContainer) return null;
+
+        const editor = activeContainer.querySelector('.note-editor');
+        return editor;
+    },
+
+    showMiss() {
+        state.elements.noteSearchInput.classList.add('note-search-miss');
+        setTimeout(() => {
+            state.elements.noteSearchInput.classList.remove('note-search-miss');
+        }, CONSTANTS.SEARCH_MISS_DURATION);
+    },
+
+    scrollToIndex(noteEditor, index) {
+        const textBefore = noteEditor.value.slice(0, index);
+        const lineIndex = textBefore.split('\n').length - 1;
+        const style = window.getComputedStyle(noteEditor);
+        const lineHeight = parseFloat(style.lineHeight) || 24;
+        const paddingTop = parseFloat(style.paddingTop) || 0;
+        const targetTop = (lineIndex * lineHeight) + paddingTop;
+        const offset = noteEditor.clientHeight / 3;
+        noteEditor.scrollTop = Math.max(0, targetTop - offset);
+    }
+};
+
+
+/* === src/notepad.js === */
+// ========================================
+// Notepad Management
+// ========================================
+
+
+
+
+
+
+
+
+
+
+// Cache DOM elements
+let notePanel = null;
+let noteEditor = null;
+let lineNumbers = null;
+let charCountEl = null;
+
+// 빈 문자열도 textarea에서 1줄로 보이므로 최소 1로 보정.
+// split보다 빠르게 줄 수만 세는 헬퍼 — 5MB 파일에서 split 배열 할당 비용을 피한다.
+function countLines(text) {
+    if (!text) return 1;
+    let count = 1;
+    for (let i = 0; i < text.length; i++) {
+        if (text.charCodeAt(i) === 10) count++;
+    }
+    return count;
+}
+
+// 줄 번호 영역 갱신 + 줄 수 캐시. 줄 수가 그대로면 textContent를
+// 다시 쓰지 않아 큰 파일 입력 중 리플로우/리페인트 비용을 절감한다.
+function refreshLineNumbers(editor, lineNumbersEl) {
+    if (!editor || !lineNumbersEl) return;
+    const count = countLines(editor.value);
+    if (lineNumbersEl.__ssLineCount !== count) {
+        lineNumbersEl.textContent = buildLineNumbersText(count);
+        lineNumbersEl.__ssLineCount = count;
+    }
+    lineNumbersEl.scrollTop = editor.scrollTop;
+}
+
+// 파일 탭 관리 상태
+const fileTabs = {
+    slots: Array(7).fill(null), // 각 슬롯의 파일 정보 {fileName, content}
+    currentTab: 'main', // 현재 활성 탭
+    wrapStates: { main: false, 0: false, 1: false, 2: false, 3: false, 4: false, 5: false, 6: false }, // 각 탭의 줄바꿈 상태
+    previewStates: { 0: false, 1: false, 2: false, 3: false, 4: false, 5: false, 6: false } // .md 미리보기 상태
+};
+
+// 코드 블럭 실행기의 메모리 — "메모리에 저장" 옵션을 선택했을 때만 갱신됨.
+// IndexedDB(또는 폴백 메모리)에 영속 저장되며, Notepad.open()에서 자동 로드.
+const calcMemory = {};
+
+// 메모리를 영속 저장에 기록. IndexedDB 실패 시 AppAPI가 메모리 폴백으로 처리.
+async function persistCalcMemory() {
+    try {
+        await AppAPI.saveOrUpdateNoteByDate(CONSTANTS.CALC_MEMORY_KEY, serializeEnv(calcMemory));
+    } catch (e) {
+        console.warn('[ssMemo] 코드 메모리 저장 실패:', e);
+    }
+}
+
+// 영속 저장에서 메모리를 읽어 calcMemory에 채움. 손상 시 빈 상태로 동작.
+async function loadCalcMemory() {
+    try {
+        const rec = await AppAPI.getNoteByDate(CONSTANTS.CALC_MEMORY_KEY);
+        const restored = deserializeEnv(rec?.content || '');
+        for (const k of Object.keys(calcMemory)) delete calcMemory[k];
+        Object.assign(calcMemory, restored);
+    } catch (e) {
+        console.warn('[ssMemo] 코드 메모리 로드 실패:', e);
+    }
+}
+
+const Notepad = {
+    async open() {
+        notePanel = document.getElementById('note-panel');
+        noteEditor = document.getElementById('note-editor');
+        lineNumbers = document.getElementById('line-numbers');
+        charCountEl = document.getElementById('note-char-count');
+
+        if (!notePanel || !noteEditor || !lineNumbers || !charCountEl) return;
+
+        notePanel.classList.remove('hidden');
+        noteEditor.focus();
+
+        try {
+            // 레거시 NOTEPAD → memo:기본 메모 마이그레이션 (이미 메모가 있으면 스킵).
+            const firstTitle = await ensureAtLeastOneMemo();
+            const memo = await loadMemo(firstTitle);
+            noteEditor.value = memo.content || '';
+            state.notepad.currentMemoTitle = firstTitle;
+        } catch (e) {
+            console.error('Failed to load notepad content:', e);
+            noteEditor.value = '';
+            state.notepad.currentMemoTitle = CONSTANTS.DEFAULT_MEMO_TITLE;
+        }
+
+        state.notepad.lastSavedContent = noteEditor.value;
+        state.notepad.isDirty = false;
+        this.refreshTitleDisplay();
+
+        // 저장된 코드 블럭 메모리를 읽어 calcMemory에 채운다.
+        // 이후 runCodeBlock에서 즉시 사용 가능하도록 await로 동기화.
+        await loadCalcMemory();
+
+        this.updateLineNumbers();
+        this.updateCharCount();
+        // 로드된 메모에 이미 절취선이 있을 수 있으므로 버튼 상태 동기화.
+        this.syncSplitButtonState();
+
+        // 큰 파일에서 keystroke마다 전체 스캔(countLines)을 돌면 입력이 끊긴다.
+        // 줄번호 갱신은 50ms로 묶고, char count/scroll/isDirty는 즉시 반영.
+        const debouncedLineNumbers = debounce(() => this.updateLineNumbers(), 50);
+
+        noteEditor.oninput = () => {
+            debouncedLineNumbers();
+            this.updateCharCount();
+            lineNumbers.scrollTop = noteEditor.scrollTop;
+            state.notepad.isDirty = noteEditor.value !== state.notepad.lastSavedContent;
+        };
+
+        noteEditor.onscroll = () => {
+            lineNumbers.scrollTop = noteEditor.scrollTop;
+        };
+
+        noteEditor.onkeydown = (e) => this.handleKeyDown(e);
+        noteEditor.oncontextmenu = (e) => this.handleContextMenu(e);
+
+        // 탭 클릭 핸들러 설정
+        this.setupTabClickHandlers();
+
+        // Drag & Drop 핸들러 설정
+        this.setupDragAndDrop();
+
+        this.startAutoSave();
+    },
+
+    async close() {
+        if (notePanel && !notePanel.classList.contains('hidden')) {
+            await this.save();
+            notePanel.classList.add('hidden');
+            this.stopAutoSave();
+        }
+    },
+
+    async save() {
+        if (!noteEditor) return "저장할 데이터가 없습니다.";
+
+        const content = noteEditor.value;
+        if (!state.notepad.isDirty || content === state.notepad.lastSavedContent) {
+            return "변경된 내용이 없습니다.";
+        }
+
+        const title = state.notepad.currentMemoTitle;
+        if (!title) return "현재 메모를 알 수 없어 저장하지 못했습니다.";
+
+        let retMsg = "저장에 성공했습니다.";
+        try {
+            await saveMemo(title, content);
+            state.notepad.lastSavedContent = content;
+            state.notepad.isDirty = false;
+            console.log(`Notepad auto-saved: ${title}`);
+        } catch (e) {
+            console.error('Failed to save notepad:', e);
+            retMsg = "저장에 실패했습니다.";
+        }
+        return retMsg;
+    },
+
+    async saveWithNotification() {
+        const msg = await this.save();
+        await AppAPI.showMessage('메모 저장', msg);
+    },
+
+    startAutoSave() {
+        if (state.notepad.autoSaveTimer) clearInterval(state.notepad.autoSaveTimer);
+        state.notepad.autoSaveTimer = setInterval(() => this.save(), CONSTANTS.AUTO_SAVE_INTERVAL);
+    },
+
+    stopAutoSave() {
+        if (state.notepad.autoSaveTimer) {
+            clearInterval(state.notepad.autoSaveTimer);
+            state.notepad.autoSaveTimer = null;
+        }
+    },
+
+    insertDivider() {
+        if (!noteEditor) return;
+
+        const divider = '─'.repeat(CONSTANTS.DIVIDER_LENGTH);
+        const cursorPos = noteEditor.selectionStart;
+        const textBefore = noteEditor.value.substring(0, cursorPos);
+        const textAfter = noteEditor.value.substring(noteEditor.selectionEnd);
+
+        const prefix = (textBefore.length > 0 && !textBefore.endsWith('\n')) ? '\n' : '';
+        const suffix = (textAfter.length > 0 && !textAfter.startsWith('\n')) ? '\n' : '';
+
+        const newText = textBefore + prefix + divider + suffix + textAfter;
+        noteEditor.value = newText;
+
+        const newCursorPos = cursorPos + prefix.length + divider.length + suffix.length;
+        noteEditor.setSelectionRange(newCursorPos, newCursorPos);
+
+        this.updateLineNumbers();
+        this.updateCharCount();
+        state.notepad.isDirty = noteEditor.value !== state.notepad.lastSavedContent;
+    },
+
+    insertSymbol(symbol) {
+        if (!noteEditor) return;
+
+        const cursorPos = noteEditor.selectionStart;
+        const textBefore = noteEditor.value.substring(0, cursorPos);
+        const textAfter = noteEditor.value.substring(noteEditor.selectionEnd);
+
+        const newText = textBefore + symbol + textAfter;
+        noteEditor.value = newText;
+
+        const newCursorPos = cursorPos + symbol.length;
+        noteEditor.setSelectionRange(newCursorPos, newCursorPos);
+
+        this.updateLineNumbers();
+        this.updateCharCount();
+        state.notepad.isDirty = noteEditor.value !== state.notepad.lastSavedContent;
+    },
+
+    updateCharCount() {
+        if (!noteEditor || !charCountEl) return;
+        charCountEl.textContent = `글자수: ${noteEditor.value.length}`;
+    },
+
+    updateLineNumbers() {
+        refreshLineNumbers(noteEditor, lineNumbers);
+    },
+
+    handleContextMenu(e) {
+        if (!noteEditor) return;
+
+        const start = noteEditor.selectionStart;
+        const end = noteEditor.selectionEnd;
+
+        if (start === end) return;
+
+        const selectedText = noteEditor.value.substring(start, end).trim();
+        const urlPattern = /^(https?:\/\/|www\.)/i;
+        if (urlPattern.test(selectedText)) {
+            e.preventDefault();
+
+            let url = selectedText;
+            if (url.startsWith('www.')) {
+                url = 'https://' + url;
+            }
+
+            AppAPI.openURL(url);
+        }
+    },
+
+    handleKeyDown(e) {
+        if (e.ctrlKey && (e.key === 'F' || e.key === 'I' || e.key === 'i')) {
+            e.preventDefault();
+            state.elements.noteSearchInput?.focus();
+            return;
+        }
+
+        if (e.key === 'PageUp' || (e.altKey && (e.key === 'B' || e.key === 'b'))) {
+            e.preventDefault();
+            const currentEditor = fileTabs.currentTab === 'main'
+                ? noteEditor
+                : document.getElementById(`note-editor-${fileTabs.currentTab}`);
+            if (currentEditor) currentEditor.scrollTop -= currentEditor.clientHeight;
+            return;
+        }
+
+        if (e.key === 'PageDown' || (e.altKey && (e.key === 'F' || e.key === 'f'))) {
+            e.preventDefault();
+            const currentEditor = fileTabs.currentTab === 'main'
+                ? noteEditor
+                : document.getElementById(`note-editor-${fileTabs.currentTab}`);
+            if (currentEditor) currentEditor.scrollTop += currentEditor.clientHeight;
+            return;
+        }
+
+        if (e.ctrlKey && (e.key === '6' || e.key === 'h' || e.key === 'H')) {
+            e.preventDefault();
+            if (noteEditor) {
+                noteEditor.setSelectionRange(0, 0);
+                noteEditor.scrollTop = 0;
+            }
+            return;
+        }
+
+        if (e.ctrlKey && (e.key === '4' || e.key === 'e' || e.key === 'E')) {
+            e.preventDefault();
+            if (noteEditor) {
+                const endPos = noteEditor.value.length;
+                noteEditor.setSelectionRange(endPos, endPos);
+                noteEditor.scrollTop = noteEditor.scrollHeight;
+            }
+            return;
+        }
+
+        if (e.ctrlKey && (e.key === ',' || e.key === 'b' || e.key === 'B')) {
+            e.preventDefault();
+            NoteSearchUI.findPrev();
+            return;
+        }
+
+        if (e.ctrlKey && (e.key === 'n' || e.key === 'N' || e.key === '.')) {
+            e.preventDefault();
+            NoteSearchUI.find({ startFromBeginning: false });
+            return;
+        }
+
+        if (e.ctrlKey && (e.key === 'l' || e.key === 'L')) {
+            e.preventDefault();
+            this.insertDivider();
+            return;
+        }
+
+        if (e.ctrlKey && e.key === 'Enter') {
+            e.preventDefault();
+            this.runCodeBlock();
+            return;
+        }
+
+        if (e.ctrlKey && e.shiftKey && e.key) {
+            const upperKey = e.key.toUpperCase();
+            const symbol = SYMBOL_SHORTCUTS[upperKey];
+            if (symbol) {
+                e.preventDefault();
+                this.insertSymbol(symbol);
+                return;
+            }
+        }
+    },
+
+    // 절취선 토글 버튼의 텍스트/툴팁을 현재 메모 내용에 맞춘다.
+    // 메모 로드/리셋/분할 토글 직후 호출해 시각과 콘텐츠 상태를 일치시킨다.
+    syncSplitButtonState(len = 2000) {
+        const btn = document.querySelector('button[onclick^="splitNoteIntoChunks"]');
+        if (!btn || !noteEditor) return;
+        const hasDelimiter = noteEditor.value.includes(CHUNK_DELIMITER);
+        if (hasDelimiter) {
+            btn.textContent = '➕';
+            btn.title = '절취선 문구 삭제';
+        } else {
+            btn.textContent = '➗';
+            btn.title = `${len}자 크기로 나누기`;
+        }
+    },
+
+    splitNoteIntoChunks(len) {
+        if (!noteEditor) return;
+        const content = noteEditor.value;
+        const action = decideChunkAction(content, len);
+        if (action === 'noop') return;
+
+        if (action === 'join') {
+            noteEditor.value = joinTextChunks(content);
+            if (state.elements.noteSearchInput &&
+                state.elements.noteSearchInput.value === '절취선') {
+                state.elements.noteSearchInput.value = '';
+            }
+        } else {
+            noteEditor.value = splitTextIntoChunks(content, len);
+            if (state.elements.noteSearchInput) {
+                state.elements.noteSearchInput.value = '절취선';
+            }
+        }
+
+        this.syncSplitButtonState(len);
+        this.updateLineNumbers();
+        this.updateCharCount();
+        state.notepad.isDirty = noteEditor.value !== state.notepad.lastSavedContent;
+    },
+
+    showHelpPanel() {
+        const helpText = `메모장 단축키
+
+📁 파일 메뉴 — 메모 관리/파일 불러오기/저장/다운로드/메모 비우기.
+  📋 메모 관리에서 여러 메모를 만들고 전환/이름변경/삭제 가능.
+  자동 저장(3분)은 현재 표시된 메모로 향한다.
+
+Alt + B - 페이지 위로
+Alt + F - 페이지 아래로
+
+Ctrl + Ｉ - 검색
+Ctrl + < - 이전 검색 결과로 이동
+Ctrl + > - 다음 검색 결과로 이동
+
+Ctrl + L - 구분선 삽입
+Ctrl + Enter - 선택한 코드 실행 🧮
+  (드래그로 선택 후 실행. 선택 없으면 현재 줄 실행)
+  결과 모달 옵션:
+    📥 메모에 삽입 — 코드 다음 줄에 # 주석으로 결과 삽입
+    💾 메모리에 저장 — 이번 실행의 변수를 세션 메모리에 보존
+    🗑️ 메모리 초기화 — 저장된 변수 모두 삭제
+  저장된 메모리 변수는 다음 실행에서 자동으로 읽혀 사용 가능
+  (IndexedDB에 영속 저장 — 페이지 새로고침/재시작 후에도 유지)
+  지원: 변수, +,-,*,/,//, 괄호, sin/cos/tan,
+        factorial(n≤1000), # 주석
+  정수는 5000자리 이상도 정확.
+
+  예시:
+    1 + 2 * 3            # 7
+    (10 + 5) / 3         # 5
+    7 / 2                # 3.5
+    7 // 2               # 3 (몫)
+    x = 10
+    y = x * x + 1        # y = 101
+    factorial(20)        # 2432902008176640000
+    sin(0) + cos(0)      # 1
+    9999 * 9999          # 99980001
+
+기호 삽입:
+Ctrl + Shift + A - →
+Ctrl + Shift + C - ✅ (체크마크)
+Ctrl + Shift + O - □ (박스)
+Ctrl + Shift + R - ※
+Ctrl + Shift + X - ❎
+Ctrl + Shift + Z - 🟩
+
+URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
+`;
+
+        AppAPI.showMessage('메모장 도움말', helpText);
+    },
+
+    async loadFileFromDisk() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.txt,.md,.py,.java,.go,.c,.cpp,text/*';
+
+        input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            await this.handleIncomingFile(file);
+        };
+
+        input.click();
+    },
+
+    async handleIncomingFile(file) {
+        if (isOversized(file)) {
+            await AppAPI.showMessage('파일 불러오기 실패', '파일 크기가 너무 큽니다. (10MB 이하)');
+            return;
+        }
+        if (!isAllowedTextFile(file)) {
+            await AppAPI.showMessage('파일 불러오기 실패', '지원하지 않는 파일 형식입니다. (텍스트 파일만 가능)');
+            return;
+        }
+
+        const showSpinner = file.size >= CONSTANTS.LOADING_SPINNER_THRESHOLD;
+        if (showSpinner) {
+            const sizeKb = Math.round(file.size / 1024);
+            AppAPI.showLoading(`파일을 불러오는 중... (${sizeKb} KB)`);
+            // 스피너가 실제로 그려지도록 한 프레임 양보
+            await nextFrame();
+        }
+
+        // 큰 파일에서 decode/normalize/value 적용/줄번호/탭 전환이 한 동기 블록으로
+        // 묶이면 메인 스레드가 수 초간 잠겨 터치/스크롤이 멈춘다. 단계 사이에
+        // rAF로 양보해 브라우저가 페인트/입력을 처리할 틈을 만든다.
+        const yieldIfBig = showSpinner ? nextFrame : null;
+
+        // 어떤 단계에서 던지더라도 스피너가 영구 잔류하지 않도록 finally로 hideLoading 보장.
+        let resultTitle = '파일 불러오기';
+        let resultMsg = '파일을 읽을 수 없습니다.';
+        try {
+            // ArrayBuffer로 읽어 한글 인코딩(UTF-8/CP949/Johab)을 자동 감지한다.
+            const buffer = await file.arrayBuffer();
+            if (yieldIfBig) await yieldIfBig();
+
+            const { text, encoding } = decodeKoreanText(buffer);
+            if (yieldIfBig) await yieldIfBig();
+
+            // CRLF/CR 파일을 LF로 정규화: split('\n')이 세는 줄 수와
+            // textarea가 그리는 시각적 줄 수를 일치시킨다.
+            const content = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+            if (yieldIfBig) await yieldIfBig();
+
+            const emptySlotIndex = fileTabs.slots.findIndex(slot => slot === null);
+            if (emptySlotIndex === -1) {
+                resultTitle = '파일 불러오기 실패';
+                resultMsg = `최대 ${CONSTANTS.MAX_FILE_TABS}개의 파일만 열 수 있습니다.`;
+            } else {
+                // buffer는 사용자가 인코딩을 잘못 자동 감지했을 때 재디코딩에 쓰인다.
+                fileTabs.slots[emptySlotIndex] = { fileName: file.name, content, encoding, buffer };
+                this.showFileTab(emptySlotIndex);
+                await this.loadFileToEditor(emptySlotIndex, yieldIfBig);
+                if (yieldIfBig) await yieldIfBig();
+                this.switchTab(emptySlotIndex);
+                const garbledHint = looksGarbled(content)
+                    ? '\n\n⚠️ 디코딩이 부정확할 수 있습니다. 툴바의 🔤 버튼으로 인코딩을 바꿔보세요.'
+                    : '';
+                resultMsg = `파일 "${file.name}"을 ${encoding} 인코딩으로 불러왔습니다.${garbledHint}`;
+            }
+        } catch (error) {
+            console.error('Failed to read file:', error);
+            resultTitle = '파일 불러오기 실패';
+            resultMsg = '파일을 읽을 수 없습니다.';
+        } finally {
+            if (showSpinner) AppAPI.hideLoading();
+        }
+
+        await AppAPI.showMessage(resultTitle, resultMsg);
+    },
+
+    showFileTab(index) {
+        const tab = document.querySelector(`.note-tab[data-tab="${index}"]`);
+        if (!tab) return;
+
+        const fileInfo = fileTabs.slots[index];
+        if (!fileInfo) return;
+
+        // 탭 표시 및 파일명 설정
+        tab.classList.remove('note-tab-hidden');
+        const labelEl = tab.querySelector('.note-tab-label');
+        if (labelEl) {
+            // 파일명이 10글자를 초과하면 10글자까지만 표시
+            const displayName = fileInfo.fileName.length > 12
+                ? fileInfo.fileName.substring(0, 8) + '...'
+                : fileInfo.fileName;
+            labelEl.textContent = displayName;
+            labelEl.title = fileInfo.fileName; // 전체 파일명은 툴팁으로 표시
+        }
+    },
+
+    hideFileTab(index) {
+        const tab = document.querySelector(`.note-tab[data-tab="${index}"]`);
+        if (!tab) return;
+
+        tab.classList.add('note-tab-hidden');
+        tab.classList.remove('note-tab-active');
+    },
+
+    // yieldFn이 주어지면 editor.value 적용 후 한 프레임 양보해 textarea가
+    // 페인트되고 터치 이벤트가 처리될 시간을 준 뒤 줄번호를 그린다.
+    // 큰 파일에서 메인 스레드가 한 번에 묶이는 것을 막기 위함.
+    async loadFileToEditor(index, yieldFn) {
+        const fileInfo = fileTabs.slots[index];
+        if (!fileInfo) return;
+
+        const editor = document.getElementById(`note-editor-${index}`);
+        const lineNumEl = document.getElementById(`line-numbers-${index}`);
+
+        if (!editor || !lineNumEl) return;
+
+        editor.value = fileInfo.content;
+        if (yieldFn) await yieldFn();
+
+        // 줄 번호 업데이트 (캐시로 중복 갱신 차단)
+        refreshLineNumbers(editor, lineNumEl);
+
+        // 스크롤 동기화
+        editor.onscroll = () => {
+            lineNumEl.scrollTop = editor.scrollTop;
+        };
+
+        // 키보드 이벤트 핸들러 연결 (검색 단축키 지원)
+        editor.onkeydown = (e) => this.handleKeyDown(e);
+    },
+
+    // textarea의 scrollHeight와 line-numbers 패널의 scrollHeight를 일치시킨다.
+    // 일부 브라우저는 textarea 바닥에 1행 분량의 추가 공간을 두어 두 요소가 어긋난다.
+    // 탭이 표시된(보이는) 상태에서만 호출해야 측정이 유효하다.
+    syncLineNumbersHeight(editor, lineNumEl) {
+        if (!editor || !lineNumEl) return;
+        if (editor.offsetParent === null) return; // 숨겨진 상태면 측정 불가
+        const diff = editor.scrollHeight - lineNumEl.scrollHeight;
+        const basePadding = 10;
+        lineNumEl.style.paddingBottom = `${Math.max(basePadding, basePadding + diff)}px`;
+    },
+
+    switchTab(tabId) {
+        // 모든 탭과 컨테이너 비활성화
+        document.querySelectorAll('.note-tab').forEach(tab => {
+            tab.classList.remove('note-tab-active');
+        });
+
+        document.querySelectorAll('.note-editor-container').forEach(container => {
+            container.classList.add('hidden');
+        });
+
+        // 선택된 탭과 컨테이너 활성화
+        const targetTab = document.querySelector(`.note-tab[data-tab="${tabId}"]`);
+        const targetContainer = document.getElementById(`note-container-${tabId}`);
+
+        if (targetTab && targetContainer) {
+            targetTab.classList.add('note-tab-active');
+            targetContainer.classList.remove('hidden');
+            fileTabs.currentTab = tabId;
+
+            // 글자수 업데이트
+            this.updateCharCountForTab(tabId);
+
+            // 저장하기, 나누기 버튼 표시/숨김 처리
+            this.updateButtonsVisibility(tabId);
+
+            // 줄바꿈 버튼 상태 동기화
+            this.syncForceEnterButton();
+
+            // 탭이 화면에 그려진 다음 프레임에 line-numbers 높이 보정
+            if (tabId !== 'main') {
+                const editor = document.getElementById(`note-editor-${tabId}`);
+                const lineNumEl = document.getElementById(`line-numbers-${tabId}`);
+                requestAnimationFrame(() => this.syncLineNumbersHeight(editor, lineNumEl));
+            }
+        }
+    },
+
+    updateCharCountForTab(tabId) {
+        if (!charCountEl) return;
+
+        let editor;
+        if (tabId === 'main') {
+            editor = noteEditor;
+        } else {
+            editor = document.getElementById(`note-editor-${tabId}`);
+        }
+
+        if (editor) {
+            charCountEl.textContent = `글자수: ${editor.value.length}`;
+        }
+    },
+
+    updateButtonsVisibility(tabId) {
+        // 메인 메모장 전용 편집 아이콘은 파일 탭에서 숨김.
+        // 저장/다운로드/초기화는 📁 파일 메뉴 안에서 탭별로 동적 표시되므로 여기서 다루지 않음.
+        const splitBtn = document.querySelector('button[onclick^="splitNoteIntoChunks"]');
+        if (splitBtn) {
+            splitBtn.style.display = (tabId === 'main') ? '' : 'none';
+        }
+
+        this.updateMarkdownButtonVisibility(tabId);
+        this.updateEncodingButtonVisibility(tabId);
+    },
+
+    updateEncodingButtonVisibility(tabId) {
+        const btn = document.getElementById('encoding-btn');
+        if (!btn) return;
+        const slot = tabId !== 'main' ? fileTabs.slots[tabId] : null;
+        if (slot && slot.buffer) {
+            btn.classList.remove('hidden');
+            btn.title = `현재 인코딩: ${slot.encoding} (변경)`;
+        } else {
+            btn.classList.add('hidden');
+        }
+    },
+
+    async changeEncoding() {
+        const tabId = fileTabs.currentTab;
+        if (tabId === 'main') return;
+        const slot = fileTabs.slots[tabId];
+        if (!slot || !slot.buffer) {
+            await AppAPI.showMessage('인코딩 변경', '재디코딩할 원본 데이터가 없습니다.');
+            return;
+        }
+
+        const ENCODINGS = ['UTF-8', 'CP949', 'Johab'];
+        const options = ENCODINGS.map(enc => ({
+            value: enc,
+            label: enc + (enc === slot.encoding ? '  ✓ (현재)' : ''),
+            isCurrent: enc === slot.encoding,
+        }));
+        const chosen = await AppAPI.choose(
+            '인코딩 변경',
+            `현재: ${slot.encoding}\n다른 인코딩으로 다시 읽어옵니다.`,
+            options
+        );
+        if (!chosen || chosen === slot.encoding) return;
+
+        const showSpinner = slot.buffer.byteLength >= CONSTANTS.LOADING_SPINNER_THRESHOLD;
+        if (showSpinner) {
+            AppAPI.showLoading(`${chosen} 인코딩으로 다시 읽는 중...`);
+            await nextFrame();
+        }
+        // handleIncomingFile과 동일하게 큰 파일에서는 단계 사이마다 양보.
+        const yieldIfBig = showSpinner ? nextFrame : null;
+
+        let resultMsg = '다시 디코딩하지 못했습니다.';
+        try {
+            const text = decodeWithEncoding(slot.buffer, chosen);
+            if (yieldIfBig) await yieldIfBig();
+
+            const content = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+            if (yieldIfBig) await yieldIfBig();
+
+            slot.content = content;
+            slot.encoding = chosen;
+
+            const editor = document.getElementById(`note-editor-${tabId}`);
+            const lineNumEl = document.getElementById(`line-numbers-${tabId}`);
+            if (editor && lineNumEl) {
+                editor.value = content;
+                if (yieldIfBig) await yieldIfBig();
+                refreshLineNumbers(editor, lineNumEl);
+            }
+
+            // 마크다운 미리보기 활성 상태면 새 텍스트로 다시 렌더.
+            const previewEl = document.getElementById(`note-md-preview-${tabId}`);
+            if (previewEl && fileTabs.previewStates[tabId]) {
+                previewEl.innerHTML = renderMarkdown(content);
+            }
+
+            this.updateEncodingButtonVisibility(tabId);
+            const garbledHint = looksGarbled(content)
+                ? '\n\n⚠️ 결과가 여전히 깨져 보이면 다른 인코딩을 시도해보세요.'
+                : '';
+            resultMsg = `${chosen} 인코딩으로 다시 읽었습니다.${garbledHint}`;
+        } catch (e) {
+            console.error('Failed to re-decode:', e);
+            resultMsg = '다시 디코딩하지 못했습니다.';
+        } finally {
+            if (showSpinner) AppAPI.hideLoading();
+        }
+
+        await AppAPI.showMessage('인코딩 변경', resultMsg);
+    },
+
+    updateMarkdownButtonVisibility(tabId) {
+        const btn = document.getElementById('md-preview-btn');
+        if (!btn) return;
+        const isMd = tabId !== 'main' &&
+            fileTabs.slots[tabId]?.fileName?.toLowerCase().endsWith('.md');
+        if (isMd) {
+            btn.classList.remove('hidden');
+            const previewing = fileTabs.previewStates[tabId];
+            btn.textContent = previewing ? '✏️' : '📖';
+            btn.title = previewing ? '마크다운 원문 보기' : '마크다운 미리보기';
+        } else {
+            btn.classList.add('hidden');
+        }
+    },
+
+    toggleMarkdownPreview() {
+        const tabId = fileTabs.currentTab;
+        if (tabId === 'main') return;
+        const slot = fileTabs.slots[tabId];
+        if (!slot || !slot.fileName.toLowerCase().endsWith('.md')) return;
+
+        const editor = document.getElementById(`note-editor-${tabId}`);
+        const lineNumEl = document.getElementById(`line-numbers-${tabId}`);
+        const previewEl = document.getElementById(`note-md-preview-${tabId}`);
+        if (!editor || !previewEl) return;
+
+        const turningOn = !fileTabs.previewStates[tabId];
+        if (turningOn) {
+            previewEl.innerHTML = renderMarkdown(slot.content);
+            previewEl.classList.remove('hidden');
+            editor.classList.add('hidden');
+            if (lineNumEl) lineNumEl.classList.add('hidden');
+        } else {
+            previewEl.classList.add('hidden');
+            editor.classList.remove('hidden');
+            if (lineNumEl) lineNumEl.classList.remove('hidden');
+        }
+        fileTabs.previewStates[tabId] = turningOn;
+        this.updateMarkdownButtonVisibility(tabId);
+    },
+
+    closeFileTab(index) {
+        // 탭 닫기 확인
+        const fileName = fileTabs.slots[index]?.fileName || `파일 ${index + 1}`;
+        if (!confirm(`"${fileName}" 탭을 닫으시겠습니까?`)) {
+            return;
+        }
+
+        // 슬롯 초기화
+        fileTabs.slots[index] = null;
+        fileTabs.previewStates[index] = false;
+
+        // 탭 숨기기
+        this.hideFileTab(index);
+
+        // 에디터 내용 초기화 및 미리보기 정리
+        const editor = document.getElementById(`note-editor-${index}`);
+        const lineNumEl = document.getElementById(`line-numbers-${index}`);
+        const previewEl = document.getElementById(`note-md-preview-${index}`);
+        if (editor) {
+            editor.value = '';
+            editor.classList.remove('hidden');
+        }
+        if (lineNumEl) {
+            lineNumEl.textContent = '1';
+            lineNumEl.__ssLineCount = 1;
+            lineNumEl.classList.remove('hidden');
+        }
+        if (previewEl) {
+            previewEl.innerHTML = '';
+            previewEl.classList.add('hidden');
+        }
+
+        // 현재 탭이 닫힌 탭이면 메인 탭으로 전환
+        if (fileTabs.currentTab === index) {
+            this.switchTab('main');
+        }
+    },
+
+    setupTabClickHandlers() {
+        document.querySelectorAll('.note-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                // 닫기 버튼 클릭은 무시
+                if (e.target.classList.contains('note-tab-close')) {
+                    return;
+                }
+
+                const tabId = tab.getAttribute('data-tab');
+                this.switchTab(tabId);
+            });
+        });
+    },
+
+    forceEnterToNote() {
+        const btn = document.querySelector('button[onclick="forceEnterToNote()"]');
+        if (!btn) return;
+
+        // 현재 활성화된 에디터 찾기
+        let currentEditor = noteEditor;
+        let currentLineNumbers = lineNumbers;
+        if (fileTabs.currentTab !== 'main') {
+            currentEditor = document.getElementById(`note-editor-${fileTabs.currentTab}`);
+            currentLineNumbers = document.getElementById(`line-numbers-${fileTabs.currentTab}`);
+        }
+        if (!currentEditor || !currentLineNumbers) return;
+
+        // 현재 탭의 상태 토글
+        const currentState = fileTabs.wrapStates[fileTabs.currentTab];
+
+        if (currentState) {
+            // 줄 바꿈 해제 (가로 스크롤 활성화)
+            currentEditor.style.whiteSpace = 'pre';
+            currentEditor.style.overflowX = 'auto';
+            fileTabs.wrapStates[fileTabs.currentTab] = false;
+            btn.textContent = '⬇️';
+            btn.title = '강제 줄 바꿈';
+        } else {
+            // 줄 바꿈 활성화 (가로 스크롤 비활성화)
+            currentEditor.style.whiteSpace = 'pre-wrap';
+            currentEditor.style.overflowX = 'hidden';
+            fileTabs.wrapStates[fileTabs.currentTab] = true;
+            btn.textContent = '⬆️';
+            btn.title = '강제 줄 바꿈 해제';
+        }
+
+        // 줄 번호 동기화
+        this.updateLineNumbersForEditor(currentEditor, currentLineNumbers);
+        if (fileTabs.currentTab !== 'main') {
+            requestAnimationFrame(() => this.syncLineNumbersHeight(currentEditor, currentLineNumbers));
+        }
+    },
+
+    syncForceEnterButton() {
+        const btn = document.querySelector('button[onclick="forceEnterToNote()"]');
+        if (!btn) return;
+
+        const currentState = fileTabs.wrapStates[fileTabs.currentTab];
+        if (currentState) {
+            btn.textContent = '⬆️';
+            btn.title = '강제 줄 바꿈 해제';
+        } else {
+            btn.textContent = '⬇️';
+            btn.title = '강제 줄 바꿈';
+        }
+    },
+
+    async resetNotePad() {
+        if (fileTabs.currentTab !== 'main') {
+            await AppAPI.showMessage('메모장 초기화', '메인 메모장 탭에서만 초기화할 수 있습니다.');
+            return;
+        }
+        if (!noteEditor) return;
+
+        const ok = await AppAPI.confirm(
+            '메모장 초기화',
+            '메모장의 모든 내용을 지우시겠습니까?\n이 작업은 되돌릴 수 없습니다.'
+        );
+        if (!ok) return;
+
+        noteEditor.value = '';
+        state.notepad.isDirty = true;
+        try {
+            // 현재 메모를 비운다 — 메모 자체는 유지되고 본문만 빈 상태로.
+            // 메모를 삭제하려면 메모 관리 📋의 [삭제] 버튼을 사용.
+            const title = state.notepad.currentMemoTitle;
+            if (title) {
+                await saveMemo(title, '');
+            }
+            state.notepad.lastSavedContent = '';
+            state.notepad.isDirty = false;
+        } catch (e) {
+            console.error('Failed to reset notepad:', e);
+        }
+        this.updateLineNumbers();
+        this.updateCharCount();
+        this.syncSplitButtonState();
+        await AppAPI.showMessage('메모장 초기화', '메모장이 초기화되었습니다.');
+    },
+
+    downloadNotePad() {
+        let content = '';
+        let fileName = 'ssMemo.txt';
+
+        if (fileTabs.currentTab === 'main') {
+            content = noteEditor.value;
+        } else {
+            const index = fileTabs.currentTab;
+            const slot = fileTabs.slots[index];
+            if (slot) {
+                content = slot.content;
+                fileName = slot.fileName;
+            } else {
+                // Fallback for unexpected state
+                const editor = document.getElementById(`note-editor-${index}`);
+                if (editor) {
+                    content = editor.value;
+                }
+            }
+        }
+
+        if (!content) {
+            AppAPI.showMessage('다운로드', '다운로드할 내용이 없습니다.');
+            return;
+        }
+
+        try {
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Failed to download file:', error);
+            AppAPI.showMessage('다운로드 실패', '파일을 다운로드하는 중 오류가 발생했습니다.');
+        }
+    },
+
+    updateLineNumbersForEditor(editor, lineNumbersEl) {
+        refreshLineNumbers(editor, lineNumbersEl);
+    },
+
+    setupDragAndDrop() {
+        if (!notePanel) return;
+
+        // 드래그 오버 시 시각적 효과
+        notePanel.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            notePanel.classList.add('drag-over');
+        });
+
+        notePanel.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // notePanel 자체를 벗어났을 때만 클래스 제거
+            if (e.target === notePanel) {
+                notePanel.classList.remove('drag-over');
+            }
+        });
+
+        notePanel.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            notePanel.classList.remove('drag-over');
+
+            const files = e.dataTransfer.files;
+            if (files.length === 0) return;
+            await this.handleIncomingFile(files[0]);
+        });
+    },
+
+    // 선택된 텍스트(또는 커서가 위치한 줄)를 코드로 실행해 결과를 모달로 표시.
+    // 모달 옵션:
+    //   - 📥 메모에 삽입 (메인 탭 + 출력 있을 때)
+    //   - 💾 메모리에 저장 (항상)
+    //   - 🗑️ 메모리 초기화 (메모리에 변수가 있을 때)
+    // 메모리는 매 실행 시 initialEnv로 자동 주입(읽기)되지만, 쓰기는 명시적 저장만.
+    async runCodeBlock() {
+        const currentTab = fileTabs.currentTab;
+        const isMainTab = currentTab === 'main';
+        const editor = isMainTab
+            ? noteEditor
+            : document.getElementById(`note-editor-${currentTab}`);
+        if (!editor) return;
+
+        const start = editor.selectionStart;
+        const end = editor.selectionEnd;
+        let code;
+        let codeEnd; // 코드 영역의 끝 위치 (삽입 기준점)
+        if (start !== end) {
+            code = editor.value.substring(start, end);
+            codeEnd = end;
+        } else {
+            // 선택이 없으면 커서가 있는 줄을 사용
+            const text = editor.value;
+            let ls = start;
+            while (ls > 0 && text[ls - 1] !== '\n') ls--;
+            let le = start;
+            while (le < text.length && text[le] !== '\n') le++;
+            code = text.substring(ls, le);
+            codeEnd = le;
+        }
+
+        if (!code.trim()) {
+            await AppAPI.showMessage('🧮 코드 실행', '실행할 코드를 드래그로 선택하거나 코드 라인에 커서를 두세요.');
+            return;
+        }
+
+        let outputs, env;
+        try {
+            const r = runCode(code, calcMemory);
+            outputs = r.outputs;
+            env = r.env;
+        } catch (err) {
+            await AppAPI.showMessage('🧮 실행 오류', err.message || String(err));
+            return;
+        }
+
+        const memKeys = Object.keys(calcMemory);
+        const memHeader = memKeys.length > 0
+            ? `[메모리: ${memKeys.join(', ')}]\n\n`
+            : '';
+        const body = memHeader + (outputs.length > 0 ? outputs.join('\n') : '(출력 없음)');
+
+        const options = [];
+        if (isMainTab && outputs.length > 0) {
+            options.push({ value: 'insert', label: '📥 메모에 삽입' });
+        }
+        options.push({ value: 'save', label: '💾 메모리에 저장' });
+        if (memKeys.length > 0) {
+            options.push({ value: 'clear', label: '🗑️ 메모리 초기화' });
+        }
+
+        const action = await AppAPI.choose('🧮 실행 결과', body, options);
+        if (action === 'insert') {
+            this.insertCodeResult(editor, codeEnd, outputs);
+        } else if (action === 'save') {
+            // 실행 후의 env(initialEnv + 신규 대입) 전체를 메모리에 병합 후 영속화.
+            Object.assign(calcMemory, env);
+            persistCalcMemory();
+        } else if (action === 'clear') {
+            for (const k of Object.keys(calcMemory)) delete calcMemory[k];
+            persistCalcMemory();
+        }
+    },
+
+    // 코드 영역 끝(codeEnd) 다음에 결과를 `# ...` 주석 라인들로 삽입.
+    // 직전 문자가 개행이 아니면 자동으로 개행 추가, 커서는 삽입된 끝으로.
+    insertCodeResult(editor, codeEnd, outputs) {
+        const text = editor.value;
+        const needsNL = codeEnd > 0 && text[codeEnd - 1] !== '\n';
+        const insertText = (needsNL ? '\n' : '')
+            + outputs.map((o) => '# ' + o).join('\n');
+
+        editor.value = text.substring(0, codeEnd) + insertText + text.substring(codeEnd);
+        const newCursor = codeEnd + insertText.length;
+        editor.setSelectionRange(newCursor, newCursor);
+
+        this.updateLineNumbers();
+        this.updateCharCount();
+        state.notepad.isDirty = editor.value !== state.notepad.lastSavedContent;
+    },
+
+    // 파일 메뉴 모달 — 메모/파일 관련 액션을 한 곳에 모음.
+    // 현재 탭에 따라 옵션 동적 구성 (파일 탭에서는 메인 전용 액션 숨김).
+    async openFileMenu() {
+        const isMainTab = fileTabs.currentTab === 'main';
+        const options = [
+            { value: 'memos', label: '📋 메모 관리 (목록/이름변경/삭제)' },
+            { value: 'load',  label: '🗂️ 파일 불러오기' },
+        ];
+        if (isMainTab) {
+            options.push({ value: 'save', label: '💾 저장' });
+        }
+        options.push({ value: 'download', label: '📥 다운로드' });
+        if (isMainTab) {
+            options.push({ value: 'reset', label: '🗑️ 메모 비우기' });
+        }
+
+        const action = await AppAPI.choose('📁 파일', '원하는 작업을 선택하세요.', options);
+        switch (action) {
+            case 'memos':    return this.openMemoManager();
+            case 'load':     return this.loadFileFromDisk();
+            case 'save':     return this.saveWithNotification();
+            case 'download': return this.downloadNotePad();
+            case 'reset':    return this.resetNotePad();
+        }
+    },
+
+    // 현재 메모 제목을 헤더에 표시.
+    refreshTitleDisplay() {
+        const el = document.getElementById('current-memo-title');
+        if (!el) return;
+        const title = state.notepad.currentMemoTitle || '―';
+        el.textContent = title;
+        el.title = `현재 메모: ${title}`;
+    },
+
+    // 메인 탭의 콘텐츠를 currentMemoTitle 메모로 저장하고, target 메모로 전환.
+    // 더티 상태면 먼저 저장. 전환 후 화면/상태/메모리 모두 갱신.
+    async switchToMemo(title) {
+        if (!noteEditor) return;
+        if (title === state.notepad.currentMemoTitle) return;
+        if (state.notepad.isDirty) await this.save();
+        try {
+            const memo = await loadMemo(title);
+            noteEditor.value = memo.content || '';
+        } catch (e) {
+            console.error('Failed to load memo:', e);
+            await AppAPI.showMessage('메모 열기 실패', '메모를 불러오지 못했습니다.');
+            return;
+        }
+        state.notepad.currentMemoTitle = title;
+        state.notepad.lastSavedContent = noteEditor.value;
+        state.notepad.isDirty = false;
+        this.refreshTitleDisplay();
+        this.updateLineNumbers();
+        this.updateCharCount();
+        this.syncSplitButtonState();
+        // 메인 탭으로 강제 전환 (다른 파일 탭이 열려 있을 수 있음).
+        this.switchToMainTabIfNeeded();
+    },
+
+    // 현재 활성 탭이 메인이 아니면 메인으로 전환.
+    switchToMainTabIfNeeded() {
+        if (fileTabs.currentTab !== 'main' && typeof this.switchTab === 'function') {
+            this.switchTab('main');
+        }
+    },
+
+    // 메모 관리 모달. 사용자가 메모 목록과 액션(열기/이름변경/삭제/새 메모)을 다룰 수 있음.
+    async openMemoManager() {
+        // 진입 직전 더티 상태면 먼저 저장해 목록의 updatedAt이 최신을 반영하도록.
+        if (state.notepad.isDirty) await this.save();
+
+        let memos;
+        try {
+            memos = await listMemos();
+        } catch (e) {
+            await AppAPI.showMessage('메모 목록 오류', '메모 목록을 불러오지 못했습니다.');
+            return;
+        }
+
+        const action = await this.showMemoManagerModal(memos);
+        if (!action) return;
+
+        if (action.type === 'open') {
+            await this.switchToMemo(action.title);
+        } else if (action.type === 'new') {
+            await this.createNewMemo();
+        } else if (action.type === 'rename') {
+            await this.promptRename(action.title);
+        } else if (action.type === 'delete') {
+            await this.promptDelete(action.title);
+        }
+    },
+
+    // 메모 관리 모달 렌더링. 사용자 선택을 액션 객체로 반환.
+    async showMemoManagerModal(memos) {
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.className = 'custom-modal-overlay';
+            const modal = document.createElement('div');
+            modal.className = 'custom-modal memo-manager-modal';
+            modal.innerHTML = `
+                <div class="custom-modal-header">📋 메모 관리</div>
+                <div class="custom-modal-body memo-manager-body"></div>
+                <div class="custom-modal-footer">
+                    <button class="custom-modal-btn custom-modal-btn-cancel">닫기</button>
+                </div>
+            `;
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            const body = modal.querySelector('.memo-manager-body');
+            const cleanup = (val) => { overlay.remove(); resolve(val); };
+
+            // "새 메모" 버튼 (목록 위)
+            const newBtn = document.createElement('button');
+            newBtn.className = 'custom-modal-btn memo-manager-new-btn';
+            newBtn.textContent = '➕ 새 메모';
+            newBtn.addEventListener('click', () => cleanup({ type: 'new' }));
+            body.appendChild(newBtn);
+
+            // 목록
+            const list = document.createElement('div');
+            list.className = 'memo-manager-list';
+            const currentTitle = state.notepad.currentMemoTitle;
+            memos.forEach((m) => {
+                const row = document.createElement('div');
+                row.className = 'memo-manager-row' + (m.title === currentTitle ? ' is-current' : '');
+
+                const titleSpan = document.createElement('span');
+                titleSpan.className = 'memo-manager-title';
+                titleSpan.textContent = (m.title === currentTitle ? '✓ ' : '') + m.title;
+                row.appendChild(titleSpan);
+
+                const actions = document.createElement('span');
+                actions.className = 'memo-manager-actions';
+
+                const openBtn = document.createElement('button');
+                openBtn.className = 'memo-manager-action';
+                openBtn.textContent = '열기';
+                openBtn.disabled = (m.title === currentTitle);
+                openBtn.addEventListener('click', () => cleanup({ type: 'open', title: m.title }));
+                actions.appendChild(openBtn);
+
+                const renameBtn = document.createElement('button');
+                renameBtn.className = 'memo-manager-action';
+                renameBtn.textContent = '이름변경';
+                renameBtn.addEventListener('click', () => cleanup({ type: 'rename', title: m.title }));
+                actions.appendChild(renameBtn);
+
+                const delBtn = document.createElement('button');
+                delBtn.className = 'memo-manager-action memo-manager-action-danger';
+                delBtn.textContent = '삭제';
+                delBtn.addEventListener('click', () => cleanup({ type: 'delete', title: m.title }));
+                actions.appendChild(delBtn);
+
+                row.appendChild(actions);
+                list.appendChild(row);
+            });
+            if (memos.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'memo-manager-empty';
+                empty.textContent = '저장된 메모가 없습니다.';
+                list.appendChild(empty);
+            }
+            body.appendChild(list);
+
+            modal.querySelector('.custom-modal-btn-cancel')
+                .addEventListener('click', () => cleanup(null));
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) cleanup(null);
+            });
+        });
+    },
+
+    // 텍스트 입력 모달. 취소/잘못된 입력 시 null 반환, 성공 시 trim된 문자열 반환.
+    // validator는 (string) => string|null 형태: null이면 통과, 문자열이면 에러 메시지.
+    async promptText(title, message, defaultValue, validator) {
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.className = 'custom-modal-overlay';
+            const modal = document.createElement('div');
+            modal.className = 'custom-modal';
+            modal.innerHTML = `
+                <div class="custom-modal-header"></div>
+                <div class="custom-modal-body">
+                    <div class="prompt-message"></div>
+                    <input type="text" class="prompt-input" />
+                    <div class="prompt-error"></div>
+                </div>
+                <div class="custom-modal-footer">
+                    <button class="custom-modal-btn custom-modal-btn-cancel">취소</button>
+                    <button class="custom-modal-btn">확인</button>
+                </div>
+            `;
+            overlay.appendChild(modal);
+            modal.querySelector('.custom-modal-header').textContent = title;
+            modal.querySelector('.prompt-message').textContent = message;
+            const input = modal.querySelector('.prompt-input');
+            input.value = defaultValue || '';
+            const errEl = modal.querySelector('.prompt-error');
+            document.body.appendChild(overlay);
+            setTimeout(() => { input.focus(); input.select(); }, 10);
+
+            const cleanup = (val) => { overlay.remove(); resolve(val); };
+            const tryConfirm = () => {
+                const v = input.value.trim();
+                const err = validator ? validator(v) : null;
+                if (err) { errEl.textContent = err; return; }
+                cleanup(v);
+            };
+
+            modal.querySelectorAll('.custom-modal-btn')[1]
+                .addEventListener('click', tryConfirm);
+            modal.querySelector('.custom-modal-btn-cancel')
+                .addEventListener('click', () => cleanup(null));
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) cleanup(null);
+            });
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); tryConfirm(); }
+                if (e.key === 'Escape') { e.preventDefault(); cleanup(null); }
+            });
+        });
+    },
+
+    // 새 메모 생성. 제목 입력 → 빈 콘텐츠로 저장 → 해당 메모로 전환.
+    async createNewMemo() {
+        const existing = (await listMemos()).map((m) => m.title);
+        const newTitle = await this.promptText(
+            '➕ 새 메모', '새 메모 제목을 입력하세요.', '',
+            (t) => {
+                const v = validateTitle(t);
+                if (v) return v;
+                if (existing.includes(t)) return '같은 제목의 메모가 이미 존재합니다.';
+                return null;
+            }
+        );
+        if (!newTitle) return;
+        try {
+            await saveMemo(newTitle, '');
+            await this.switchToMemo(newTitle);
+        } catch (e) {
+            console.error('Failed to create memo:', e);
+            await AppAPI.showMessage('새 메모 생성 실패', '메모를 생성하지 못했습니다.');
+        }
+    },
+
+    // 메모 이름 변경. 현재 메모를 변경할 경우 currentMemoTitle도 갱신.
+    async promptRename(oldTitle) {
+        const existing = (await listMemos()).map((m) => m.title).filter((t) => t !== oldTitle);
+        const newTitle = await this.promptText(
+            '✏️ 이름 변경', `"${oldTitle}" → 새 제목`, oldTitle,
+            (t) => {
+                const v = validateTitle(t);
+                if (v) return v;
+                if (t === oldTitle) return '기존 제목과 같습니다.';
+                if (existing.includes(t)) return '같은 제목의 메모가 이미 존재합니다.';
+                return null;
+            }
+        );
+        if (!newTitle) return;
+        try {
+            // 현재 메모 이름 변경 직전, 더티 콘텐츠가 있으면 옛 키로 먼저 저장.
+            if (oldTitle === state.notepad.currentMemoTitle && state.notepad.isDirty) {
+                await this.save();
+            }
+            await renameMemo(oldTitle, newTitle);
+            if (oldTitle === state.notepad.currentMemoTitle) {
+                state.notepad.currentMemoTitle = newTitle;
+                this.refreshTitleDisplay();
+            }
+        } catch (e) {
+            console.error('Failed to rename memo:', e);
+            await AppAPI.showMessage('이름 변경 실패', e.message || '메모 이름을 변경하지 못했습니다.');
+        }
+    },
+
+    // 메모 삭제. 현재 메모를 삭제하면 남은 첫 메모로 전환, 없으면 기본 메모 생성.
+    async promptDelete(title) {
+        const ok = await AppAPI.confirm(
+            '🗑️ 메모 삭제',
+            `"${title}" 메모를 영구 삭제합니다.\n이 작업은 되돌릴 수 없습니다.`
+        );
+        if (!ok) return;
+        try {
+            await deleteMemo(title);
+        } catch (e) {
+            console.error('Failed to delete memo:', e);
+            await AppAPI.showMessage('삭제 실패', '메모를 삭제하지 못했습니다.');
+            return;
+        }
+        // 현재 메모를 삭제한 경우 다음 메모로 전환 (없으면 기본 메모 새로 생성).
+        if (title === state.notepad.currentMemoTitle) {
+            const memos = await listMemos();
+            if (memos.length > 0) {
+                state.notepad.isDirty = false; // 삭제됐으므로 저장 시도 막기
+                state.notepad.currentMemoTitle = '';
+                await this.switchToMemo(memos[0].title);
+            } else {
+                const newTitle = CONSTANTS.DEFAULT_MEMO_TITLE;
+                await saveMemo(newTitle, '');
+                state.notepad.isDirty = false;
+                state.notepad.currentMemoTitle = '';
+                await this.switchToMemo(newTitle);
+            }
+        }
+    }
+};
+
+window.openNotePanel = () => Notepad.open();
+window.closeNotePanel = () => Notepad.close();
+window.saveNotePad = () => Notepad.save();
+window.saveNotePadWithNoti = () => Notepad.saveWithNotification();
+window.showNoteHelpPanel = () => Notepad.showHelpPanel();
+window.splitNoteIntoChunks = (len) => Notepad.splitNoteIntoChunks(len);
+window.LoadFileFromDisk = () => Notepad.loadFileFromDisk();
+window.closeFileTab = (index) => Notepad.closeFileTab(index);
+window.forceEnterToNote = () => Notepad.forceEnterToNote();
+window.downloadNotePad = () => Notepad.downloadNotePad();
+window.toggleMarkdownPreview = () => Notepad.toggleMarkdownPreview();
+window.changeEncoding = () => Notepad.changeEncoding();
+window.resetNotePad = () => Notepad.resetNotePad();
+window.runCodeBlock = () => Notepad.runCodeBlock();
+window.openMemoManager = () => Notepad.openMemoManager();
+window.openFileMenu = () => Notepad.openFileMenu();
+
+/* === src/main.js === */
+// ========================================
+// Main Application Entry Point
+// ========================================
+
+
+
+
+async function initApp() {
+    await AppAPI.init();
+    NoteSearchUI.setup();
+    Notepad.open();
+}
+
+// Save notepad when closing the window if there are changes
+window.addEventListener('beforeunload', async (e) => {
+    if (state.notepad.isDirty) {
+        await Notepad.save();
+    }
+});
+
+window.addEventListener('load', initApp);
+</script>
+</body>
+</html>
