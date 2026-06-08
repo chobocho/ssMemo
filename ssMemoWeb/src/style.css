@@ -698,6 +698,13 @@ body.dark-theme .note-tab:hover {
     text-overflow: ellipsis;
 }
 
+/* 편집 가능한 메모 탭의 미저장 표시 */
+.note-tab-dirty .note-tab-label::before {
+    content: '• ';
+    color: #e57373;
+    font-weight: bold;
+}
+
 .note-tab-close {
     background: none;
     border: none;

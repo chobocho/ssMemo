@@ -143,7 +143,7 @@ export const Notepad = {
 
     async close() {
         if (notePanel && !notePanel.classList.contains('hidden')) {
-            await this.save();
+            await this.saveAll();
             notePanel.classList.add('hidden');
             this.stopAutoSave();
         }
@@ -180,7 +180,7 @@ export const Notepad = {
 
     startAutoSave() {
         if (state.notepad.autoSaveTimer) clearInterval(state.notepad.autoSaveTimer);
-        state.notepad.autoSaveTimer = setInterval(() => this.save(), CONSTANTS.AUTO_SAVE_INTERVAL);
+        state.notepad.autoSaveTimer = setInterval(() => this.saveAll(), CONSTANTS.AUTO_SAVE_INTERVAL);
     },
 
     stopAutoSave() {
@@ -190,44 +190,71 @@ export const Notepad = {
         }
     },
 
+    // 현재 활성 탭의 에디터/줄번호/메모 슬롯 컨텍스트. 메인 탭이면 slot=null.
+    activeEditorContext() {
+        const tabId = fileTabs.currentTab;
+        if (tabId === 'main') {
+            return { tabId, editor: noteEditor, lineNumbersEl: lineNumbers, slot: null };
+        }
+        return {
+            tabId,
+            editor: document.getElementById(`note-editor-${tabId}`),
+            lineNumbersEl: document.getElementById(`line-numbers-${tabId}`),
+            slot: fileTabs.slots[tabId] || null,
+        };
+    },
+
+    // 프로그램적 편집(구분선/기호 삽입 등) 후 줄번호/글자수/미저장 상태를 활성 탭 기준으로 갱신.
+    afterProgrammaticEdit(ctx) {
+        refreshLineNumbers(ctx.editor, ctx.lineNumbersEl);
+        if (charCountEl) charCountEl.textContent = `글자수: ${ctx.editor.value.length}`;
+        if (ctx.tabId === 'main') {
+            state.notepad.isDirty = ctx.editor.value !== state.notepad.lastSavedContent;
+        } else if (ctx.slot && ctx.slot.kind === 'memo') {
+            ctx.slot.content = ctx.editor.value;
+            ctx.slot.isDirty = ctx.editor.value !== ctx.slot.lastSavedContent;
+            this.setMemoTabDirty(ctx.tabId, ctx.slot.isDirty);
+        }
+    },
+
     insertDivider() {
-        if (!noteEditor) return;
+        const ctx = this.activeEditorContext();
+        const editor = ctx.editor;
+        if (!editor || editor.readOnly) return;
 
         const divider = '─'.repeat(CONSTANTS.DIVIDER_LENGTH);
-        const cursorPos = noteEditor.selectionStart;
-        const textBefore = noteEditor.value.substring(0, cursorPos);
-        const textAfter = noteEditor.value.substring(noteEditor.selectionEnd);
+        const cursorPos = editor.selectionStart;
+        const textBefore = editor.value.substring(0, cursorPos);
+        const textAfter = editor.value.substring(editor.selectionEnd);
 
         const prefix = (textBefore.length > 0 && !textBefore.endsWith('\n')) ? '\n' : '';
         const suffix = (textAfter.length > 0 && !textAfter.startsWith('\n')) ? '\n' : '';
 
         const newText = textBefore + prefix + divider + suffix + textAfter;
-        noteEditor.value = newText;
+        editor.value = newText;
 
         const newCursorPos = cursorPos + prefix.length + divider.length + suffix.length;
-        noteEditor.setSelectionRange(newCursorPos, newCursorPos);
+        editor.setSelectionRange(newCursorPos, newCursorPos);
 
-        this.updateLineNumbers();
-        this.updateCharCount();
-        state.notepad.isDirty = noteEditor.value !== state.notepad.lastSavedContent;
+        this.afterProgrammaticEdit(ctx);
     },
 
     insertSymbol(symbol) {
-        if (!noteEditor) return;
+        const ctx = this.activeEditorContext();
+        const editor = ctx.editor;
+        if (!editor || editor.readOnly) return;
 
-        const cursorPos = noteEditor.selectionStart;
-        const textBefore = noteEditor.value.substring(0, cursorPos);
-        const textAfter = noteEditor.value.substring(noteEditor.selectionEnd);
+        const cursorPos = editor.selectionStart;
+        const textBefore = editor.value.substring(0, cursorPos);
+        const textAfter = editor.value.substring(editor.selectionEnd);
 
         const newText = textBefore + symbol + textAfter;
-        noteEditor.value = newText;
+        editor.value = newText;
 
         const newCursorPos = cursorPos + symbol.length;
-        noteEditor.setSelectionRange(newCursorPos, newCursorPos);
+        editor.setSelectionRange(newCursorPos, newCursorPos);
 
-        this.updateLineNumbers();
-        this.updateCharCount();
-        state.notepad.isDirty = noteEditor.value !== state.notepad.lastSavedContent;
+        this.afterProgrammaticEdit(ctx);
     },
 
     updateCharCount() {
@@ -385,7 +412,8 @@ export const Notepad = {
 
 📁 파일 메뉴 — 메모 관리/파일 불러오기/저장/다운로드/메모 비우기.
   📋 메모 관리에서 여러 메모를 만들고 전환/이름변경/삭제 가능.
-  자동 저장(3분)은 현재 표시된 메모로 향한다.
+  메모 목록의 [🗂️ 탭] 버튼으로 메모를 추가 탭에 함께 열어 편집 가능.
+  자동 저장(3분)은 메인 메모와 열려 있는 모든 메모 탭에 적용된다.
 
 Alt + B - 페이지 위로
 Alt + F - 페이지 아래로
@@ -512,23 +540,151 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         await AppAPI.showMessage(resultTitle, resultMsg);
     },
 
-    showFileTab(index) {
+    // 탭 라벨 텍스트/툴팁 설정. 이름이 12글자를 초과하면 8글자 + '...'로 축약하고
+    // 전체 이름은 툴팁으로 보존. tooltip이 주어지면 라벨 title로 사용.
+    setTabLabel(index, fullName, tooltip) {
         const tab = document.querySelector(`.note-tab[data-tab="${index}"]`);
         if (!tab) return;
-
-        const fileInfo = fileTabs.slots[index];
-        if (!fileInfo) return;
-
-        // 탭 표시 및 파일명 설정
         tab.classList.remove('note-tab-hidden');
         const labelEl = tab.querySelector('.note-tab-label');
         if (labelEl) {
-            // 파일명이 10글자를 초과하면 10글자까지만 표시
-            const displayName = fileInfo.fileName.length > 12
-                ? fileInfo.fileName.substring(0, 8) + '...'
-                : fileInfo.fileName;
+            const displayName = fullName.length > 12
+                ? fullName.substring(0, 8) + '...'
+                : fullName;
             labelEl.textContent = displayName;
-            labelEl.title = fileInfo.fileName; // 전체 파일명은 툴팁으로 표시
+            labelEl.title = tooltip || fullName;
+        }
+    },
+
+    showFileTab(index) {
+        const fileInfo = fileTabs.slots[index];
+        if (!fileInfo) return;
+        this.setTabLabel(index, fileInfo.fileName);
+    },
+
+    // 메모 탭의 라벨을 제목으로 설정 (툴팁은 "메모: 제목").
+    showMemoTab(index) {
+        const slot = fileTabs.slots[index];
+        if (!slot || slot.kind !== 'memo') return;
+        this.setTabLabel(index, slot.title, `메모: ${slot.title}`);
+        this.setMemoTabDirty(index, slot.isDirty);
+    },
+
+    // 메모 탭의 미저장 표시(•) 토글.
+    setMemoTabDirty(index, dirty) {
+        const tab = document.querySelector(`.note-tab[data-tab="${index}"]`);
+        if (tab) tab.classList.toggle('note-tab-dirty', !!dirty);
+    },
+
+    // 이미 열려 있는 메모인지 확인. 메인 탭 또는 슬롯 탭이면 위치를 반환.
+    findOpenMemo(title) {
+        if (title === state.notepad.currentMemoTitle) return 'main';
+        const idx = fileTabs.slots.findIndex(
+            (s) => s && s.kind === 'memo' && s.title === title);
+        return idx === -1 ? null : idx;
+    },
+
+    // IndexedDB 메모를 빈 슬롯 탭에 편집 가능한 상태로 추가로 연다.
+    // 이미 열린 메모면 해당 탭으로 전환만 한다. 빈 슬롯이 없으면 안내.
+    async openMemoInTab(title) {
+        const open = this.findOpenMemo(title);
+        if (open !== null) {
+            this.switchTab(open);
+            return;
+        }
+
+        const emptySlot = fileTabs.slots.findIndex((s) => s === null);
+        if (emptySlot === -1) {
+            await AppAPI.showMessage(
+                '메모 열기 실패',
+                `탭이 가득 찼습니다. 최대 ${CONSTANTS.MAX_FILE_TABS}개까지 추가로 열 수 있습니다.`);
+            return;
+        }
+
+        let content = '';
+        try {
+            const memo = await loadMemo(title);
+            content = memo.content || '';
+        } catch (e) {
+            console.error('Failed to load memo into tab:', e);
+            await AppAPI.showMessage('메모 열기 실패', '메모를 불러오지 못했습니다.');
+            return;
+        }
+
+        fileTabs.slots[emptySlot] = {
+            kind: 'memo', title, content,
+            lastSavedContent: content, isDirty: false,
+        };
+        this.showMemoTab(emptySlot);
+        this.loadMemoToEditor(emptySlot);
+        this.switchTab(emptySlot);
+    },
+
+    // 메모 슬롯의 콘텐츠를 에디터에 싣고 편집 가능 상태로 만든다.
+    // 파일 탭과 달리 readonly를 해제하고 입력 시 슬롯 상태/미저장 표시를 갱신한다.
+    loadMemoToEditor(index) {
+        const slot = fileTabs.slots[index];
+        if (!slot || slot.kind !== 'memo') return;
+
+        const editor = document.getElementById(`note-editor-${index}`);
+        const lineNumEl = document.getElementById(`line-numbers-${index}`);
+        const container = document.getElementById(`note-container-${index}`);
+        if (!editor || !lineNumEl) return;
+
+        editor.value = slot.content;
+        editor.readOnly = false;
+        if (container) container.classList.remove('note-editor-readonly');
+        refreshLineNumbers(editor, lineNumEl);
+
+        editor.onscroll = () => { lineNumEl.scrollTop = editor.scrollTop; };
+        editor.onkeydown = (e) => this.handleKeyDown(e);
+        editor.oninput = () => {
+            refreshLineNumbers(editor, lineNumEl);
+            slot.content = editor.value;
+            slot.isDirty = editor.value !== slot.lastSavedContent;
+            this.setMemoTabDirty(index, slot.isDirty);
+            if (fileTabs.currentTab === index) this.updateCharCountForTab(index);
+            lineNumEl.scrollTop = editor.scrollTop;
+        };
+    },
+
+    // 메모 탭 슬롯을 IndexedDB에 저장. 변경 없으면 저장 생략.
+    async saveMemoSlot(index) {
+        const slot = fileTabs.slots[index];
+        if (!slot || slot.kind !== 'memo') return '저장할 메모가 아닙니다.';
+
+        const editor = document.getElementById(`note-editor-${index}`);
+        const content = editor ? editor.value : slot.content;
+        if (!slot.isDirty && content === slot.lastSavedContent) {
+            return '변경된 내용이 없습니다.';
+        }
+        try {
+            await saveMemo(slot.title, content);
+            slot.content = content;
+            slot.lastSavedContent = content;
+            slot.isDirty = false;
+            this.setMemoTabDirty(index, false);
+            console.log(`Memo tab auto-saved: ${slot.title}`);
+            return '저장에 성공했습니다.';
+        } catch (e) {
+            console.error('Failed to save memo tab:', e);
+            return '저장에 실패했습니다.';
+        }
+    },
+
+    async saveMemoSlotWithNotification(index) {
+        const msg = await this.saveMemoSlot(index);
+        await AppAPI.showMessage('메모 저장', msg);
+    },
+
+    // 메인 메모 + 열려 있는 모든 더티 메모 탭을 함께 저장. 자동 저장/닫기에서 사용.
+    async saveAll() {
+        await this.save();
+        for (let i = 0; i < fileTabs.slots.length; i++) {
+            const s = fileTabs.slots[i];
+            if (s && s.kind === 'memo' && s.isDirty) {
+                await this.saveMemoSlot(i);
+            }
         }
     },
 
@@ -549,10 +705,15 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
 
         const editor = document.getElementById(`note-editor-${index}`);
         const lineNumEl = document.getElementById(`line-numbers-${index}`);
+        const container = document.getElementById(`note-container-${index}`);
 
         if (!editor || !lineNumEl) return;
 
+        // 슬롯이 이전에 편집 가능한 메모로 쓰였을 수 있으므로 읽기 전용 상태로 복원.
         editor.value = fileInfo.content;
+        editor.readOnly = true;
+        editor.oninput = null;
+        if (container) container.classList.add('note-editor-readonly');
         if (yieldFn) await yieldFn();
 
         // 줄 번호 업데이트 (캐시로 중복 갱신 차단)
@@ -579,6 +740,10 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
     },
 
     switchTab(tabId) {
+        // 슬롯 탭 id를 숫자로 정규화. data-tab 속성은 문자열("0")이고 findIndex는 숫자(0)를
+        // 돌려주므로, currentTab 타입을 통일해 이후 === 비교(예: 메모 입력 핸들러)를 일치시킨다.
+        if (tabId !== 'main') tabId = Number(tabId);
+
         // 모든 탭과 컨테이너 비활성화
         document.querySelectorAll('.note-tab').forEach(tab => {
             tab.classList.remove('note-tab-active');
@@ -765,28 +930,47 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         this.updateMarkdownButtonVisibility(tabId);
     },
 
-    closeFileTab(index) {
-        // 탭 닫기 확인
-        const fileName = fileTabs.slots[index]?.fileName || `파일 ${index + 1}`;
-        if (!confirm(`"${fileName}" 탭을 닫으시겠습니까?`)) {
+    async closeFileTab(index) {
+        const slot = fileTabs.slots[index];
+        // 탭 닫기 확인 — 메모 탭은 제목, 파일 탭은 파일명으로 안내.
+        const label = slot?.kind === 'memo'
+            ? slot.title
+            : (slot?.fileName || `파일 ${index + 1}`);
+        if (!confirm(`"${label}" 탭을 닫으시겠습니까?`)) {
             return;
         }
 
+        // 편집 가능한 메모 탭은 닫기 전에 변경분을 저장해 데이터 유실을 막는다.
+        if (slot?.kind === 'memo' && slot.isDirty) {
+            await this.saveMemoSlot(index);
+        }
+
+        this.discardTab(index);
+    },
+
+    // 슬롯 탭을 확인/저장 없이 비우고 UI를 초기화한다. 닫기/삭제 동기화에서 사용.
+    discardTab(index) {
         // 슬롯 초기화
         fileTabs.slots[index] = null;
         fileTabs.previewStates[index] = false;
+        fileTabs.wrapStates[index] = false;
 
-        // 탭 숨기기
+        // 탭 숨기기 및 미저장 표시 제거
         this.hideFileTab(index);
+        this.setMemoTabDirty(index, false);
 
-        // 에디터 내용 초기화 및 미리보기 정리
+        // 에디터 내용 초기화 및 미리보기 정리 — 메모 편집 후 남은 readonly 해제 상태도 복원.
         const editor = document.getElementById(`note-editor-${index}`);
         const lineNumEl = document.getElementById(`line-numbers-${index}`);
         const previewEl = document.getElementById(`note-md-preview-${index}`);
+        const container = document.getElementById(`note-container-${index}`);
         if (editor) {
             editor.value = '';
+            editor.readOnly = true;
+            editor.oninput = null;
             editor.classList.remove('hidden');
         }
+        if (container) container.classList.add('note-editor-readonly');
         if (lineNumEl) {
             lineNumEl.textContent = '1';
             lineNumEl.__ssLineCount = 1;
@@ -914,7 +1098,7 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
             const slot = fileTabs.slots[index];
             if (slot) {
                 content = slot.content;
-                fileName = slot.fileName;
+                fileName = slot.kind === 'memo' ? `${slot.title}.txt` : slot.fileName;
             } else {
                 // Fallback for unexpected state
                 const editor = document.getElementById(`note-editor-${index}`);
@@ -1032,8 +1216,10 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
             : '';
         const body = memHeader + (outputs.length > 0 ? outputs.join('\n') : '(출력 없음)');
 
+        // 메인 탭과 편집 가능한 메모 탭 모두 결과 삽입 가능 (읽기 전용 파일 탭 제외).
+        const isEditable = isMainTab || fileTabs.slots[currentTab]?.kind === 'memo';
         const options = [];
-        if (isMainTab && outputs.length > 0) {
+        if (isEditable && outputs.length > 0) {
             options.push({ value: 'insert', label: '📥 메모에 삽입' });
         }
         options.push({ value: 'save', label: '💾 메모리에 저장' });
@@ -1066,20 +1252,22 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         const newCursor = codeEnd + insertText.length;
         editor.setSelectionRange(newCursor, newCursor);
 
-        this.updateLineNumbers();
-        this.updateCharCount();
-        state.notepad.isDirty = editor.value !== state.notepad.lastSavedContent;
+        // 활성 탭(메인/메모) 기준으로 줄번호·글자수·미저장 상태 갱신.
+        this.afterProgrammaticEdit(this.activeEditorContext());
     },
 
     // 파일 메뉴 모달 — 메모/파일 관련 액션을 한 곳에 모음.
     // 현재 탭에 따라 옵션 동적 구성 (파일 탭에서는 메인 전용 액션 숨김).
     async openFileMenu() {
-        const isMainTab = fileTabs.currentTab === 'main';
+        const currentTab = fileTabs.currentTab;
+        const isMainTab = currentTab === 'main';
+        const isMemoTab = !isMainTab && fileTabs.slots[currentTab]?.kind === 'memo';
         const options = [
             { value: 'memos', label: '📋 메모 관리 (목록/이름변경/삭제)' },
             { value: 'load',  label: '🗂️ 파일 불러오기' },
         ];
-        if (isMainTab) {
+        // 메인 메모와 편집 가능한 메모 탭 모두 저장 가능.
+        if (isMainTab || isMemoTab) {
             options.push({ value: 'save', label: '💾 저장' });
         }
         options.push({ value: 'download', label: '📥 다운로드' });
@@ -1091,7 +1279,9 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         switch (action) {
             case 'memos':    return this.openMemoManager();
             case 'load':     return this.loadFileFromDisk();
-            case 'save':     return this.saveWithNotification();
+            case 'save':     return isMainTab
+                ? this.saveWithNotification()
+                : this.saveMemoSlotWithNotification(currentTab);
             case 'download': return this.downloadNotePad();
             case 'reset':    return this.resetNotePad();
         }
@@ -1112,6 +1302,13 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         if (!noteEditor) return;
         if (title === state.notepad.currentMemoTitle) return;
         if (state.notepad.isDirty) await this.save();
+        // 같은 메모가 별도 탭으로 열려 있으면 메인과 중복되므로, 저장 후 그 탭을 닫는다.
+        const dupIdx = fileTabs.slots.findIndex(
+            (s) => s && s.kind === 'memo' && s.title === title);
+        if (dupIdx !== -1) {
+            if (fileTabs.slots[dupIdx].isDirty) await this.saveMemoSlot(dupIdx);
+            this.discardTab(dupIdx);
+        }
         try {
             const memo = await loadMemo(title);
             noteEditor.value = memo.content || '';
@@ -1141,7 +1338,8 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
     // 메모 관리 모달. 사용자가 메모 목록과 액션(열기/이름변경/삭제/새 메모)을 다룰 수 있음.
     async openMemoManager() {
         // 진입 직전 더티 상태면 먼저 저장해 목록의 updatedAt이 최신을 반영하도록.
-        if (state.notepad.isDirty) await this.save();
+        // 메인 + 열린 메모 탭을 모두 저장.
+        await this.saveAll();
 
         let memos;
         try {
@@ -1156,6 +1354,8 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
 
         if (action.type === 'open') {
             await this.switchToMemo(action.title);
+        } else if (action.type === 'open-tab') {
+            await this.openMemoInTab(action.title);
         } else if (action.type === 'new') {
             await this.createNewMemo();
         } else if (action.type === 'rename') {
@@ -1214,6 +1414,16 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
                 openBtn.disabled = (m.title === currentTitle);
                 openBtn.addEventListener('click', () => cleanup({ type: 'open', title: m.title }));
                 actions.appendChild(openBtn);
+
+                // 추가 탭으로 열기 — 이미 열려 있으면(메인/슬롯) 비활성화.
+                const openTabBtn = document.createElement('button');
+                openTabBtn.className = 'memo-manager-action';
+                openTabBtn.textContent = '🗂️ 탭';
+                const alreadyOpen = this.findOpenMemo(m.title) !== null;
+                openTabBtn.disabled = alreadyOpen;
+                if (alreadyOpen) openTabBtn.title = '이미 열려 있는 메모입니다.';
+                openTabBtn.addEventListener('click', () => cleanup({ type: 'open-tab', title: m.title }));
+                actions.appendChild(openTabBtn);
 
                 const renameBtn = document.createElement('button');
                 renameBtn.className = 'memo-manager-action';
@@ -1334,14 +1544,24 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         );
         if (!newTitle) return;
         try {
-            // 현재 메모 이름 변경 직전, 더티 콘텐츠가 있으면 옛 키로 먼저 저장.
+            // 이름 변경 직전, 더티 콘텐츠가 있으면 옛 키로 먼저 저장 (메인/메모 탭 모두).
             if (oldTitle === state.notepad.currentMemoTitle && state.notepad.isDirty) {
                 await this.save();
+            }
+            const slotIdx = fileTabs.slots.findIndex(
+                (s) => s && s.kind === 'memo' && s.title === oldTitle);
+            if (slotIdx !== -1 && fileTabs.slots[slotIdx].isDirty) {
+                await this.saveMemoSlot(slotIdx);
             }
             await renameMemo(oldTitle, newTitle);
             if (oldTitle === state.notepad.currentMemoTitle) {
                 state.notepad.currentMemoTitle = newTitle;
                 this.refreshTitleDisplay();
+            }
+            // 열려 있는 메모 탭이면 슬롯 제목과 라벨도 갱신.
+            if (slotIdx !== -1) {
+                fileTabs.slots[slotIdx].title = newTitle;
+                this.showMemoTab(slotIdx);
             }
         } catch (e) {
             console.error('Failed to rename memo:', e);
@@ -1363,6 +1583,10 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
             await AppAPI.showMessage('삭제 실패', '메모를 삭제하지 못했습니다.');
             return;
         }
+        // 삭제한 메모가 별도 탭으로 열려 있으면 저장 없이 탭을 닫는다.
+        const slotIdx = fileTabs.slots.findIndex(
+            (s) => s && s.kind === 'memo' && s.title === title);
+        if (slotIdx !== -1) this.discardTab(slotIdx);
         // 현재 메모를 삭제한 경우 다음 메모로 전환 (없으면 기본 메모 새로 생성).
         if (title === state.notepad.currentMemoTitle) {
             const memos = await listMemos();
