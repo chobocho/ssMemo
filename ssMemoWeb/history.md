@@ -6,6 +6,7 @@
 ## 2026-06-08
 
 - 빌드 산출물을 `release/index.html` 단일 파일로 단순화. `build.sh`에서 다중 파일 복사 단계(index.html / readme.md / src/*.js / style.css / data-sources/*.js) 제거하고 `bundle.py`만 실행. `bundle.py` 출력 파일명을 `index.single.html` → `index.html`로 변경. `build.bat`도 동일하게 정리하고 cp949 + CRLF로 저장해 Windows cmd 한글 깨짐 방지. 산출물 91.1KB 단일 파일로 검증 완료.
+- `readme.md` 빌드 안내를 단일 파일 산출 구조에 맞춰 갱신 (멀티 파일/`index.single.html` 표기 제거).
 
 ## 2026-04-28
 

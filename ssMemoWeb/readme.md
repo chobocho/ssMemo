@@ -65,10 +65,7 @@ ssMemoWeb/
 
 ## 빌드
 
-`build.sh` (Linux/macOS) 또는 `build.bat` (Windows)을 실행하면 `release/` 폴더에 두 가지 산출물이 생성됩니다.
-
-- `release/index.html` + `release/src/` — 멀티 파일. 정적 서버 필요.
-- `release/index.single.html` — JS/CSS가 모두 인라인된 단일 파일. 더블 클릭으로 브라우저에서 바로 열 수 있습니다 (서버 불필요).
+`build.sh` (Linux/macOS) 또는 `build.bat` (Windows)을 실행하면 `release/` 폴더에 JS/CSS가 모두 인라인된 단일 파일 `release/index.html`이 생성됩니다. 더블 클릭으로 브라우저에서 바로 열 수 있고 (서버 불필요), 원한다면 `cd release && python -m http.server 8001`로 띄울 수도 있습니다.
 
 단일 파일 번들은 `bundle.py` (Python 표준 라이브러리만 사용)가 ES 모듈을 위상 정렬 후 import/export 키워드를 제거하고 인라인합니다.
 
