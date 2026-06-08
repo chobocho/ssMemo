@@ -9,7 +9,7 @@ import { splitTextIntoChunks, joinTextChunks, buildLineNumbersText, debounce, ne
 import { renderMarkdown } from './markdown.js';
 import { isAllowedTextFile, isOversized } from './file-utils.js';
 import { decodeKoreanText, decodeWithEncoding, looksGarbled } from './encoding.js';
-import { runCode } from './calc.js';
+import { runCode, serializeEnv, deserializeEnv } from './calc.js';
 
 // Cache DOM elements
 let notePanel = null;
@@ -48,9 +48,30 @@ const fileTabs = {
     previewStates: { 0: false, 1: false, 2: false, 3: false, 4: false, 5: false, 6: false } // .md 미리보기 상태
 };
 
-// 코드 블럭 실행기의 세션 메모리 — "메모리에 저장" 옵션을 선택했을 때만 갱신됨.
-// 페이지 새로고침 시 초기화 (영속 저장 아님).
+// 코드 블럭 실행기의 메모리 — "메모리에 저장" 옵션을 선택했을 때만 갱신됨.
+// IndexedDB(또는 폴백 메모리)에 영속 저장되며, Notepad.open()에서 자동 로드.
 const calcMemory = {};
+
+// 메모리를 영속 저장에 기록. IndexedDB 실패 시 AppAPI가 메모리 폴백으로 처리.
+async function persistCalcMemory() {
+    try {
+        await AppAPI.saveOrUpdateNoteByDate(CONSTANTS.CALC_MEMORY_KEY, serializeEnv(calcMemory));
+    } catch (e) {
+        console.warn('[ssMemo] 코드 메모리 저장 실패:', e);
+    }
+}
+
+// 영속 저장에서 메모리를 읽어 calcMemory에 채움. 손상 시 빈 상태로 동작.
+async function loadCalcMemory() {
+    try {
+        const rec = await AppAPI.getNoteByDate(CONSTANTS.CALC_MEMORY_KEY);
+        const restored = deserializeEnv(rec?.content || '');
+        for (const k of Object.keys(calcMemory)) delete calcMemory[k];
+        Object.assign(calcMemory, restored);
+    } catch (e) {
+        console.warn('[ssMemo] 코드 메모리 로드 실패:', e);
+    }
+}
 
 export const Notepad = {
     async open() {
@@ -74,6 +95,10 @@ export const Notepad = {
 
         state.notepad.lastSavedContent = noteEditor.value;
         state.notepad.isDirty = false;
+
+        // 저장된 코드 블럭 메모리를 읽어 calcMemory에 채운다.
+        // 이후 runCodeBlock에서 즉시 사용 가능하도록 await로 동기화.
+        await loadCalcMemory();
 
         this.updateLineNumbers();
         this.updateCharCount();
@@ -350,7 +375,7 @@ Ctrl + Enter - 선택한 코드 실행 🧮
     💾 메모리에 저장 — 이번 실행의 변수를 세션 메모리에 보존
     🗑️ 메모리 초기화 — 저장된 변수 모두 삭제
   저장된 메모리 변수는 다음 실행에서 자동으로 읽혀 사용 가능
-  (메모리는 페이지 새로고침 시 초기화)
+  (IndexedDB에 영속 저장 — 페이지 새로고침/재시작 후에도 유지)
   지원: 변수, +,-,*,/,//, 괄호, sin/cos/tan,
         factorial(n≤1000), # 주석
   정수는 5000자리 이상도 정확.
@@ -996,10 +1021,12 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         if (action === 'insert') {
             this.insertCodeResult(editor, codeEnd, outputs);
         } else if (action === 'save') {
-            // 실행 후의 env(initialEnv + 신규 대입) 전체를 메모리에 병합.
+            // 실행 후의 env(initialEnv + 신규 대입) 전체를 메모리에 병합 후 영속화.
             Object.assign(calcMemory, env);
+            persistCalcMemory();
         } else if (action === 'clear') {
             for (const k of Object.keys(calcMemory)) delete calcMemory[k];
+            persistCalcMemory();
         }
     },
 

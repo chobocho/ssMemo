@@ -270,6 +270,35 @@ export function formatValue(v) {
     return Number(v).toString();
 }
 
+// 변수 환경을 영속 저장(IndexedDB 등 텍스트 스토리지)에 보관할 수 있도록
+// JSON 문자열로 직렬화. BigInt는 _big 마커로 보존해 복원 시 정확.
+export function serializeEnv(env) {
+    const out = {};
+    for (const [k, v] of Object.entries(env)) {
+        if (typeof v === 'bigint') out[k] = { _big: v.toString() };
+        else if (typeof v === 'number' && Number.isFinite(v)) out[k] = { _num: v };
+        // 이외 타입(undefined/NaN/Infinity/객체)은 저장 대상 아님 → 스킵
+    }
+    return JSON.stringify(out);
+}
+
+export function deserializeEnv(str) {
+    const out = {};
+    if (!str) return out;
+    let parsed;
+    try { parsed = JSON.parse(str); } catch { return out; }
+    if (!parsed || typeof parsed !== 'object') return out;
+    for (const [k, v] of Object.entries(parsed)) {
+        if (!v || typeof v !== 'object') continue;
+        if (typeof v._big === 'string') {
+            try { out[k] = BigInt(v._big); } catch { /* skip */ }
+        } else if (typeof v._num === 'number') {
+            out[k] = v._num;
+        }
+    }
+    return out;
+}
+
 export function runCode(source, initialEnv = {}) {
     const tokens = tokenize(source);
     const ast = parse(tokens);

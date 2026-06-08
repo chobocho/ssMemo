@@ -7,6 +7,7 @@ export const CONSTANTS = {
     SEARCH_MISS_DURATION: 450,
     DIVIDER_LENGTH: 50,
     NOTEPAD_KEY: 'NOTEPAD',
+    CALC_MEMORY_KEY: '__CALC_MEMORY__', // 코드 블럭 세션 메모리 영속 저장 키
     LOADING_SPINNER_THRESHOLD: 200 * 1024, // 200KB 이상 파일 로드 시 스피너 표시
     MAX_FILE_SIZE: 10 * 1024 * 1024,       // 10MB 업로드 상한
     MAX_FILE_TABS: 7,                       // 동시 열 수 있는 보조 파일 탭 수

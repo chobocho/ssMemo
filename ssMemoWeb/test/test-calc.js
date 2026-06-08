@@ -1,7 +1,7 @@
 // ========================================
 // 코드 블럭 실행기 단위 테스트
 // ========================================
-import { runCode, formatValue } from '../src/calc.js';
+import { runCode, formatValue, serializeEnv, deserializeEnv } from '../src/calc.js';
 import { assertEqual, section } from './runner.js';
 
 section('calc.js — 기본 산술');
@@ -102,3 +102,27 @@ section('calc.js — formatValue');
 assertEqual(formatValue(42n), '42', 'BigInt 포맷');
 assertEqual(formatValue(3.14), '3.14', 'Number 포맷');
 assertEqual(formatValue(1.0), '1', 'Number 정수형 포맷');
+
+section('calc.js — serialize/deserialize (영속 저장)');
+
+// 라운드트립: BigInt + Number 혼합
+const env = { x: 12345678901234567890n, y: 3.14, z: 0n };
+const ser = serializeEnv(env);
+const back = deserializeEnv(ser);
+assertEqual(back.x, 12345678901234567890n, '5000자리 BigInt 라운드트립');
+assertEqual(back.y, 3.14, 'Number 라운드트립');
+assertEqual(back.z, 0n, '0 BigInt 라운드트립');
+
+// 5000자리 정확 보존
+const big = BigInt('9'.repeat(5000));
+const r5000 = deserializeEnv(serializeEnv({ huge: big }));
+assertEqual(r5000.huge === big, true, '5000자리 BigInt 정확 보존');
+
+// 빈 문자열/null/잘못된 JSON
+assertEqual(deserializeEnv(''), {}, '빈 문자열은 빈 env');
+assertEqual(deserializeEnv('not-json'), {}, '잘못된 JSON은 빈 env');
+assertEqual(deserializeEnv('null'), {}, 'null도 빈 env');
+
+// 직렬화된 값을 calc 실행에 주입 가능
+const reloaded = deserializeEnv(serializeEnv({ a: 100n }));
+assertEqual(runCode('a * 2', reloaded).outputs, ['200'], '직렬화/역직렬화 후 코드 실행');
