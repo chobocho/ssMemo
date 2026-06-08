@@ -1101,7 +1101,7 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
     refreshTitleDisplay() {
         const el = document.getElementById('current-memo-title');
         if (!el) return;
-        const title = state.notepad.currentMemoTitle || '―';
+        const title = state.notepad.currentMemoTitle || '메모장';
         el.textContent = title;
         el.title = `현재 메모: ${title}`;
     },

@@ -98,14 +98,14 @@ body.dark-theme .note-panel.drag-over {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 8px;
+    padding: 4px 8px;
     background: rgba(0, 0, 0, 0.05);
     border-bottom: 1px solid var(--search-border);
     color: var(--modal-text);
     font-weight: bold;
     gap: 6px;
     flex-wrap: wrap;
-    min-height: 44px;
+    min-height: 34px;
 }
 
 .current-memo-title {
@@ -880,7 +880,7 @@ body.dark-theme .note-editor-readonly .note-editor {
         <!-- 탭 UI -->
         <div class="note-tabs-container">
             <div class="note-tab note-tab-active" data-tab="main">
-                <span id="current-memo-title" class="current-memo-title" title="">―</span>
+                <span id="current-memo-title" class="current-memo-title" title="">메모장</span>
             </div>
             <div class="note-tab note-tab-hidden" data-tab="0">
                 <span class="note-tab-label">파일 1</span>
@@ -3633,7 +3633,7 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
     refreshTitleDisplay() {
         const el = document.getElementById('current-memo-title');
         if (!el) return;
-        const title = state.notepad.currentMemoTitle || '―';
+        const title = state.notepad.currentMemoTitle || '메모장';
         el.textContent = title;
         el.title = `현재 메모: ${title}`;
     },

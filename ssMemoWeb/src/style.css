@@ -91,14 +91,14 @@ body.dark-theme .note-panel.drag-over {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 8px;
+    padding: 4px 8px;
     background: rgba(0, 0, 0, 0.05);
     border-bottom: 1px solid var(--search-border);
     color: var(--modal-text);
     font-weight: bold;
     gap: 6px;
     flex-wrap: wrap;
-    min-height: 44px;
+    min-height: 34px;
 }
 
 .current-memo-title {
