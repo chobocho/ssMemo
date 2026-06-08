@@ -341,6 +341,7 @@ Ctrl + > - 다음 검색 결과로 이동
 Ctrl + L - 구분선 삽입
 Ctrl + Enter - 선택한 코드 실행 🧮
   (드래그로 선택 후 실행. 선택 없으면 현재 줄 실행)
+  결과 모달에서 📥 버튼으로 코드 다음 줄에 # 주석으로 삽입 가능
   지원: 변수, +,-,*,/,//, 괄호, sin/cos/tan,
         factorial(n≤1000), # 주석
   정수는 5000자리 이상도 정확.
@@ -921,10 +922,12 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
     },
 
     // 선택된 텍스트(또는 커서가 위치한 줄)를 코드로 실행해 결과를 모달로 표시.
-    // 변수/연산은 한 번의 실행 안에서만 유효 (저장되지 않음).
+    // 메인 메모장에서 실행한 경우, 모달에서 "메모에 삽입"을 선택하면 코드 다음
+    // 줄에 `# ...` 주석 형태로 결과를 끼워 넣는다 (재실행 시 주석으로 무시됨).
     async runCodeBlock() {
         const currentTab = fileTabs.currentTab;
-        const editor = currentTab === 'main'
+        const isMainTab = currentTab === 'main';
+        const editor = isMainTab
             ? noteEditor
             : document.getElementById(`note-editor-${currentTab}`);
         if (!editor) return;
@@ -932,8 +935,10 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         const start = editor.selectionStart;
         const end = editor.selectionEnd;
         let code;
+        let codeEnd; // 코드 영역의 끝 위치 (삽입 기준점)
         if (start !== end) {
             code = editor.value.substring(start, end);
+            codeEnd = end;
         } else {
             // 선택이 없으면 커서가 있는 줄을 사용
             const text = editor.value;
@@ -942,6 +947,7 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
             let le = start;
             while (le < text.length && text[le] !== '\n') le++;
             code = text.substring(ls, le);
+            codeEnd = le;
         }
 
         if (!code.trim()) {
@@ -949,15 +955,45 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
             return;
         }
 
+        let outputs;
         try {
-            const { outputs } = runCode(code);
-            const body = outputs.length > 0
-                ? outputs.join('\n')
-                : '(출력 없음)';
-            await AppAPI.showMessage('🧮 실행 결과', body);
+            outputs = runCode(code).outputs;
         } catch (err) {
             await AppAPI.showMessage('🧮 실행 오류', err.message || String(err));
+            return;
         }
+
+        const body = outputs.length > 0 ? outputs.join('\n') : '(출력 없음)';
+        // 메인 탭에서 출력이 있을 때만 "메모에 삽입" 옵션 제공.
+        // 읽기 전용 파일 탭에서는 삽입 불가 → 단순 결과 모달만 표시.
+        const canInsert = isMainTab && outputs.length > 0;
+        if (!canInsert) {
+            await AppAPI.showMessage('🧮 실행 결과', body);
+            return;
+        }
+        const action = await AppAPI.choose('🧮 실행 결과', body, [
+            { value: 'insert', label: '📥 메모에 삽입' },
+        ]);
+        if (action === 'insert') {
+            this.insertCodeResult(editor, codeEnd, outputs);
+        }
+    },
+
+    // 코드 영역 끝(codeEnd) 다음에 결과를 `# ...` 주석 라인들로 삽입.
+    // 직전 문자가 개행이 아니면 자동으로 개행 추가, 커서는 삽입된 끝으로.
+    insertCodeResult(editor, codeEnd, outputs) {
+        const text = editor.value;
+        const needsNL = codeEnd > 0 && text[codeEnd - 1] !== '\n';
+        const insertText = (needsNL ? '\n' : '')
+            + outputs.map((o) => '# ' + o).join('\n');
+
+        editor.value = text.substring(0, codeEnd) + insertText + text.substring(codeEnd);
+        const newCursor = codeEnd + insertText.length;
+        editor.setSelectionRange(newCursor, newCursor);
+
+        this.updateLineNumbers();
+        this.updateCharCount();
+        state.notepad.isDirty = editor.value !== state.notepad.lastSavedContent;
     }
 };
 
