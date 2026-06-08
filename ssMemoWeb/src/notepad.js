@@ -408,56 +408,82 @@ export const Notepad = {
     },
 
     showHelpPanel() {
-        const helpText = `메모장 단축키
+        // 한 줄: 키(또는 아이콘) + 설명. < > 는 HTML 태그로 해석되지 않도록 미리 이스케이프해 전달.
+        const row = (key, desc) =>
+            `<li><span class="help-key">${key}</span><span class="help-desc">${desc}</span></li>`;
 
-📁 파일 메뉴 — 메모 관리/파일 불러오기/저장/다운로드/메모 비우기.
-  📋 메모 관리에서 여러 메모를 만들고 전환/이름변경/삭제 가능.
-  메모 목록의 [🗂️ 탭] 버튼으로 메모를 추가 탭에 함께 열어 편집 가능.
-  자동 저장(3분)은 메인 메모와 열려 있는 모든 메모 탭에 적용된다.
+        const sections = [
+            ['🗂️ 메모 & 탭', [
+                row('📁 파일 메뉴', '메모 관리 · 파일 불러오기 · 저장 · 다운로드 · 메모 비우기'),
+                row('📋 메모 관리', '새 메모 만들기 · 전환 · 이름 변경 · 삭제'),
+                row('🗂️ 탭', '메모를 추가 탭으로 열어 동시 편집 (메인 + 최대 7개)'),
+                row('• 표시', '저장하지 않은 변경이 있는 메모 탭에 표시'),
+                row('자동 저장', '3분마다 메인 메모와 열려 있는 모든 메모 탭을 저장'),
+                row('파일 열기', '드래그 앤 드롭 또는 파일 불러오기 (읽기 전용 탭)'),
+            ]],
+            ['🧰 툴바 아이콘', [
+                row('➗ / ➕', '2000자 단위로 나누기(절취선) / 절취선 제거'),
+                row('⬇️ / ⬆️', '강제 줄바꿈 켜기 / 끄기'),
+                row('📖', '마크다운 미리보기 (.md 파일 탭)'),
+                row('🔤', '인코딩 변경 — UTF-8 / CP949 / Johab (파일 탭)'),
+                row('🧮', '선택한 코드 실행'),
+                row('🔍', '텍스트 검색'),
+            ]],
+            ['⌨️ 단축키', [
+                row('Ctrl + F / Ctrl + I', '검색창 포커스'),
+                row('Ctrl + &lt; / Ctrl + ,', '이전 검색 결과'),
+                row('Ctrl + &gt; / Ctrl + . / Ctrl + N', '다음 검색 결과'),
+                row('Ctrl + L', '구분선 삽입'),
+                row('Ctrl + Enter', '선택한 코드 실행 🧮'),
+                row('Ctrl + 6 / Ctrl + H', '문서 맨 위로'),
+                row('Ctrl + 4 / Ctrl + E', '문서 맨 아래로'),
+                row('Alt + B / PageUp', '페이지 위로'),
+                row('Alt + F / PageDown', '페이지 아래로'),
+            ]],
+            ['✨ 기호 삽입 (Ctrl + Shift)', [
+                row('Ctrl + Shift + A', '→'),
+                row('Ctrl + Shift + C', '✅ 체크마크'),
+                row('Ctrl + Shift + O', '□ 박스'),
+                row('Ctrl + Shift + R', '※'),
+                row('Ctrl + Shift + X', '❎'),
+                row('Ctrl + Shift + Z', '🟩'),
+            ]],
+            ['🧮 코드 실행', [
+                row('실행', '코드를 드래그 후 🧮 또는 Ctrl + Enter (선택 없으면 현재 줄)'),
+                row('지원 문법', '+ − * / // · 괄호 · 변수 · sin/cos/tan · factorial(n≤1000) · # 주석'),
+                row('정수 정밀도', 'BigInt 기반 — 5000자리 이상도 정확'),
+                row('📥 메모에 삽입', '코드 다음 줄에 # 주석으로 결과 삽입'),
+                row('💾 메모리에 저장', '변수를 IndexedDB에 영속 저장 (다음 실행에서 자동 사용)'),
+                row('🗑️ 메모리 초기화', '저장된 변수 모두 삭제'),
+            ]],
+            ['🔗 기타', [
+                row('URL 열기', 'URL을 드래그한 뒤 우클릭하면 새 창으로 이동'),
+            ]],
+        ];
 
-Alt + B - 페이지 위로
-Alt + F - 페이지 아래로
+        const bodyHtml = sections.map(([title, rows]) =>
+            `<div class="help-section">
+                <h4>${title}</h4>
+                <ul class="help-list">${rows.join('')}</ul>
+            </div>`).join('');
 
-Ctrl + Ｉ - 검색
-Ctrl + < - 이전 검색 결과로 이동
-Ctrl + > - 다음 검색 결과로 이동
+        const overlay = document.createElement('div');
+        overlay.className = 'custom-modal-overlay';
+        const modal = document.createElement('div');
+        modal.className = 'custom-modal help-modal';
+        modal.innerHTML = `
+            <div class="custom-modal-header">📝 ssMemo 도움말</div>
+            <div class="custom-modal-body help-body">${bodyHtml}</div>
+            <div class="custom-modal-footer">
+                <button class="custom-modal-btn">확인</button>
+            </div>
+        `;
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
 
-Ctrl + L - 구분선 삽입
-Ctrl + Enter - 선택한 코드 실행 🧮
-  (드래그로 선택 후 실행. 선택 없으면 현재 줄 실행)
-  결과 모달 옵션:
-    📥 메모에 삽입 — 코드 다음 줄에 # 주석으로 결과 삽입
-    💾 메모리에 저장 — 이번 실행의 변수를 세션 메모리에 보존
-    🗑️ 메모리 초기화 — 저장된 변수 모두 삭제
-  저장된 메모리 변수는 다음 실행에서 자동으로 읽혀 사용 가능
-  (IndexedDB에 영속 저장 — 페이지 새로고침/재시작 후에도 유지)
-  지원: 변수, +,-,*,/,//, 괄호, sin/cos/tan,
-        factorial(n≤1000), # 주석
-  정수는 5000자리 이상도 정확.
-
-  예시:
-    1 + 2 * 3            # 7
-    (10 + 5) / 3         # 5
-    7 / 2                # 3.5
-    7 // 2               # 3 (몫)
-    x = 10
-    y = x * x + 1        # y = 101
-    factorial(20)        # 2432902008176640000
-    sin(0) + cos(0)      # 1
-    9999 * 9999          # 99980001
-
-기호 삽입:
-Ctrl + Shift + A - →
-Ctrl + Shift + C - ✅ (체크마크)
-Ctrl + Shift + O - □ (박스)
-Ctrl + Shift + R - ※
-Ctrl + Shift + X - ❎
-Ctrl + Shift + Z - 🟩
-
-URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
-`;
-
-        AppAPI.showMessage('메모장 도움말', helpText);
+        const close = () => overlay.remove();
+        modal.querySelector('.custom-modal-btn').addEventListener('click', close);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
     },
 
     async loadFileFromDisk() {

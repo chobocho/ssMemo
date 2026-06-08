@@ -432,6 +432,65 @@ body.dark-theme .memo-manager-row {
     border-top: 1px solid var(--search-border);
 }
 
+/* 도움말 모달 — 섹션별로 구분된 키/설명 목록 */
+.help-modal {
+    max-width: 580px;
+    width: 92%;
+}
+
+.help-body {
+    white-space: normal;
+}
+
+.help-section {
+    margin-bottom: 18px;
+}
+
+.help-section:last-child {
+    margin-bottom: 0;
+}
+
+.help-section h4 {
+    margin: 0 0 8px;
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--modal-text);
+    border-left: 3px solid #4ECDC4;
+    padding-left: 8px;
+}
+
+.help-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.help-list li {
+    display: flex;
+    gap: 12px;
+    padding: 3px 0;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.help-key {
+    flex: 0 0 38%;
+    max-width: 38%;
+    color: #00897b;
+    font-weight: bold;
+    word-break: keep-all;
+}
+
+body.dark-theme .help-key {
+    color: #4DB6AC;
+}
+
+.help-desc {
+    flex: 1 1 auto;
+    color: var(--modal-text);
+    opacity: 0.92;
+}
+
 /* choose() 모달의 옵션 버튼 — body와 footer 사이에 세로로 쌓는다 */
 .custom-modal-choices {
     padding: 8px 20px 16px;
