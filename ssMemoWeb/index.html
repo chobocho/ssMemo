@@ -10,7 +10,6 @@
 <div id="app">
     <div id="note-panel" class="note-panel">
         <div class="note-panel-header">
-            <span id="current-memo-title" class="current-memo-title" title="">―</span>
             <span id="note-char-count" class="note-char-count-panel">글자수: 0</span>
             <div class="note-search-controls">
                 <input id="noteSearchInput" type="text" placeholder="검색 (Ctrl + I)">
@@ -30,7 +29,7 @@
         <!-- 탭 UI -->
         <div class="note-tabs-container">
             <div class="note-tab note-tab-active" data-tab="main">
-                <span class="note-tab-label">메모장</span>
+                <span id="current-memo-title" class="current-memo-title" title="">―</span>
             </div>
             <div class="note-tab note-tab-hidden" data-tab="0">
                 <span class="note-tab-label">파일 1</span>

@@ -109,23 +109,17 @@ body.dark-theme .note-panel.drag-over {
 }
 
 .current-memo-title {
-    flex: 0 1 auto;
-    margin-left: 8px;
-    padding: 2px 8px;
-    font-size: 13px;
-    color: #555;
-    border: 1px solid var(--search-border, #cfd8dc);
-    border-radius: 4px;
-    background: rgba(0, 0, 0, 0.03);
-    max-width: 240px;
+    font-size: 11px;
+    color: #777;
+    max-width: 160px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    text-align: center;
 }
 
 body.dark-theme .current-memo-title {
-    color: #ddd;
-    background: rgba(255, 255, 255, 0.05);
+    color: #bbb;
 }
 
 .note-search-controls {
@@ -693,6 +687,13 @@ body.dark-theme .note-tab:hover {
     font-weight: bold;
 }
 
+/* 메인 탭: 메모 제목을 탭 이름 위에 세로로 표시 */
+.note-tab[data-tab="main"] {
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
 .note-tab-hidden {
     display: none;
 }
@@ -860,7 +861,6 @@ body.dark-theme .note-editor-readonly .note-editor {
 <div id="app">
     <div id="note-panel" class="note-panel">
         <div class="note-panel-header">
-            <span id="current-memo-title" class="current-memo-title" title="">―</span>
             <span id="note-char-count" class="note-char-count-panel">글자수: 0</span>
             <div class="note-search-controls">
                 <input id="noteSearchInput" type="text" placeholder="검색 (Ctrl + I)">
@@ -880,7 +880,7 @@ body.dark-theme .note-editor-readonly .note-editor {
         <!-- 탭 UI -->
         <div class="note-tabs-container">
             <div class="note-tab note-tab-active" data-tab="main">
-                <span class="note-tab-label">메모장</span>
+                <span id="current-memo-title" class="current-memo-title" title="">―</span>
             </div>
             <div class="note-tab note-tab-hidden" data-tab="0">
                 <span class="note-tab-label">파일 1</span>
