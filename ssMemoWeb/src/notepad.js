@@ -386,9 +386,9 @@ export const Notepad = {
     showHelpPanel() {
         const helpText = `메모장 단축키
 
-📋 메모 관리 — 여러 개의 메모를 만들고 전환/이름변경/삭제 가능.
-  헤더의 메모 이름 옆 📋 버튼을 누르면 목록이 열린다.
-  자동 저장은 현재 표시된 메모로 향한다.
+📁 파일 메뉴 — 메모 관리/파일 불러오기/저장/다운로드/메모 비우기.
+  📋 메모 관리에서 여러 메모를 만들고 전환/이름변경/삭제 가능.
+  자동 저장(3분)은 현재 표시된 메모로 향한다.
 
 Alt + B - 페이지 위로
 Alt + F - 페이지 아래로
@@ -634,20 +634,11 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
     },
 
     updateButtonsVisibility(tabId) {
-        const saveBtn = document.querySelector('button[onclick="saveNotePadWithNoti()"]');
+        // 메인 메모장 전용 편집 아이콘은 파일 탭에서 숨김.
+        // 저장/다운로드/초기화는 📁 파일 메뉴 안에서 탭별로 동적 표시되므로 여기서 다루지 않음.
         const splitBtn = document.querySelector('button[onclick^="splitNoteIntoChunks"]');
-        const downloadBtn = document.querySelector('button[onclick^="downloadNotePad"]');
-
-        if (saveBtn && splitBtn) {
-            if (tabId === 'main') {
-                saveBtn.style.display = '';
-                splitBtn.style.display = '';
-                downloadBtn.style.display = '';
-            } else {
-                saveBtn.style.display = 'none';
-                splitBtn.style.display = 'none';
-                downloadBtn.style.display = 'none';
-            }
+        if (splitBtn) {
+            splitBtn.style.display = (tabId === 'main') ? '' : 'none';
         }
 
         this.updateMarkdownButtonVisibility(tabId);
@@ -1083,6 +1074,32 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         state.notepad.isDirty = editor.value !== state.notepad.lastSavedContent;
     },
 
+    // 파일 메뉴 모달 — 메모/파일 관련 액션을 한 곳에 모음.
+    // 현재 탭에 따라 옵션 동적 구성 (파일 탭에서는 메인 전용 액션 숨김).
+    async openFileMenu() {
+        const isMainTab = fileTabs.currentTab === 'main';
+        const options = [
+            { value: 'memos', label: '📋 메모 관리 (목록/이름변경/삭제)' },
+            { value: 'load',  label: '🗂️ 파일 불러오기' },
+        ];
+        if (isMainTab) {
+            options.push({ value: 'save', label: '💾 저장' });
+        }
+        options.push({ value: 'download', label: '📥 다운로드' });
+        if (isMainTab) {
+            options.push({ value: 'reset', label: '🗑️ 메모 비우기' });
+        }
+
+        const action = await AppAPI.choose('📁 파일', '원하는 작업을 선택하세요.', options);
+        switch (action) {
+            case 'memos':    return this.openMemoManager();
+            case 'load':     return this.loadFileFromDisk();
+            case 'save':     return this.saveWithNotification();
+            case 'download': return this.downloadNotePad();
+            case 'reset':    return this.resetNotePad();
+        }
+    },
+
     // 현재 메모 제목을 헤더에 표시.
     refreshTitleDisplay() {
         const el = document.getElementById('current-memo-title');
@@ -1382,3 +1399,4 @@ window.changeEncoding = () => Notepad.changeEncoding();
 window.resetNotePad = () => Notepad.resetNotePad();
 window.runCodeBlock = () => Notepad.runCodeBlock();
 window.openMemoManager = () => Notepad.openMemoManager();
+window.openFileMenu = () => Notepad.openFileMenu();
