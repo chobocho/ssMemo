@@ -3475,9 +3475,8 @@ URL을 드래그 후 우클릭하면 해당 URL로 이동합니다.
         const label = slot?.kind === 'memo'
             ? slot.title
             : (slot?.fileName || `파일 ${index + 1}`);
-        if (!confirm(`"${label}" 탭을 닫으시겠습니까?`)) {
-            return;
-        }
+        const ok = await AppAPI.confirm('탭 닫기', `"${label}" 탭을 닫으시겠습니까?`);
+        if (!ok) return;
 
         // 편집 가능한 메모 탭은 닫기 전에 변경분을 저장해 데이터 유실을 막는다.
         if (slot?.kind === 'memo' && slot.isDirty) {
