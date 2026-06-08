@@ -2,7 +2,7 @@
 // 코드 블럭 실행기 단위 테스트
 // ========================================
 import { runCode, formatValue, serializeEnv, deserializeEnv } from '../src/calc.js';
-import { assertEqual, section } from './runner.js';
+import { assertEqual, assertThrows, section } from './runner.js';
 
 section('calc.js — 기본 산술');
 
@@ -64,16 +64,6 @@ assertEqual(runCode('# 모두 주석').outputs, [], '주석만 있으면 출력 
 
 section('calc.js — 에러 처리');
 
-function assertThrows(fn, needle, label) {
-    try {
-        fn();
-        assertEqual(true, false, `${label} (에러 발생 안 함)`);
-    } catch (e) {
-        const ok = e.message.includes(needle);
-        assertEqual(ok ? needle : e.message, needle, label);
-    }
-}
-
 assertThrows(() => runCode('5 / 0'), '0으로', '0 나눗셈 에러');
 assertThrows(() => runCode('5 // 0'), '0으로', '0 정수나눗셈 에러');
 assertThrows(() => runCode('factorial(1001)'), '1000', 'factorial 한도 초과');
@@ -81,6 +71,36 @@ assertThrows(() => runCode('factorial(-1)'), '음수', 'factorial 음수');
 assertThrows(() => runCode('unknown'), '정의되지 않은', '미정의 변수');
 assertThrows(() => runCode('foo(1)'), '알 수 없는 함수', '미정의 함수');
 assertThrows(() => runCode('1 +'), '예상치 못한', '불완전 표현식');
+assertThrows(() => runCode('@@@'), '알 수 없는 문자', '미지원 문자 토큰화 에러');
+assertThrows(() => runCode('(1 + 2'), '기대한 토큰', '닫는 괄호 누락');
+
+section('calc.js — 빈/공백 입력');
+
+assertEqual(runCode('').outputs, [], '빈 문자열 → 출력 없음');
+assertEqual(runCode('   ').outputs, [], '공백만 → 출력 없음');
+assertEqual(runCode('\n\n\n').outputs, [], '개행만 → 출력 없음');
+assertEqual(runCode('# only\n# comments').outputs, [], '주석만 여러 줄 → 출력 없음');
+
+section('calc.js — BigInt/Number 혼합 연산');
+
+// BigInt + Number → Number (혼합 시 Number 승격)
+assertEqual(runCode('1 + 1.5').outputs, ['2.5'], 'BigInt + Number → Number');
+assertEqual(runCode('1.5 + 1').outputs, ['2.5'], 'Number + BigInt → Number');
+assertEqual(runCode('10 - 0.5').outputs, ['9.5'], 'BigInt - Number → Number');
+assertEqual(runCode('2.5 * 4').outputs, ['10'], 'Number * BigInt 정수 결과');
+assertEqual(runCode('1.5 * 2').outputs, ['3'], 'Number * BigInt: 결과가 정수면 정수 포맷');
+// 함수 결과(Number)와 BigInt 혼합
+assertEqual(runCode('cos(0) + 5').outputs, ['6'], 'cos(0)(Number) + 5(BigInt) → 6');
+
+section('calc.js — 함수 중첩/단항+');
+
+assertEqual(runCode('factorial(factorial(3))').outputs, ['720'],
+    'factorial(factorial(3)) = factorial(6) = 720');
+assertEqual(runCode('factorial(3 + 2)').outputs, ['120'],
+    'factorial(3+2) 인자 표현식 평가');
+assertEqual(runCode('+5').outputs, ['5'], '단항 + 동작');
+assertEqual(runCode('+-5').outputs, ['-5'], '단항 +- 조합');
+assertEqual(runCode('1 - -1').outputs, ['2'], '연산자 + 단항 인접');
 
 section('calc.js — initialEnv (메모리)');
 

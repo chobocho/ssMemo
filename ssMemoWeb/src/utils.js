@@ -21,6 +21,16 @@ export function joinTextChunks(text, delimiter = CHUNK_DELIMITER) {
     return text.split(delimiter).join('');
 }
 
+// 절취선 토글 버튼이 클릭됐을 때 어떤 동작을 해야 하는지 결정.
+// - delimiter가 이미 있으면 길이와 무관하게 'join' (짧아진 메모에서도 토글 가능)
+// - delimiter가 없을 때는 text가 len보다 길어야 'split', 아니면 'noop'
+// 분기 로직을 순수 함수로 두어 단위 테스트가 가능하도록 분리.
+export function decideChunkAction(text, len, delimiter = CHUNK_DELIMITER) {
+    if (typeof text !== 'string' || !len || len <= 0) return 'noop';
+    if (text.includes(delimiter)) return 'join';
+    return text.length > len ? 'split' : 'noop';
+}
+
 // 다음 애니메이션 프레임까지 메인 스레드를 양보. 큰 파일을 단계별로
 // 처리할 때 각 단계 사이에 브라우저가 페인트/입력 처리할 시간을 주기 위해 사용.
 // 페이지가 백그라운드/숨김 상태라 rAF가 throttle되면 setTimeout fallback으로

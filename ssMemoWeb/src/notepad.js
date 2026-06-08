@@ -5,7 +5,7 @@ import { state } from './state.js';
 import { CONSTANTS, SYMBOL_SHORTCUTS } from './constants.js';
 import { NoteSearchUI } from './note-search.js';
 import { AppAPI } from './app-api.js';
-import { splitTextIntoChunks, joinTextChunks, buildLineNumbersText, debounce, nextFrame, CHUNK_DELIMITER } from './utils.js';
+import { splitTextIntoChunks, joinTextChunks, buildLineNumbersText, debounce, nextFrame, decideChunkAction, CHUNK_DELIMITER } from './utils.js';
 import { renderMarkdown } from './markdown.js';
 import { isAllowedTextFile, isOversized } from './file-utils.js';
 import { decodeKoreanText, decodeWithEncoding, looksGarbled } from './encoding.js';
@@ -356,21 +356,18 @@ export const Notepad = {
     },
 
     splitNoteIntoChunks(len) {
-        if (!noteEditor || !len || len <= 0) return;
-
+        if (!noteEditor) return;
         const content = noteEditor.value;
-        const hasDelimiter = content.includes(CHUNK_DELIMITER);
+        const action = decideChunkAction(content, len);
+        if (action === 'noop') return;
 
-        if (hasDelimiter) {
-            // 절취선이 있으면 길이와 무관하게 제거(토글) — 짧아진 메모에서도 동작.
+        if (action === 'join') {
             noteEditor.value = joinTextChunks(content);
             if (state.elements.noteSearchInput &&
                 state.elements.noteSearchInput.value === '절취선') {
                 state.elements.noteSearchInput.value = '';
             }
         } else {
-            // 절취선이 없을 때만 길이 조건으로 분할 여부 결정.
-            if (content.length <= len) return;
             noteEditor.value = splitTextIntoChunks(content, len);
             if (state.elements.noteSearchInput) {
                 state.elements.noteSearchInput.value = '절취선';

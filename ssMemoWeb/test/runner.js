@@ -25,9 +25,33 @@ function refreshSummary() {
         : `❌ ${failed} 실패 - ssMemo 테스트`;
 }
 
+// BigInt는 JSON.stringify로 직렬화할 수 없으므로 replacer로 문자열화한다.
+// 그래야 calc.js의 BigInt 결과를 assertEqual로 비교할 수 있다.
+const _replacer = (_k, v) => (typeof v === 'bigint' ? `__bigint__${v.toString()}` : v);
+function _stringify(v) {
+    try { return JSON.stringify(v, _replacer); }
+    catch (e) { return `__unstringifiable__:${String(v)}`; }
+}
+
 export function assertEqual(actual, expected, label) {
-    const ok = JSON.stringify(actual) === JSON.stringify(expected);
-    appendResult(ok, ok ? label : `${label}  (expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)})`);
+    const a = _stringify(actual);
+    const b = _stringify(expected);
+    const ok = a === b;
+    appendResult(ok, ok ? label : `${label}  (expected ${b}, got ${a})`);
+}
+
+// fn 실행 시 에러가 발생하고 그 메시지에 needle이 포함되어야 통과.
+export function assertThrows(fn, needle, label) {
+    let threw = false;
+    let msg = '';
+    try { fn(); }
+    catch (e) { threw = true; msg = e?.message || String(e); }
+    if (!threw) {
+        appendResult(false, `${label}  (에러 발생 안 함)`);
+        return;
+    }
+    const ok = msg.includes(needle);
+    appendResult(ok, ok ? label : `${label}  (메시지에 "${needle}" 없음 — 실제: "${msg}")`);
 }
 
 export function assertContains(actual, needle, label) {

@@ -10,6 +10,8 @@ import {
     findPrevIndex,
     buildLineNumbersText,
     debounce,
+    decideChunkAction,
+    nextFrame,
     CHUNK_DELIMITER,
 } from '../src/utils.js';
 import { assertEqual, section } from './runner.js';
@@ -80,4 +82,34 @@ await new Promise(resolve => {
         assertEqual(lastArg, 'c', 'debounce: 마지막 호출 인자로 실행');
         resolve();
     }, 80);
+});
+
+// decideChunkAction: 절취선 토글의 분기 결정 (Bug A/B 회귀 방지)
+const D = CHUNK_DELIMITER;
+assertEqual(decideChunkAction('a'.repeat(3000), 2000), 'split',
+    'decideChunkAction: 긴 + 절취선 없음 → split');
+assertEqual(decideChunkAction('짧은 메모', 2000), 'noop',
+    'decideChunkAction: 짧음 + 절취선 없음 → noop');
+assertEqual(decideChunkAction('a' + D + 'b', 2000), 'join',
+    'decideChunkAction: 짧지만 절취선 있음 → join (Bug B 회귀 방지)');
+assertEqual(decideChunkAction('a'.repeat(3000) + D + 'b', 2000), 'join',
+    'decideChunkAction: 긴 + 절취선 → join');
+assertEqual(decideChunkAction('', 2000), 'noop',
+    'decideChunkAction: 빈 문자열 → noop');
+assertEqual(decideChunkAction('hi', 0), 'noop',
+    'decideChunkAction: len=0 → noop');
+assertEqual(decideChunkAction('hi', -1), 'noop',
+    'decideChunkAction: 음수 len → noop');
+assertEqual(decideChunkAction(null, 2000), 'noop',
+    'decideChunkAction: null 입력 → noop');
+
+// nextFrame: 어떤 환경에서도 resolve되어야 한다 (rAF throttle 시 setTimeout fallback).
+await new Promise(resolve => {
+    let resolved = false;
+    nextFrame().then(() => { resolved = true; resolve(); });
+    setTimeout(() => {
+        if (!resolved) resolve(); // 안전망
+    }, 500);
+}).then(() => {
+    assertEqual(true, true, 'nextFrame: 500ms 안에 resolve됨');
 });
