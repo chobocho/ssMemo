@@ -20,6 +20,20 @@ async function fallbackToMemory(reason) {
     );
 }
 
+// 모달 overlay에 ESC 닫기를 연결. 모달이 겹쳐 있으면 최상단 overlay만 반응.
+// 반환된 detach 함수를 모달 정리 시 반드시 호출해 document 리스너를 해제한다.
+function attachEscToClose(overlay, onClose) {
+    const onKey = (e) => {
+        if (e.key !== 'Escape') return;
+        const overlays = document.querySelectorAll('.custom-modal-overlay');
+        if (overlays[overlays.length - 1] !== overlay) return;
+        e.preventDefault();
+        onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+}
+
 export const AppAPI = {
     async init() {
         try {
@@ -86,9 +100,11 @@ export const AppAPI = {
 
             const btn = modal.querySelector('.custom-modal-btn');
             const closeModal = () => {
+                detachEsc();
                 modal.remove();
                 resolve();
             };
+            const detachEsc = attachEscToClose(modal, closeModal);
 
             btn.addEventListener('click', closeModal);
             modal.addEventListener('click', (e) => {
@@ -114,9 +130,11 @@ export const AppAPI = {
             document.body.appendChild(modal);
 
             const cleanup = (result) => {
+                detachEsc();
                 modal.remove();
                 resolve(result);
             };
+            const detachEsc = attachEscToClose(modal, () => cleanup(false));
 
             modal.querySelector('.custom-modal-btn-cancel')
                 .addEventListener('click', () => cleanup(false));
@@ -148,7 +166,8 @@ export const AppAPI = {
             modal.querySelector('.custom-modal-body').textContent = message;
             document.body.appendChild(modal);
 
-            const cleanup = (val) => { modal.remove(); resolve(val); };
+            const cleanup = (val) => { detachEsc(); modal.remove(); resolve(val); };
+            const detachEsc = attachEscToClose(modal, () => cleanup(null));
 
             const choicesEl = modal.querySelector('.custom-modal-choices');
             (options || []).forEach((opt) => {

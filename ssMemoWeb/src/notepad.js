@@ -289,45 +289,42 @@ export const Notepad = {
     },
 
     handleKeyDown(e) {
-        if (e.ctrlKey && (e.key === 'F' || e.key === 'I' || e.key === 'i')) {
+        if (e.ctrlKey && (e.key === 'f' || e.key === 'F' || e.key === 'I' || e.key === 'i')) {
             e.preventDefault();
             state.elements.noteSearchInput?.focus();
             return;
         }
 
+        // 스크롤/이동 단축키는 현재 활성 탭의 에디터를 대상으로 한다.
+        const { editor: currentEditor } = this.activeEditorContext();
+
         if (e.key === 'PageUp' || (e.altKey && (e.key === 'B' || e.key === 'b'))) {
             e.preventDefault();
-            const currentEditor = fileTabs.currentTab === 'main'
-                ? noteEditor
-                : document.getElementById(`note-editor-${fileTabs.currentTab}`);
             if (currentEditor) currentEditor.scrollTop -= currentEditor.clientHeight;
             return;
         }
 
         if (e.key === 'PageDown' || (e.altKey && (e.key === 'F' || e.key === 'f'))) {
             e.preventDefault();
-            const currentEditor = fileTabs.currentTab === 'main'
-                ? noteEditor
-                : document.getElementById(`note-editor-${fileTabs.currentTab}`);
             if (currentEditor) currentEditor.scrollTop += currentEditor.clientHeight;
             return;
         }
 
         if (e.ctrlKey && (e.key === '6' || e.key === 'h' || e.key === 'H')) {
             e.preventDefault();
-            if (noteEditor) {
-                noteEditor.setSelectionRange(0, 0);
-                noteEditor.scrollTop = 0;
+            if (currentEditor) {
+                currentEditor.setSelectionRange(0, 0);
+                currentEditor.scrollTop = 0;
             }
             return;
         }
 
         if (e.ctrlKey && (e.key === '4' || e.key === 'e' || e.key === 'E')) {
             e.preventDefault();
-            if (noteEditor) {
-                const endPos = noteEditor.value.length;
-                noteEditor.setSelectionRange(endPos, endPos);
-                noteEditor.scrollTop = noteEditor.scrollHeight;
+            if (currentEditor) {
+                const endPos = currentEditor.value.length;
+                currentEditor.setSelectionRange(endPos, endPos);
+                currentEditor.scrollTop = currentEditor.scrollHeight;
             }
             return;
         }
@@ -701,6 +698,12 @@ export const Notepad = {
     async saveMemoSlotWithNotification(index) {
         const msg = await this.saveMemoSlot(index);
         await AppAPI.showMessage('메모 저장', msg);
+    },
+
+    // 메인 메모 또는 열려 있는 메모 탭에 미저장 변경이 있는지. 이탈 경고 판단용.
+    hasUnsavedChanges() {
+        if (state.notepad.isDirty) return true;
+        return fileTabs.slots.some((s) => s && s.kind === 'memo' && s.isDirty);
     },
 
     // 메인 메모 + 열려 있는 모든 더티 메모 탭을 함께 저장. 자동 저장/닫기에서 사용.
@@ -1094,6 +1097,7 @@ export const Notepad = {
 
         noteEditor.value = '';
         state.notepad.isDirty = true;
+        let resultMsg = '메모장이 초기화되었습니다.';
         try {
             // 현재 메모를 비운다 — 메모 자체는 유지되고 본문만 빈 상태로.
             // 메모를 삭제하려면 메모 관리 📋의 [삭제] 버튼을 사용.
@@ -1105,11 +1109,16 @@ export const Notepad = {
             state.notepad.isDirty = false;
         } catch (e) {
             console.error('Failed to reset notepad:', e);
+            // 저장 실패 시 화면만 비우면 DB와 어긋난다(새로고침 시 내용 부활).
+            // 마지막 저장 내용으로 복원하고 실패를 그대로 알린다.
+            noteEditor.value = state.notepad.lastSavedContent;
+            state.notepad.isDirty = false;
+            resultMsg = '저장소에 반영하지 못해 초기화를 취소했습니다. 잠시 후 다시 시도해주세요.';
         }
         this.updateLineNumbers();
         this.updateCharCount();
         this.syncSplitButtonState();
-        await AppAPI.showMessage('메모장 초기화', '메모장이 초기화되었습니다.');
+        await AppAPI.showMessage('메모장 초기화', resultMsg);
     },
 
     downloadNotePad() {

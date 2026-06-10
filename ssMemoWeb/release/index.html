@@ -2219,6 +2219,20 @@ async function fallbackToMemory(reason) {
     );
 }
 
+// 모달 overlay에 ESC 닫기를 연결. 모달이 겹쳐 있으면 최상단 overlay만 반응.
+// 반환된 detach 함수를 모달 정리 시 반드시 호출해 document 리스너를 해제한다.
+function attachEscToClose(overlay, onClose) {
+    const onKey = (e) => {
+        if (e.key !== 'Escape') return;
+        const overlays = document.querySelectorAll('.custom-modal-overlay');
+        if (overlays[overlays.length - 1] !== overlay) return;
+        e.preventDefault();
+        onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+}
+
 const AppAPI = {
     async init() {
         try {
@@ -2285,9 +2299,11 @@ const AppAPI = {
 
             const btn = modal.querySelector('.custom-modal-btn');
             const closeModal = () => {
+                detachEsc();
                 modal.remove();
                 resolve();
             };
+            const detachEsc = attachEscToClose(modal, closeModal);
 
             btn.addEventListener('click', closeModal);
             modal.addEventListener('click', (e) => {
@@ -2313,9 +2329,11 @@ const AppAPI = {
             document.body.appendChild(modal);
 
             const cleanup = (result) => {
+                detachEsc();
                 modal.remove();
                 resolve(result);
             };
+            const detachEsc = attachEscToClose(modal, () => cleanup(false));
 
             modal.querySelector('.custom-modal-btn-cancel')
                 .addEventListener('click', () => cleanup(false));
@@ -2347,7 +2365,8 @@ const AppAPI = {
             modal.querySelector('.custom-modal-body').textContent = message;
             document.body.appendChild(modal);
 
-            const cleanup = (val) => { modal.remove(); resolve(val); };
+            const cleanup = (val) => { detachEsc(); modal.remove(); resolve(val); };
+            const detachEsc = attachEscToClose(modal, () => cleanup(null));
 
             const choicesEl = modal.querySelector('.custom-modal-choices');
             (options || []).forEach((opt) => {
@@ -2887,45 +2906,42 @@ const Notepad = {
     },
 
     handleKeyDown(e) {
-        if (e.ctrlKey && (e.key === 'F' || e.key === 'I' || e.key === 'i')) {
+        if (e.ctrlKey && (e.key === 'f' || e.key === 'F' || e.key === 'I' || e.key === 'i')) {
             e.preventDefault();
             state.elements.noteSearchInput?.focus();
             return;
         }
 
+        // 스크롤/이동 단축키는 현재 활성 탭의 에디터를 대상으로 한다.
+        const { editor: currentEditor } = this.activeEditorContext();
+
         if (e.key === 'PageUp' || (e.altKey && (e.key === 'B' || e.key === 'b'))) {
             e.preventDefault();
-            const currentEditor = fileTabs.currentTab === 'main'
-                ? noteEditor
-                : document.getElementById(`note-editor-${fileTabs.currentTab}`);
             if (currentEditor) currentEditor.scrollTop -= currentEditor.clientHeight;
             return;
         }
 
         if (e.key === 'PageDown' || (e.altKey && (e.key === 'F' || e.key === 'f'))) {
             e.preventDefault();
-            const currentEditor = fileTabs.currentTab === 'main'
-                ? noteEditor
-                : document.getElementById(`note-editor-${fileTabs.currentTab}`);
             if (currentEditor) currentEditor.scrollTop += currentEditor.clientHeight;
             return;
         }
 
         if (e.ctrlKey && (e.key === '6' || e.key === 'h' || e.key === 'H')) {
             e.preventDefault();
-            if (noteEditor) {
-                noteEditor.setSelectionRange(0, 0);
-                noteEditor.scrollTop = 0;
+            if (currentEditor) {
+                currentEditor.setSelectionRange(0, 0);
+                currentEditor.scrollTop = 0;
             }
             return;
         }
 
         if (e.ctrlKey && (e.key === '4' || e.key === 'e' || e.key === 'E')) {
             e.preventDefault();
-            if (noteEditor) {
-                const endPos = noteEditor.value.length;
-                noteEditor.setSelectionRange(endPos, endPos);
-                noteEditor.scrollTop = noteEditor.scrollHeight;
+            if (currentEditor) {
+                const endPos = currentEditor.value.length;
+                currentEditor.setSelectionRange(endPos, endPos);
+                currentEditor.scrollTop = currentEditor.scrollHeight;
             }
             return;
         }
@@ -3299,6 +3315,12 @@ const Notepad = {
     async saveMemoSlotWithNotification(index) {
         const msg = await this.saveMemoSlot(index);
         await AppAPI.showMessage('메모 저장', msg);
+    },
+
+    // 메인 메모 또는 열려 있는 메모 탭에 미저장 변경이 있는지. 이탈 경고 판단용.
+    hasUnsavedChanges() {
+        if (state.notepad.isDirty) return true;
+        return fileTabs.slots.some((s) => s && s.kind === 'memo' && s.isDirty);
     },
 
     // 메인 메모 + 열려 있는 모든 더티 메모 탭을 함께 저장. 자동 저장/닫기에서 사용.
@@ -3692,6 +3714,7 @@ const Notepad = {
 
         noteEditor.value = '';
         state.notepad.isDirty = true;
+        let resultMsg = '메모장이 초기화되었습니다.';
         try {
             // 현재 메모를 비운다 — 메모 자체는 유지되고 본문만 빈 상태로.
             // 메모를 삭제하려면 메모 관리 📋의 [삭제] 버튼을 사용.
@@ -3703,11 +3726,16 @@ const Notepad = {
             state.notepad.isDirty = false;
         } catch (e) {
             console.error('Failed to reset notepad:', e);
+            // 저장 실패 시 화면만 비우면 DB와 어긋난다(새로고침 시 내용 부활).
+            // 마지막 저장 내용으로 복원하고 실패를 그대로 알린다.
+            noteEditor.value = state.notepad.lastSavedContent;
+            state.notepad.isDirty = false;
+            resultMsg = '저장소에 반영하지 못해 초기화를 취소했습니다. 잠시 후 다시 시도해주세요.';
         }
         this.updateLineNumbers();
         this.updateCharCount();
         this.syncSplitButtonState();
-        await AppAPI.showMessage('메모장 초기화', '메모장이 초기화되었습니다.');
+        await AppAPI.showMessage('메모장 초기화', resultMsg);
     },
 
     downloadNotePad() {
@@ -4252,17 +4280,26 @@ window.openFileMenu = () => Notepad.openFileMenu();
 
 
 
-
 async function initApp() {
     await AppAPI.init();
     NoteSearchUI.setup();
     Notepad.open();
 }
 
-// Save notepad when closing the window if there are changes
-window.addEventListener('beforeunload', async (e) => {
-    if (state.notepad.isDirty) {
-        await Notepad.save();
+// beforeunload의 async 핸들러는 브라우저가 promise를 기다려주지 않아 저장이
+// 시작되기 전에 페이지가 사라질 수 있다. 대신 pagehide/visibilitychange(hidden)
+// 시점에 저장을 시작해 유실 가능성을 줄인다 (메인 + 열린 메모 탭 모두 저장).
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') Notepad.saveAll();
+});
+window.addEventListener('pagehide', () => Notepad.saveAll());
+
+// 미저장 변경이 남아 있으면 이탈 경고를 띄워 저장이 완료될 시간을 확보한다.
+window.addEventListener('beforeunload', (e) => {
+    if (Notepad.hasUnsavedChanges()) {
+        Notepad.saveAll();
+        e.preventDefault();
+        e.returnValue = '';
     }
 });
 

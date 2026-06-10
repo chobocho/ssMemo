@@ -3,6 +3,16 @@
 날짜는 git 커밋 기준이 아닌 작업 항목 단위로 기록합니다.
 신규 변경은 위쪽에 추가합니다.
 
+## 2026-06-10
+
+- 코드 리뷰에서 발견된 버그 5건 일괄 수정.
+  1. 종료 시 저장 보장 강화 — `beforeunload`의 async 핸들러는 브라우저가 promise를 기다려주지 않아 저장 시작 전에 페이지가 사라질 수 있고, 메인 메모만 저장(`save()`)해 더티 메모 탭이 누락되던 문제. `pagehide`/`visibilitychange(hidden)` 시점에 `saveAll()`(메인+모든 메모 탭)을 트리거하고, 미저장 변경이 남아 있으면 `beforeunload`에서 이탈 경고를 띄워 저장 완료 시간을 확보. `Notepad.hasUnsavedChanges()` 신설. `main.js`의 미사용 `state` import 제거.
+  2. Ctrl+F 검색창 포커스가 동작하지 않던 문제 — 키 비교에 소문자 `'f'`가 빠져 Shift 없이 누르면 브라우저 기본 찾기 창이 뜨던 버그. 도움말 안내(Ctrl+F/Ctrl+I)와 실제 동작 일치.
+  3. 문서 맨 위(Ctrl+6/H)/맨 아래(Ctrl+4/E) 이동이 파일·메모 탭에서 화면에 안 보이는 메인 에디터를 조작하던 문제 — `activeEditorContext()`로 현재 활성 탭 에디터를 대상으로 동작하도록 수정. PageUp/PageDown 분기도 같은 헬퍼로 통일해 중복 lookup 제거.
+  4. 메모장 초기화 시 DB 저장이 실패해도 "초기화되었습니다"로 안내되던 문제 — 실패 시 에디터를 마지막 저장 내용으로 복원하고 실패 메시지를 표시(화면과 DB 불일치로 새로고침 시 내용이 부활하는 혼란 방지).
+  5. 모달 ESC 닫기 미구현 — `AppAPI.choose` 주석에는 ESC 취소가 명시돼 있었으나 실제 핸들러가 없던 문제. `attachEscToClose` 헬퍼를 신설해 `showMessage`/`confirm`/`choose` 모두 ESC로 닫기 지원(모달이 겹치면 최상단만 반응, 닫힐 때 document 리스너 해제).
+- 검증: 수정 모듈 3종(main/notepad/app-api) `node --check` 구문 통과, `build.sh` 단일 파일 번들(147.9KB) 재생성 및 번들 구문 검사 통과. 기존 단위 테스트가 import하는 순수 모듈은 변경 없음.
+
 ## 2026-06-08
 
 - 빌드 산출물을 `release/index.html` 단일 파일로 단순화. `build.sh`에서 다중 파일 복사 단계(index.html / readme.md / src/*.js / style.css / data-sources/*.js) 제거하고 `bundle.py`만 실행. `bundle.py` 출력 파일명을 `index.single.html` → `index.html`로 변경. `build.bat`도 동일하게 정리하고 cp949 + CRLF로 저장해 Windows cmd 한글 깨짐 방지. 산출물 91.1KB 단일 파일로 검증 완료.
