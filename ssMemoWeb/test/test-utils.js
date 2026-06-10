@@ -12,6 +12,7 @@ import {
     debounce,
     decideChunkAction,
     nextFrame,
+    countNewlines,
     CHUNK_DELIMITER,
 } from '../src/utils.js';
 import { assertEqual, section } from './runner.js';
@@ -113,3 +114,12 @@ await new Promise(resolve => {
 }).then(() => {
     assertEqual(true, true, 'nextFrame: 500ms 안에 resolve됨');
 });
+
+section('utils.js — countNewlines');
+
+assertEqual(countNewlines('a\nb\nc'), 2, 'countNewlines: 전체 줄바꿈 수');
+assertEqual(countNewlines('a\nb\nc', 0), 0, 'countNewlines: end=0이면 0');
+assertEqual(countNewlines('a\nb\nc', 2), 1, 'countNewlines: 인덱스 앞 구간만 카운트');
+assertEqual(countNewlines('a\nb\nc', 999), 2, 'countNewlines: end가 길이 초과면 전체');
+assertEqual(countNewlines(''), 0, 'countNewlines: 빈 문자열은 0');
+assertEqual(countNewlines('no newline'), 0, 'countNewlines: 줄바꿈 없으면 0');

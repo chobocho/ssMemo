@@ -4,6 +4,7 @@
 import { createDataSource } from './data-sources/index.js';
 import { MemorySource } from './data-sources/memory.js';
 import { STORAGE_CONFIG } from './storage-config.js';
+import { escapeHtml } from './markdown.js';
 
 let dataSource = createDataSource(STORAGE_CONFIG);
 let usingFallback = false;
@@ -43,21 +44,21 @@ export const AppAPI = {
         }
     },
 
-    async getNoteByDate(key) {
+    async getRecord(key) {
         try {
-            return await dataSource.getNoteByDate(key);
+            return await dataSource.getRecord(key);
         } catch (err) {
             await fallbackToMemory(err);
-            return dataSource.getNoteByDate(key);
+            return dataSource.getRecord(key);
         }
     },
 
-    async saveOrUpdateNoteByDate(key, content) {
+    async saveRecord(key, content) {
         try {
-            return await dataSource.saveOrUpdateNoteByDate(key, content);
+            return await dataSource.saveRecord(key, content);
         } catch (err) {
             await fallbackToMemory(err);
-            return dataSource.saveOrUpdateNoteByDate(key, content);
+            return dataSource.saveRecord(key, content);
         }
     },
 
@@ -89,8 +90,8 @@ export const AppAPI = {
             modal.className = 'custom-modal-overlay';
             modal.innerHTML = `
                 <div class="custom-modal">
-                    <div class="custom-modal-header">${this.escapeHtml(title)}</div>
-                    <div class="custom-modal-body">${this.escapeHtml(message)}</div>
+                    <div class="custom-modal-header">${escapeHtml(title)}</div>
+                    <div class="custom-modal-body">${escapeHtml(message)}</div>
                     <div class="custom-modal-footer">
                         <button class="custom-modal-btn">확인</button>
                     </div>
@@ -119,8 +120,8 @@ export const AppAPI = {
             modal.className = 'custom-modal-overlay';
             modal.innerHTML = `
                 <div class="custom-modal">
-                    <div class="custom-modal-header">${this.escapeHtml(title)}</div>
-                    <div class="custom-modal-body">${this.escapeHtml(message)}</div>
+                    <div class="custom-modal-header">${escapeHtml(title)}</div>
+                    <div class="custom-modal-body">${escapeHtml(message)}</div>
                     <div class="custom-modal-footer">
                         <button class="custom-modal-btn custom-modal-btn-cancel">취소</button>
                         <button class="custom-modal-btn custom-modal-btn-danger">확인</button>
@@ -185,12 +186,6 @@ export const AppAPI = {
                 if (e.target === modal) cleanup(null);
             });
         });
-    },
-
-    escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
     },
 
     openURL(url) {

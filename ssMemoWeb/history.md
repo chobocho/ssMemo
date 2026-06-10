@@ -5,6 +5,18 @@
 
 ## 2026-06-10
 
+- 코드 리뷰에서 발견된 개선 포인트 8건 일괄 반영.
+  1. 죽은 코드/중복 제거 — 테스트만 있고 미사용이던 `utils.findNextIndex`/`findPrevIndex`를 `note-search.js`가 실제로 사용하도록 교체(동일한 랩어라운드 검색 로직의 인라인 재구현 제거).
+  2. `escapeHtml` 2벌 통일 — `AppAPI.escapeHtml`(DOM 기반)을 제거하고 `markdown.js`의 문자열 치환 구현을 import해 재사용.
+  3. 마크다운 코드 스팬 리터럴 보존 — `` `**x**` `` 같은 코드 스팬 내부에 bold/italic/링크 치환이 적용되던 문제. 코드 스팬을 PUA(/) 플레이스홀더로 분리 후 마지막에 복원하는 방식으로 수정. 입력에 우연히 PUA 문자가 있어도 오작동하지 않도록 선제거. 단위 테스트 11건 추가.
+  4. 검색 스크롤 성능 — `scrollToIndex`의 `split('\n')` 대형 배열 할당을 `utils.countNewlines`(charCode 루프, 할당 없음)로 교체. `notepad.js`의 `countLines`도 같은 헬퍼를 재사용하도록 정리. 단위 테스트 6건 추가.
+  5. 단축키 안내 일치 — 도움말의 Ctrl+< / Ctrl+>가 실제로는 Shift 조합이라 `e.key`가 `'<'`/`'>'`로 들어와 동작하지 않던 것을 키 매치에 추가.
+  6. 계산기 지수 표기 — `2e`처럼 지수 뒤 숫자가 없으면 `Number('2e') → NaN`이 조용히 출력되던 문제. e/E 뒤에 (부호 포함) 숫자가 실제로 이어질 때만 숫자 토큰으로 소비하도록 수정 — `2e`는 명확한 에러(미정의 변수/파서 에러). 단위 테스트 7건 추가.
+  7. index.html 정리 — `lang="ko"`로 수정, 접근성을 해치는 `user-scalable=no`/`maximum-scale` 제거. 손으로 복붙돼 있던 파일 탭 7개 + 에디터 컨테이너 7개 블록을 `Notepad.buildTabSlots()`가 `MAX_FILE_TABS` 상수 기준으로 동적 생성하도록 변경(탭 개수를 상수 하나로 관리). 인라인 `onclick="closeFileTab(i)"`가 사라져 `window.closeFileTab` 전역 노출도 제거. `fileTabs`의 wrapStates/previewStates 키도 하드코딩 대신 루프 생성.
+  8. 저장소 메서드 개명 — 날짜 키 시절 이름이던 `getNoteByDate`/`saveOrUpdateNoteByDate`를 실제 의미에 맞게 `getRecord`/`saveRecord`로 전 데이터 소스(IndexedDb/Memory/Rest)·AppAPI·호출처·테스트 일괄 변경. `bundle.py`의 낡은 산출물 파일명 주석도 수정.
+  - 보류: 파일 탭의 원본 `ArrayBuffer` 보관 해제는 🔤 인코딩 변경 기능이 원본 바이트를 필요로 하므로 적용하지 않음(기능 제거 없이는 불가).
+  - 검증: 신규/회귀 핵심 케이스 23건을 Node로 직접 실행해 전부 통과(markdown 코드 스팬·표·details·XSS 회귀, calc 지수·산술·factorial 회귀, utils 검색/카운트). 전체 src/test 모듈 구문 검사 통과, `build.sh` 단일 파일 번들(146.6KB) 재생성 및 번들 구문·내용 검사 통과.
+
 - 코드 리뷰에서 발견된 버그 5건 일괄 수정.
   1. 종료 시 저장 보장 강화 — `beforeunload`의 async 핸들러는 브라우저가 promise를 기다려주지 않아 저장 시작 전에 페이지가 사라질 수 있고, 메인 메모만 저장(`save()`)해 더티 메모 탭이 누락되던 문제. `pagehide`/`visibilitychange(hidden)` 시점에 `saveAll()`(메인+모든 메모 탭)을 트리거하고, 미저장 변경이 남아 있으면 `beforeunload`에서 이탈 경고를 띄워 저장 완료 시간을 확보. `Notepad.hasUnsavedChanges()` 신설. `main.js`의 미사용 `state` import 제거.
   2. Ctrl+F 검색창 포커스가 동작하지 않던 문제 — 키 비교에 소문자 `'f'`가 빠져 Shift 없이 누르면 브라우저 기본 찾기 창이 뜨던 버그. 도움말 안내(Ctrl+F/Ctrl+I)와 실제 동작 일치.

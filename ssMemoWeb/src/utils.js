@@ -69,6 +69,18 @@ export function buildLineNumbersText(count) {
     return buf;
 }
 
+// [0, end) 구간의 줄바꿈(\n) 개수를 센다. countNewlines(text, idx)는 해당
+// 인덱스의 0-기반 줄 번호와 같다. split 배열 할당 없이 동작해 5MB 파일에서도 저비용.
+export function countNewlines(text, end = text.length) {
+    if (!text) return 0;
+    const limit = end < text.length ? end : text.length;
+    let count = 0;
+    for (let i = 0; i < limit; i++) {
+        if (text.charCodeAt(i) === 10) count++;
+    }
+    return count;
+}
+
 // content 안에서 query를 정방향 검색. 없으면 -1.
 // startIndex 이후에서 못 찾고 startIndex>0이면 처음부터 다시 시도(랩어라운드).
 export function findNextIndex(content, query, startIndex = 0) {

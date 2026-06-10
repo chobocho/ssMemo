@@ -8,7 +8,7 @@ export class MemorySource {
 
     async init() { /* nothing */ }
 
-    async getNoteByDate(key) {
+    async getRecord(key) {
         const record = this.store.get(key);
         return {
             key,
@@ -17,7 +17,7 @@ export class MemorySource {
         };
     }
 
-    async saveOrUpdateNoteByDate(key, content) {
+    async saveRecord(key, content) {
         const record = {
             key,
             content,

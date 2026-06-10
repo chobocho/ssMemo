@@ -11,7 +11,7 @@ export class IndexedDbSource {
         this.db = await this.openDb();
     }
 
-    async getNoteByDate(key) {
+    async getRecord(key) {
         const db = await this.ensureDb();
         return new Promise((resolve, reject) => {
             const tx = db.transaction(this.options.storeName, 'readonly');
@@ -30,7 +30,7 @@ export class IndexedDbSource {
         });
     }
 
-    async saveOrUpdateNoteByDate(key, content) {
+    async saveRecord(key, content) {
         const db = await this.ensureDb();
         return new Promise((resolve, reject) => {
             const tx = db.transaction(this.options.storeName, 'readwrite');

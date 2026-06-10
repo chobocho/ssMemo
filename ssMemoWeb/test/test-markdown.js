@@ -97,3 +97,24 @@ assertContains(bEvil, '&lt;b onclick', '차단된 태그는 이스케이프됨')
 const unknown = renderMarkdown('<marquee>스크롤</marquee>');
 assertNotContains(unknown, '<marquee>', '알 수 없는 태그 차단');
 assertContains(unknown, '&lt;marquee&gt;', '알 수 없는 태그 이스케이프됨');
+
+section('markdown.js — 코드 스팬 리터럴 보존');
+
+// 코드 스팬 내부에서는 강조/링크 문법이 적용되지 않아야 한다.
+const codeBold = renderMarkdown('`**x**`');
+assertContains(codeBold, '<code>**x**</code>', '코드 스팬 안의 ** 리터럴 보존');
+assertNotContains(codeBold, '<strong>', '코드 스팬 안에서 bold 미적용');
+
+const codeUnderscore = renderMarkdown('`_var_name_`');
+assertContains(codeUnderscore, '<code>_var_name_</code>', '코드 스팬 안의 _ 리터럴 보존');
+assertNotContains(codeUnderscore, '<em>', '코드 스팬 안에서 italic 미적용');
+
+const codeLink = renderMarkdown('`[a](https://b.com)`');
+assertContains(codeLink, '<code>[a](https://b.com)</code>', '코드 스팬 안의 링크 문법 보존');
+assertNotContains(codeLink, '<a href', '코드 스팬 안에서 링크 미적용');
+
+// 코드 스팬 밖의 문법은 그대로 동작해야 한다.
+const mixed = renderMarkdown('**굵게** `**코드**` *기울임*');
+assertContains(mixed, '<strong>굵게</strong>', '코드 스팬 밖 bold 정상');
+assertContains(mixed, '<code>**코드**</code>', '같은 줄 코드 스팬 리터럴 보존');
+assertContains(mixed, '<em>기울임</em>', '코드 스팬 밖 italic 정상');

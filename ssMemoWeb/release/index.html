@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ssMemo V0.126.1e1</title>
     <style>
 /* [추가/수정] CSS 변수 정의 (기본 라이트 모드) */
@@ -943,82 +943,17 @@ body.dark-theme .note-editor-readonly .note-editor {
             <button onclick="runCodeBlock()" class="note-icon-btn" title="선택한 코드 실행 (Ctrl+Enter)">🧮</button>
             <button onclick="showNoteHelpPanel()" class="note-icon-btn" title="도움말">❓</button>
         </div>
-        <!-- 탭 UI -->
+        <!-- 탭 UI — 파일/메모 탭은 Notepad.buildTabSlots()가 MAX_FILE_TABS 수만큼 동적 생성 -->
         <div class="note-tabs-container">
             <div class="note-tab note-tab-active" data-tab="main">
                 <span id="current-memo-title" class="current-memo-title" title="">메모장</span>
             </div>
-            <div class="note-tab note-tab-hidden" data-tab="0">
-                <span class="note-tab-label">파일 1</span>
-                <button class="note-tab-close" onclick="closeFileTab(0)">❌</button>
-            </div>
-            <div class="note-tab note-tab-hidden" data-tab="1">
-                <span class="note-tab-label">파일 2</span>
-                <button class="note-tab-close" onclick="closeFileTab(1)">❌</button>
-            </div>
-            <div class="note-tab note-tab-hidden" data-tab="2">
-                <span class="note-tab-label">파일 3</span>
-                <button class="note-tab-close" onclick="closeFileTab(2)">❌</button>
-            </div>
-            <div class="note-tab note-tab-hidden" data-tab="3">
-                <span class="note-tab-label">파일 4</span>
-                <button class="note-tab-close" onclick="closeFileTab(3)">❌</button>
-            </div>
-            <div class="note-tab note-tab-hidden" data-tab="4">
-                <span class="note-tab-label">파일 5</span>
-                <button class="note-tab-close" onclick="closeFileTab(4)">❌</button>
-            </div>
-            <div class="note-tab note-tab-hidden" data-tab="5">
-                <span class="note-tab-label">파일 6</span>
-                <button class="note-tab-close" onclick="closeFileTab(5)">❌</button>
-            </div>
-            <div class="note-tab note-tab-hidden" data-tab="6">
-                <span class="note-tab-label">파일 7</span>
-                <button class="note-tab-close" onclick="closeFileTab(6)">❌</button>
-            </div>
         </div>
 
-        <!-- 메인 에디터 (기존) -->
+        <!-- 메인 에디터 — 파일/메모 탭용 에디터 컨테이너도 동적 생성됨 -->
         <div class="note-editor-container" id="note-container-main">
             <div id="line-numbers" class="line-numbers">1</div>
             <textarea id="note-editor" class="note-editor" spellcheck="false"></textarea>
-        </div>
-
-        <!-- 읽기 전용 파일 에디터 7개 -->
-        <div class="note-editor-container note-editor-readonly hidden" id="note-container-0">
-            <div class="line-numbers" id="line-numbers-0">1</div>
-            <textarea class="note-editor" id="note-editor-0" spellcheck="false" readonly></textarea>
-            <div class="note-md-preview hidden" id="note-md-preview-0"></div>
-        </div>
-        <div class="note-editor-container note-editor-readonly hidden" id="note-container-1">
-            <div class="line-numbers" id="line-numbers-1">1</div>
-            <textarea class="note-editor" id="note-editor-1" spellcheck="false" readonly></textarea>
-            <div class="note-md-preview hidden" id="note-md-preview-1"></div>
-        </div>
-        <div class="note-editor-container note-editor-readonly hidden" id="note-container-2">
-            <div class="line-numbers" id="line-numbers-2">1</div>
-            <textarea class="note-editor" id="note-editor-2" spellcheck="false" readonly></textarea>
-            <div class="note-md-preview hidden" id="note-md-preview-2"></div>
-        </div>
-        <div class="note-editor-container note-editor-readonly hidden" id="note-container-3">
-            <div class="line-numbers" id="line-numbers-3">1</div>
-            <textarea class="note-editor" id="note-editor-3" spellcheck="false" readonly></textarea>
-            <div class="note-md-preview hidden" id="note-md-preview-3"></div>
-        </div>
-        <div class="note-editor-container note-editor-readonly hidden" id="note-container-4">
-            <div class="line-numbers" id="line-numbers-4">1</div>
-            <textarea class="note-editor" id="note-editor-4" spellcheck="false" readonly></textarea>
-            <div class="note-md-preview hidden" id="note-md-preview-4"></div>
-        </div>
-        <div class="note-editor-container note-editor-readonly hidden" id="note-container-5">
-            <div class="line-numbers" id="line-numbers-5">1</div>
-            <textarea class="note-editor" id="note-editor-5" spellcheck="false" readonly></textarea>
-            <div class="note-md-preview hidden" id="note-md-preview-5"></div>
-        </div>
-        <div class="note-editor-container note-editor-readonly hidden" id="note-container-6">
-            <div class="line-numbers" id="line-numbers-6">1</div>
-            <textarea class="note-editor" id="note-editor-6" spellcheck="false" readonly></textarea>
-            <div class="note-md-preview hidden" id="note-md-preview-6"></div>
         </div>
     </div>
 </div>
@@ -1172,6 +1107,18 @@ function buildLineNumbersText(count) {
     return buf;
 }
 
+// [0, end) 구간의 줄바꿈(\n) 개수를 센다. countNewlines(text, idx)는 해당
+// 인덱스의 0-기반 줄 번호와 같다. split 배열 할당 없이 동작해 5MB 파일에서도 저비용.
+function countNewlines(text, end = text.length) {
+    if (!text) return 0;
+    const limit = end < text.length ? end : text.length;
+    let count = 0;
+    for (let i = 0; i < limit; i++) {
+        if (text.charCodeAt(i) === 10) count++;
+    }
+    return count;
+}
+
 // content 안에서 query를 정방향 검색. 없으면 -1.
 // startIndex 이후에서 못 찾고 startIndex>0이면 처음부터 다시 시도(랩어라운드).
 function findNextIndex(content, query, startIndex = 0) {
@@ -1219,7 +1166,15 @@ function escapeHtml(s) {
 
 function renderInline(text) {
     let s = escapeHtml(text);
-    s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+    // 코드 스팬 내부는 리터럴 보존 — 강조/링크 치환이 적용되지 않도록
+    // 사유 영역(PUA) 플레이스홀더로 분리해 두고 마지막에 복원한다.
+    // 입력에 우연히 들어온 PUA 문자가 복원 단계에서 오작동하지 않도록 먼저 제거.
+    s = s.replace(/[\uE000\uE001]/g, '');
+    const codeSpans = [];
+    s = s.replace(/`([^`]+)`/g, (_m, code) => {
+        codeSpans.push(code);
+        return `\uE000${codeSpans.length - 1}\uE001`;
+    });
     s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
     s = s.replace(/__([^_]+)__/g, '<strong>$1</strong>');
     s = s.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>');
@@ -1234,6 +1189,7 @@ function renderInline(text) {
     // 매치되지 않아 이스케이프된 상태로 유지되어 XSS를 차단합니다.
     s = s.replace(/&lt;(\/?)([biu])&gt;/gi, '<$1$2>');
     s = s.replace(/&lt;br\s*\/?&gt;/gi, '<br>');
+    s = s.replace(/\uE000(\d+)\uE001/g, (_m, i) => `<code>${codeSpans[i]}</code>`);
     return s;
 }
 
@@ -1668,11 +1624,17 @@ function tokenize(source) {
                 if (c === '.' && !hasDot) { hasDot = true; j++; continue; }
                 break;
             }
+            // 지수 표기는 e/E 뒤에 (부호 포함) 숫자가 실제로 이어질 때만 숫자의
+            // 일부로 소비한다. "2e"처럼 숫자가 없으면 e는 별도 토큰으로 남겨
+            // Number('2e') → NaN이 조용히 출력되는 것을 막는다.
             if (j < len && (source[j] === 'e' || source[j] === 'E')) {
-                hasDot = true;
-                j++;
-                if (j < len && (source[j] === '+' || source[j] === '-')) j++;
-                while (j < len && source[j] >= '0' && source[j] <= '9') j++;
+                let k = j + 1;
+                if (k < len && (source[k] === '+' || source[k] === '-')) k++;
+                if (k < len && source[k] >= '0' && source[k] <= '9') {
+                    hasDot = true;
+                    j = k;
+                    while (j < len && source[j] >= '0' && source[j] <= '9') j++;
+                }
             }
             tokens.push({ type: 'NUM', value: source.slice(i, j), isFloat: hasDot });
             i = j;
@@ -1970,7 +1932,7 @@ class IndexedDbSource {
         this.db = await this.openDb();
     }
 
-    async getNoteByDate(key) {
+    async getRecord(key) {
         const db = await this.ensureDb();
         return new Promise((resolve, reject) => {
             const tx = db.transaction(this.options.storeName, 'readonly');
@@ -1989,7 +1951,7 @@ class IndexedDbSource {
         });
     }
 
-    async saveOrUpdateNoteByDate(key, content) {
+    async saveRecord(key, content) {
         const db = await this.ensureDb();
         return new Promise((resolve, reject) => {
             const tx = db.transaction(this.options.storeName, 'readwrite');
@@ -2095,7 +2057,7 @@ class RestSource {
         }
     }
 
-    async getNoteByDate(key) {
+    async getRecord(key) {
         const url = `${this.options.baseUrl}/notes/${encodeURIComponent(key)}`;
         const res = await this._fetchWithTimeout(url, { method: 'GET' });
         if (!res.ok) {
@@ -2104,7 +2066,7 @@ class RestSource {
         return res.json();
     }
 
-    async saveOrUpdateNoteByDate(key, content) {
+    async saveRecord(key, content) {
         const url = `${this.options.baseUrl}/notes/${encodeURIComponent(key)}`;
         const res = await this._fetchWithTimeout(url, {
             method: 'PUT',
@@ -2144,7 +2106,7 @@ class MemorySource {
 
     async init() { /* nothing */ }
 
-    async getNoteByDate(key) {
+    async getRecord(key) {
         const record = this.store.get(key);
         return {
             key,
@@ -2153,7 +2115,7 @@ class MemorySource {
         };
     }
 
-    async saveOrUpdateNoteByDate(key, content) {
+    async saveRecord(key, content) {
         const record = {
             key,
             content,
@@ -2204,6 +2166,7 @@ function createDataSource(config) {
 
 
 
+
 let dataSource = createDataSource(STORAGE_CONFIG);
 let usingFallback = false;
 
@@ -2242,21 +2205,21 @@ const AppAPI = {
         }
     },
 
-    async getNoteByDate(key) {
+    async getRecord(key) {
         try {
-            return await dataSource.getNoteByDate(key);
+            return await dataSource.getRecord(key);
         } catch (err) {
             await fallbackToMemory(err);
-            return dataSource.getNoteByDate(key);
+            return dataSource.getRecord(key);
         }
     },
 
-    async saveOrUpdateNoteByDate(key, content) {
+    async saveRecord(key, content) {
         try {
-            return await dataSource.saveOrUpdateNoteByDate(key, content);
+            return await dataSource.saveRecord(key, content);
         } catch (err) {
             await fallbackToMemory(err);
-            return dataSource.saveOrUpdateNoteByDate(key, content);
+            return dataSource.saveRecord(key, content);
         }
     },
 
@@ -2288,8 +2251,8 @@ const AppAPI = {
             modal.className = 'custom-modal-overlay';
             modal.innerHTML = `
                 <div class="custom-modal">
-                    <div class="custom-modal-header">${this.escapeHtml(title)}</div>
-                    <div class="custom-modal-body">${this.escapeHtml(message)}</div>
+                    <div class="custom-modal-header">${escapeHtml(title)}</div>
+                    <div class="custom-modal-body">${escapeHtml(message)}</div>
                     <div class="custom-modal-footer">
                         <button class="custom-modal-btn">확인</button>
                     </div>
@@ -2318,8 +2281,8 @@ const AppAPI = {
             modal.className = 'custom-modal-overlay';
             modal.innerHTML = `
                 <div class="custom-modal">
-                    <div class="custom-modal-header">${this.escapeHtml(title)}</div>
-                    <div class="custom-modal-body">${this.escapeHtml(message)}</div>
+                    <div class="custom-modal-header">${escapeHtml(title)}</div>
+                    <div class="custom-modal-body">${escapeHtml(message)}</div>
                     <div class="custom-modal-footer">
                         <button class="custom-modal-btn custom-modal-btn-cancel">취소</button>
                         <button class="custom-modal-btn custom-modal-btn-danger">확인</button>
@@ -2386,12 +2349,6 @@ const AppAPI = {
         });
     },
 
-    escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    },
-
     openURL(url) {
         if (window?.go?.main?.App?.OpenURL) {
             return window.go.main.App.OpenURL(url);
@@ -2455,12 +2412,12 @@ async function listMemos() {
 }
 
 async function loadMemo(title) {
-    const rec = await AppAPI.getNoteByDate(toKey(title));
+    const rec = await AppAPI.getRecord(toKey(title));
     return { title, content: rec?.content || '', updatedAt: rec?.updatedAt || null };
 }
 
 async function saveMemo(title, content) {
-    return AppAPI.saveOrUpdateNoteByDate(toKey(title), content);
+    return AppAPI.saveRecord(toKey(title), content);
 }
 
 async function deleteMemo(title) {
@@ -2471,12 +2428,12 @@ async function deleteMemo(title) {
 // 새 제목이 이미 존재하면 거부.
 async function renameMemo(oldTitle, newTitle) {
     if (oldTitle === newTitle) return;
-    const existing = await AppAPI.getNoteByDate(toKey(newTitle));
+    const existing = await AppAPI.getRecord(toKey(newTitle));
     if (existing?.updatedAt) {
         throw new Error('같은 제목의 메모가 이미 존재합니다.');
     }
-    const cur = await AppAPI.getNoteByDate(toKey(oldTitle));
-    await AppAPI.saveOrUpdateNoteByDate(toKey(newTitle), cur?.content || '');
+    const cur = await AppAPI.getRecord(toKey(oldTitle));
+    await AppAPI.saveRecord(toKey(newTitle), cur?.content || '');
     await AppAPI.deleteKey(toKey(oldTitle));
 }
 
@@ -2488,7 +2445,7 @@ async function ensureAtLeastOneMemo() {
     const memos = await listMemos();
     if (memos.length > 0) return memos[0].title;
 
-    const legacy = await AppAPI.getNoteByDate(CONSTANTS.NOTEPAD_KEY);
+    const legacy = await AppAPI.getRecord(CONSTANTS.NOTEPAD_KEY);
     const content = legacy?.content || '';
     const title = CONSTANTS.DEFAULT_MEMO_TITLE;
     await saveMemo(title, content);
@@ -2502,6 +2459,7 @@ async function ensureAtLeastOneMemo() {
 // ========================================
 // Note Search UI
 // ========================================
+
 
 
 const NoteSearchUI = {
@@ -2541,13 +2499,8 @@ const NoteSearchUI = {
         const query = state.elements.noteSearchInput.value;
         if (!query) return;
 
-        const content = noteEditor.value;
         const startIndex = startFromBeginning ? 0 : noteEditor.selectionEnd;
-        let matchIndex = content.indexOf(query, startIndex);
-
-        if (matchIndex === -1 && startIndex > 0) {
-            matchIndex = content.indexOf(query, 0);
-        }
+        const matchIndex = findNextIndex(noteEditor.value, query, startIndex);
 
         if (matchIndex === -1) {
             this.showMiss();
@@ -2567,16 +2520,10 @@ const NoteSearchUI = {
         const query = state.elements.noteSearchInput.value;
         if (!query) return;
 
-        const content = noteEditor.value;
         const startIndex = noteEditor.selectionStart - 1;
-
         if (startIndex < 0) return;
 
-        let matchIndex = content.lastIndexOf(query, startIndex);
-
-        if (matchIndex === -1) {
-            matchIndex = content.lastIndexOf(query, content.length);
-        }
+        const matchIndex = findPrevIndex(noteEditor.value, query, startIndex);
 
         if (matchIndex === -1) {
             this.showMiss();
@@ -2606,8 +2553,8 @@ const NoteSearchUI = {
     },
 
     scrollToIndex(noteEditor, index) {
-        const textBefore = noteEditor.value.slice(0, index);
-        const lineIndex = textBefore.split('\n').length - 1;
+        // split 배열 할당 없이 매치 위치의 줄 번호 계산 — 5MB 파일 검색에서도 저비용.
+        const lineIndex = countNewlines(noteEditor.value, index);
         const style = window.getComputedStyle(noteEditor);
         const lineHeight = parseFloat(style.lineHeight) || 24;
         const paddingTop = parseFloat(style.paddingTop) || 0;
@@ -2639,14 +2586,9 @@ let lineNumbers = null;
 let charCountEl = null;
 
 // 빈 문자열도 textarea에서 1줄로 보이므로 최소 1로 보정.
-// split보다 빠르게 줄 수만 세는 헬퍼 — 5MB 파일에서 split 배열 할당 비용을 피한다.
+// 줄바꿈 카운트는 utils.countNewlines 재사용 (split 배열 할당 없음).
 function countLines(text) {
-    if (!text) return 1;
-    let count = 1;
-    for (let i = 0; i < text.length; i++) {
-        if (text.charCodeAt(i) === 10) count++;
-    }
-    return count;
+    return text ? countNewlines(text) + 1 : 1;
 }
 
 // 줄 번호 영역 갱신 + 줄 수 캐시. 줄 수가 그대로면 textContent를
@@ -2661,13 +2603,17 @@ function refreshLineNumbers(editor, lineNumbersEl) {
     lineNumbersEl.scrollTop = editor.scrollTop;
 }
 
-// 파일 탭 관리 상태
+// 파일 탭 관리 상태 — 슬롯 수와 상태 키를 MAX_FILE_TABS 상수 하나로 관리.
 const fileTabs = {
-    slots: Array(7).fill(null), // 각 슬롯의 파일 정보 {fileName, content}
+    slots: Array(CONSTANTS.MAX_FILE_TABS).fill(null), // 각 슬롯의 파일/메모 정보
     currentTab: 'main', // 현재 활성 탭
-    wrapStates: { main: false, 0: false, 1: false, 2: false, 3: false, 4: false, 5: false, 6: false }, // 각 탭의 줄바꿈 상태
-    previewStates: { 0: false, 1: false, 2: false, 3: false, 4: false, 5: false, 6: false } // .md 미리보기 상태
+    wrapStates: { main: false }, // 각 탭의 줄바꿈 상태
+    previewStates: {}, // .md 미리보기 상태
 };
+for (let i = 0; i < CONSTANTS.MAX_FILE_TABS; i++) {
+    fileTabs.wrapStates[i] = false;
+    fileTabs.previewStates[i] = false;
+}
 
 // 코드 블럭 실행기의 메모리 — "메모리에 저장" 옵션을 선택했을 때만 갱신됨.
 // IndexedDB(또는 폴백 메모리)에 영속 저장되며, Notepad.open()에서 자동 로드.
@@ -2676,7 +2622,7 @@ const calcMemory = {};
 // 메모리를 영속 저장에 기록. IndexedDB 실패 시 AppAPI가 메모리 폴백으로 처리.
 async function persistCalcMemory() {
     try {
-        await AppAPI.saveOrUpdateNoteByDate(CONSTANTS.CALC_MEMORY_KEY, serializeEnv(calcMemory));
+        await AppAPI.saveRecord(CONSTANTS.CALC_MEMORY_KEY, serializeEnv(calcMemory));
     } catch (e) {
         console.warn('[ssMemo] 코드 메모리 저장 실패:', e);
     }
@@ -2685,7 +2631,7 @@ async function persistCalcMemory() {
 // 영속 저장에서 메모리를 읽어 calcMemory에 채움. 손상 시 빈 상태로 동작.
 async function loadCalcMemory() {
     try {
-        const rec = await AppAPI.getNoteByDate(CONSTANTS.CALC_MEMORY_KEY);
+        const rec = await AppAPI.getRecord(CONSTANTS.CALC_MEMORY_KEY);
         const restored = deserializeEnv(rec?.content || '');
         for (const k of Object.keys(calcMemory)) delete calcMemory[k];
         Object.assign(calcMemory, restored);
@@ -2702,6 +2648,9 @@ const Notepad = {
         charCountEl = document.getElementById('note-char-count');
 
         if (!notePanel || !noteEditor || !lineNumbers || !charCountEl) return;
+
+        // 파일/메모 탭 UI를 MAX_FILE_TABS 수만큼 동적 생성 (최초 1회).
+        this.buildTabSlots();
 
         notePanel.classList.remove('hidden');
         noteEditor.focus();
@@ -2946,13 +2895,14 @@ const Notepad = {
             return;
         }
 
-        if (e.ctrlKey && (e.key === ',' || e.key === 'b' || e.key === 'B')) {
+        // '<'/'>'는 Shift+,/. 조합 — 도움말의 Ctrl+< / Ctrl+> 안내와 일치시킨다.
+        if (e.ctrlKey && (e.key === ',' || e.key === '<' || e.key === 'b' || e.key === 'B')) {
             e.preventDefault();
             NoteSearchUI.findPrev();
             return;
         }
 
-        if (e.ctrlKey && (e.key === 'n' || e.key === 'N' || e.key === '.')) {
+        if (e.ctrlKey && (e.key === 'n' || e.key === 'N' || e.key === '.' || e.key === '>')) {
             e.preventDefault();
             NoteSearchUI.find({ startFromBeginning: false });
             return;
@@ -3632,6 +3582,43 @@ const Notepad = {
         }
     },
 
+    // 파일/메모 탭과 에디터 컨테이너를 MAX_FILE_TABS 수만큼 동적 생성.
+    // index.html에 동일 블록을 복붙하지 않고 상수 하나로 개수를 관리한다.
+    buildTabSlots() {
+        const tabsContainer = notePanel.querySelector('.note-tabs-container');
+        if (!tabsContainer) return;
+        if (tabsContainer.querySelector('.note-tab[data-tab="0"]')) return; // 이미 생성됨
+
+        for (let i = 0; i < CONSTANTS.MAX_FILE_TABS; i++) {
+            const tab = document.createElement('div');
+            tab.className = 'note-tab note-tab-hidden';
+            tab.dataset.tab = String(i);
+
+            const label = document.createElement('span');
+            label.className = 'note-tab-label';
+            label.textContent = `파일 ${i + 1}`;
+            tab.appendChild(label);
+
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'note-tab-close';
+            closeBtn.textContent = '❌';
+            closeBtn.addEventListener('click', () => this.closeFileTab(i));
+            tab.appendChild(closeBtn);
+
+            tabsContainer.appendChild(tab);
+
+            const container = document.createElement('div');
+            container.className = 'note-editor-container note-editor-readonly hidden';
+            container.id = `note-container-${i}`;
+            container.innerHTML = `
+                <div class="line-numbers" id="line-numbers-${i}">1</div>
+                <textarea class="note-editor" id="note-editor-${i}" spellcheck="false" readonly></textarea>
+                <div class="note-md-preview hidden" id="note-md-preview-${i}"></div>
+            `;
+            notePanel.appendChild(container);
+        }
+    },
+
     setupTabClickHandlers() {
         document.querySelectorAll('.note-tab').forEach(tab => {
             tab.addEventListener('click', (e) => {
@@ -4263,7 +4250,6 @@ window.saveNotePadWithNoti = () => Notepad.saveWithNotification();
 window.showNoteHelpPanel = () => Notepad.showHelpPanel();
 window.splitNoteIntoChunks = (len) => Notepad.splitNoteIntoChunks(len);
 window.LoadFileFromDisk = () => Notepad.loadFileFromDisk();
-window.closeFileTab = (index) => Notepad.closeFileTab(index);
 window.forceEnterToNote = () => Notepad.forceEnterToNote();
 window.downloadNotePad = () => Notepad.downloadNotePad();
 window.toggleMarkdownPreview = () => Notepad.toggleMarkdownPreview();

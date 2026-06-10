@@ -30,11 +30,17 @@ function tokenize(source) {
                 if (c === '.' && !hasDot) { hasDot = true; j++; continue; }
                 break;
             }
+            // 지수 표기는 e/E 뒤에 (부호 포함) 숫자가 실제로 이어질 때만 숫자의
+            // 일부로 소비한다. "2e"처럼 숫자가 없으면 e는 별도 토큰으로 남겨
+            // Number('2e') → NaN이 조용히 출력되는 것을 막는다.
             if (j < len && (source[j] === 'e' || source[j] === 'E')) {
-                hasDot = true;
-                j++;
-                if (j < len && (source[j] === '+' || source[j] === '-')) j++;
-                while (j < len && source[j] >= '0' && source[j] <= '9') j++;
+                let k = j + 1;
+                if (k < len && (source[k] === '+' || source[k] === '-')) k++;
+                if (k < len && source[k] >= '0' && source[k] <= '9') {
+                    hasDot = true;
+                    j = k;
+                    while (j < len && source[j] >= '0' && source[j] <= '9') j++;
+                }
             }
             tokens.push({ type: 'NUM', value: source.slice(i, j), isFloat: hasDot });
             i = j;

@@ -25,7 +25,7 @@ export class RestSource {
         }
     }
 
-    async getNoteByDate(key) {
+    async getRecord(key) {
         const url = `${this.options.baseUrl}/notes/${encodeURIComponent(key)}`;
         const res = await this._fetchWithTimeout(url, { method: 'GET' });
         if (!res.ok) {
@@ -34,7 +34,7 @@ export class RestSource {
         return res.json();
     }
 
-    async saveOrUpdateNoteByDate(key, content) {
+    async saveRecord(key, content) {
         const url = `${this.options.baseUrl}/notes/${encodeURIComponent(key)}`;
         const res = await this._fetchWithTimeout(url, {
             method: 'PUT',

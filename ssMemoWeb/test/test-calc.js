@@ -146,3 +146,16 @@ assertEqual(deserializeEnv('null'), {}, 'null도 빈 env');
 // 직렬화된 값을 calc 실행에 주입 가능
 const reloaded = deserializeEnv(serializeEnv({ a: 100n }));
 assertEqual(runCode('a * 2', reloaded).outputs, ['200'], '직렬화/역직렬화 후 코드 실행');
+
+section('calc.js — 지수 표기');
+
+assertEqual(runCode('2e3').outputs, ['2000'], '2e3 = 2000');
+assertEqual(runCode('2E3').outputs, ['2000'], '대문자 E 지원');
+assertEqual(runCode('1.5e2').outputs, ['150'], '소수 + 지수');
+assertEqual(runCode('2e+3').outputs, ['2000'], '양수 부호 지수');
+assertEqual(runCode('2e-2').outputs, ['0.02'], '음수 부호 지수');
+// 지수 뒤 숫자가 없으면 e는 숫자에 포함되지 않는다 (NaN 조용한 출력 방지).
+assertThrows(() => runCode('2e'), '정의되지 않은 변수: e',
+    '2e — 지수 숫자 없으면 e는 별도 토큰(미정의 변수 에러)');
+assertThrows(() => runCode('2e+'), '예상치 못한 토큰',
+    '2e+ — 부호만 있으면 지수로 소비하지 않음 (e는 변수, + 뒤 피연산자 없음)');

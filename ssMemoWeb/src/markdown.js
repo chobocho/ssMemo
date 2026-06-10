@@ -19,7 +19,15 @@ export function escapeHtml(s) {
 
 function renderInline(text) {
     let s = escapeHtml(text);
-    s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+    // 코드 스팬 내부는 리터럴 보존 — 강조/링크 치환이 적용되지 않도록
+    // 사유 영역(PUA) 플레이스홀더로 분리해 두고 마지막에 복원한다.
+    // 입력에 우연히 들어온 PUA 문자가 복원 단계에서 오작동하지 않도록 먼저 제거.
+    s = s.replace(/[\uE000\uE001]/g, '');
+    const codeSpans = [];
+    s = s.replace(/`([^`]+)`/g, (_m, code) => {
+        codeSpans.push(code);
+        return `\uE000${codeSpans.length - 1}\uE001`;
+    });
     s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
     s = s.replace(/__([^_]+)__/g, '<strong>$1</strong>');
     s = s.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>');
@@ -34,6 +42,7 @@ function renderInline(text) {
     // 매치되지 않아 이스케이프된 상태로 유지되어 XSS를 차단합니다.
     s = s.replace(/&lt;(\/?)([biu])&gt;/gi, '<$1$2>');
     s = s.replace(/&lt;br\s*\/?&gt;/gi, '<br>');
+    s = s.replace(/\uE000(\d+)\uE001/g, (_m, i) => `<code>${codeSpans[i]}</code>`);
     return s;
 }
 

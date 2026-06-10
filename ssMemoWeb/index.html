@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ssMemo V0.126.1e1</title>
     <link rel="stylesheet" href="./src/style.css">
 </head>
@@ -26,82 +26,17 @@
             <button onclick="runCodeBlock()" class="note-icon-btn" title="선택한 코드 실행 (Ctrl+Enter)">🧮</button>
             <button onclick="showNoteHelpPanel()" class="note-icon-btn" title="도움말">❓</button>
         </div>
-        <!-- 탭 UI -->
+        <!-- 탭 UI — 파일/메모 탭은 Notepad.buildTabSlots()가 MAX_FILE_TABS 수만큼 동적 생성 -->
         <div class="note-tabs-container">
             <div class="note-tab note-tab-active" data-tab="main">
                 <span id="current-memo-title" class="current-memo-title" title="">메모장</span>
             </div>
-            <div class="note-tab note-tab-hidden" data-tab="0">
-                <span class="note-tab-label">파일 1</span>
-                <button class="note-tab-close" onclick="closeFileTab(0)">❌</button>
-            </div>
-            <div class="note-tab note-tab-hidden" data-tab="1">
-                <span class="note-tab-label">파일 2</span>
-                <button class="note-tab-close" onclick="closeFileTab(1)">❌</button>
-            </div>
-            <div class="note-tab note-tab-hidden" data-tab="2">
-                <span class="note-tab-label">파일 3</span>
-                <button class="note-tab-close" onclick="closeFileTab(2)">❌</button>
-            </div>
-            <div class="note-tab note-tab-hidden" data-tab="3">
-                <span class="note-tab-label">파일 4</span>
-                <button class="note-tab-close" onclick="closeFileTab(3)">❌</button>
-            </div>
-            <div class="note-tab note-tab-hidden" data-tab="4">
-                <span class="note-tab-label">파일 5</span>
-                <button class="note-tab-close" onclick="closeFileTab(4)">❌</button>
-            </div>
-            <div class="note-tab note-tab-hidden" data-tab="5">
-                <span class="note-tab-label">파일 6</span>
-                <button class="note-tab-close" onclick="closeFileTab(5)">❌</button>
-            </div>
-            <div class="note-tab note-tab-hidden" data-tab="6">
-                <span class="note-tab-label">파일 7</span>
-                <button class="note-tab-close" onclick="closeFileTab(6)">❌</button>
-            </div>
         </div>
 
-        <!-- 메인 에디터 (기존) -->
+        <!-- 메인 에디터 — 파일/메모 탭용 에디터 컨테이너도 동적 생성됨 -->
         <div class="note-editor-container" id="note-container-main">
             <div id="line-numbers" class="line-numbers">1</div>
             <textarea id="note-editor" class="note-editor" spellcheck="false"></textarea>
-        </div>
-
-        <!-- 읽기 전용 파일 에디터 7개 -->
-        <div class="note-editor-container note-editor-readonly hidden" id="note-container-0">
-            <div class="line-numbers" id="line-numbers-0">1</div>
-            <textarea class="note-editor" id="note-editor-0" spellcheck="false" readonly></textarea>
-            <div class="note-md-preview hidden" id="note-md-preview-0"></div>
-        </div>
-        <div class="note-editor-container note-editor-readonly hidden" id="note-container-1">
-            <div class="line-numbers" id="line-numbers-1">1</div>
-            <textarea class="note-editor" id="note-editor-1" spellcheck="false" readonly></textarea>
-            <div class="note-md-preview hidden" id="note-md-preview-1"></div>
-        </div>
-        <div class="note-editor-container note-editor-readonly hidden" id="note-container-2">
-            <div class="line-numbers" id="line-numbers-2">1</div>
-            <textarea class="note-editor" id="note-editor-2" spellcheck="false" readonly></textarea>
-            <div class="note-md-preview hidden" id="note-md-preview-2"></div>
-        </div>
-        <div class="note-editor-container note-editor-readonly hidden" id="note-container-3">
-            <div class="line-numbers" id="line-numbers-3">1</div>
-            <textarea class="note-editor" id="note-editor-3" spellcheck="false" readonly></textarea>
-            <div class="note-md-preview hidden" id="note-md-preview-3"></div>
-        </div>
-        <div class="note-editor-container note-editor-readonly hidden" id="note-container-4">
-            <div class="line-numbers" id="line-numbers-4">1</div>
-            <textarea class="note-editor" id="note-editor-4" spellcheck="false" readonly></textarea>
-            <div class="note-md-preview hidden" id="note-md-preview-4"></div>
-        </div>
-        <div class="note-editor-container note-editor-readonly hidden" id="note-container-5">
-            <div class="line-numbers" id="line-numbers-5">1</div>
-            <textarea class="note-editor" id="note-editor-5" spellcheck="false" readonly></textarea>
-            <div class="note-md-preview hidden" id="note-md-preview-5"></div>
-        </div>
-        <div class="note-editor-container note-editor-readonly hidden" id="note-container-6">
-            <div class="line-numbers" id="line-numbers-6">1</div>
-            <textarea class="note-editor" id="note-editor-6" spellcheck="false" readonly></textarea>
-            <div class="note-md-preview hidden" id="note-md-preview-6"></div>
         </div>
     </div>
 </div>

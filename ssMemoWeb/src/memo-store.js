@@ -31,12 +31,12 @@ export async function listMemos() {
 }
 
 export async function loadMemo(title) {
-    const rec = await AppAPI.getNoteByDate(toKey(title));
+    const rec = await AppAPI.getRecord(toKey(title));
     return { title, content: rec?.content || '', updatedAt: rec?.updatedAt || null };
 }
 
 export async function saveMemo(title, content) {
-    return AppAPI.saveOrUpdateNoteByDate(toKey(title), content);
+    return AppAPI.saveRecord(toKey(title), content);
 }
 
 export async function deleteMemo(title) {
@@ -47,12 +47,12 @@ export async function deleteMemo(title) {
 // 새 제목이 이미 존재하면 거부.
 export async function renameMemo(oldTitle, newTitle) {
     if (oldTitle === newTitle) return;
-    const existing = await AppAPI.getNoteByDate(toKey(newTitle));
+    const existing = await AppAPI.getRecord(toKey(newTitle));
     if (existing?.updatedAt) {
         throw new Error('같은 제목의 메모가 이미 존재합니다.');
     }
-    const cur = await AppAPI.getNoteByDate(toKey(oldTitle));
-    await AppAPI.saveOrUpdateNoteByDate(toKey(newTitle), cur?.content || '');
+    const cur = await AppAPI.getRecord(toKey(oldTitle));
+    await AppAPI.saveRecord(toKey(newTitle), cur?.content || '');
     await AppAPI.deleteKey(toKey(oldTitle));
 }
 
@@ -64,7 +64,7 @@ export async function ensureAtLeastOneMemo() {
     const memos = await listMemos();
     if (memos.length > 0) return memos[0].title;
 
-    const legacy = await AppAPI.getNoteByDate(CONSTANTS.NOTEPAD_KEY);
+    const legacy = await AppAPI.getRecord(CONSTANTS.NOTEPAD_KEY);
     const content = legacy?.content || '';
     const title = CONSTANTS.DEFAULT_MEMO_TITLE;
     await saveMemo(title, content);

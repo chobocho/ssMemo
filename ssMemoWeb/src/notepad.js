@@ -5,7 +5,7 @@ import { state } from './state.js';
 import { CONSTANTS, SYMBOL_SHORTCUTS } from './constants.js';
 import { NoteSearchUI } from './note-search.js';
 import { AppAPI } from './app-api.js';
-import { splitTextIntoChunks, joinTextChunks, buildLineNumbersText, debounce, nextFrame, decideChunkAction, CHUNK_DELIMITER } from './utils.js';
+import { splitTextIntoChunks, joinTextChunks, buildLineNumbersText, debounce, nextFrame, decideChunkAction, countNewlines, CHUNK_DELIMITER } from './utils.js';
 import { renderMarkdown } from './markdown.js';
 import { isAllowedTextFile, isOversized } from './file-utils.js';
 import { decodeKoreanText, decodeWithEncoding, looksGarbled } from './encoding.js';
@@ -22,14 +22,9 @@ let lineNumbers = null;
 let charCountEl = null;
 
 // 빈 문자열도 textarea에서 1줄로 보이므로 최소 1로 보정.
-// split보다 빠르게 줄 수만 세는 헬퍼 — 5MB 파일에서 split 배열 할당 비용을 피한다.
+// 줄바꿈 카운트는 utils.countNewlines 재사용 (split 배열 할당 없음).
 function countLines(text) {
-    if (!text) return 1;
-    let count = 1;
-    for (let i = 0; i < text.length; i++) {
-        if (text.charCodeAt(i) === 10) count++;
-    }
-    return count;
+    return text ? countNewlines(text) + 1 : 1;
 }
 
 // 줄 번호 영역 갱신 + 줄 수 캐시. 줄 수가 그대로면 textContent를
@@ -44,13 +39,17 @@ function refreshLineNumbers(editor, lineNumbersEl) {
     lineNumbersEl.scrollTop = editor.scrollTop;
 }
 
-// 파일 탭 관리 상태
+// 파일 탭 관리 상태 — 슬롯 수와 상태 키를 MAX_FILE_TABS 상수 하나로 관리.
 const fileTabs = {
-    slots: Array(7).fill(null), // 각 슬롯의 파일 정보 {fileName, content}
+    slots: Array(CONSTANTS.MAX_FILE_TABS).fill(null), // 각 슬롯의 파일/메모 정보
     currentTab: 'main', // 현재 활성 탭
-    wrapStates: { main: false, 0: false, 1: false, 2: false, 3: false, 4: false, 5: false, 6: false }, // 각 탭의 줄바꿈 상태
-    previewStates: { 0: false, 1: false, 2: false, 3: false, 4: false, 5: false, 6: false } // .md 미리보기 상태
+    wrapStates: { main: false }, // 각 탭의 줄바꿈 상태
+    previewStates: {}, // .md 미리보기 상태
 };
+for (let i = 0; i < CONSTANTS.MAX_FILE_TABS; i++) {
+    fileTabs.wrapStates[i] = false;
+    fileTabs.previewStates[i] = false;
+}
 
 // 코드 블럭 실행기의 메모리 — "메모리에 저장" 옵션을 선택했을 때만 갱신됨.
 // IndexedDB(또는 폴백 메모리)에 영속 저장되며, Notepad.open()에서 자동 로드.
@@ -59,7 +58,7 @@ const calcMemory = {};
 // 메모리를 영속 저장에 기록. IndexedDB 실패 시 AppAPI가 메모리 폴백으로 처리.
 async function persistCalcMemory() {
     try {
-        await AppAPI.saveOrUpdateNoteByDate(CONSTANTS.CALC_MEMORY_KEY, serializeEnv(calcMemory));
+        await AppAPI.saveRecord(CONSTANTS.CALC_MEMORY_KEY, serializeEnv(calcMemory));
     } catch (e) {
         console.warn('[ssMemo] 코드 메모리 저장 실패:', e);
     }
@@ -68,7 +67,7 @@ async function persistCalcMemory() {
 // 영속 저장에서 메모리를 읽어 calcMemory에 채움. 손상 시 빈 상태로 동작.
 async function loadCalcMemory() {
     try {
-        const rec = await AppAPI.getNoteByDate(CONSTANTS.CALC_MEMORY_KEY);
+        const rec = await AppAPI.getRecord(CONSTANTS.CALC_MEMORY_KEY);
         const restored = deserializeEnv(rec?.content || '');
         for (const k of Object.keys(calcMemory)) delete calcMemory[k];
         Object.assign(calcMemory, restored);
@@ -85,6 +84,9 @@ export const Notepad = {
         charCountEl = document.getElementById('note-char-count');
 
         if (!notePanel || !noteEditor || !lineNumbers || !charCountEl) return;
+
+        // 파일/메모 탭 UI를 MAX_FILE_TABS 수만큼 동적 생성 (최초 1회).
+        this.buildTabSlots();
 
         notePanel.classList.remove('hidden');
         noteEditor.focus();
@@ -329,13 +331,14 @@ export const Notepad = {
             return;
         }
 
-        if (e.ctrlKey && (e.key === ',' || e.key === 'b' || e.key === 'B')) {
+        // '<'/'>'는 Shift+,/. 조합 — 도움말의 Ctrl+< / Ctrl+> 안내와 일치시킨다.
+        if (e.ctrlKey && (e.key === ',' || e.key === '<' || e.key === 'b' || e.key === 'B')) {
             e.preventDefault();
             NoteSearchUI.findPrev();
             return;
         }
 
-        if (e.ctrlKey && (e.key === 'n' || e.key === 'N' || e.key === '.')) {
+        if (e.ctrlKey && (e.key === 'n' || e.key === 'N' || e.key === '.' || e.key === '>')) {
             e.preventDefault();
             NoteSearchUI.find({ startFromBeginning: false });
             return;
@@ -1015,6 +1018,43 @@ export const Notepad = {
         }
     },
 
+    // 파일/메모 탭과 에디터 컨테이너를 MAX_FILE_TABS 수만큼 동적 생성.
+    // index.html에 동일 블록을 복붙하지 않고 상수 하나로 개수를 관리한다.
+    buildTabSlots() {
+        const tabsContainer = notePanel.querySelector('.note-tabs-container');
+        if (!tabsContainer) return;
+        if (tabsContainer.querySelector('.note-tab[data-tab="0"]')) return; // 이미 생성됨
+
+        for (let i = 0; i < CONSTANTS.MAX_FILE_TABS; i++) {
+            const tab = document.createElement('div');
+            tab.className = 'note-tab note-tab-hidden';
+            tab.dataset.tab = String(i);
+
+            const label = document.createElement('span');
+            label.className = 'note-tab-label';
+            label.textContent = `파일 ${i + 1}`;
+            tab.appendChild(label);
+
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'note-tab-close';
+            closeBtn.textContent = '❌';
+            closeBtn.addEventListener('click', () => this.closeFileTab(i));
+            tab.appendChild(closeBtn);
+
+            tabsContainer.appendChild(tab);
+
+            const container = document.createElement('div');
+            container.className = 'note-editor-container note-editor-readonly hidden';
+            container.id = `note-container-${i}`;
+            container.innerHTML = `
+                <div class="line-numbers" id="line-numbers-${i}">1</div>
+                <textarea class="note-editor" id="note-editor-${i}" spellcheck="false" readonly></textarea>
+                <div class="note-md-preview hidden" id="note-md-preview-${i}"></div>
+            `;
+            notePanel.appendChild(container);
+        }
+    },
+
     setupTabClickHandlers() {
         document.querySelectorAll('.note-tab').forEach(tab => {
             tab.addEventListener('click', (e) => {
@@ -1646,7 +1686,6 @@ window.saveNotePadWithNoti = () => Notepad.saveWithNotification();
 window.showNoteHelpPanel = () => Notepad.showHelpPanel();
 window.splitNoteIntoChunks = (len) => Notepad.splitNoteIntoChunks(len);
 window.LoadFileFromDisk = () => Notepad.loadFileFromDisk();
-window.closeFileTab = (index) => Notepad.closeFileTab(index);
 window.forceEnterToNote = () => Notepad.forceEnterToNote();
 window.downloadNotePad = () => Notepad.downloadNotePad();
 window.toggleMarkdownPreview = () => Notepad.toggleMarkdownPreview();

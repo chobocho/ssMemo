@@ -3,6 +3,7 @@
 // ========================================
 import { state } from './state.js';
 import { CONSTANTS } from './constants.js';
+import { findNextIndex, findPrevIndex, countNewlines } from './utils.js';
 
 export const NoteSearchUI = {
     setup() {
@@ -41,13 +42,8 @@ export const NoteSearchUI = {
         const query = state.elements.noteSearchInput.value;
         if (!query) return;
 
-        const content = noteEditor.value;
         const startIndex = startFromBeginning ? 0 : noteEditor.selectionEnd;
-        let matchIndex = content.indexOf(query, startIndex);
-
-        if (matchIndex === -1 && startIndex > 0) {
-            matchIndex = content.indexOf(query, 0);
-        }
+        const matchIndex = findNextIndex(noteEditor.value, query, startIndex);
 
         if (matchIndex === -1) {
             this.showMiss();
@@ -67,16 +63,10 @@ export const NoteSearchUI = {
         const query = state.elements.noteSearchInput.value;
         if (!query) return;
 
-        const content = noteEditor.value;
         const startIndex = noteEditor.selectionStart - 1;
-
         if (startIndex < 0) return;
 
-        let matchIndex = content.lastIndexOf(query, startIndex);
-
-        if (matchIndex === -1) {
-            matchIndex = content.lastIndexOf(query, content.length);
-        }
+        const matchIndex = findPrevIndex(noteEditor.value, query, startIndex);
 
         if (matchIndex === -1) {
             this.showMiss();
@@ -106,8 +96,8 @@ export const NoteSearchUI = {
     },
 
     scrollToIndex(noteEditor, index) {
-        const textBefore = noteEditor.value.slice(0, index);
-        const lineIndex = textBefore.split('\n').length - 1;
+        // split 배열 할당 없이 매치 위치의 줄 번호 계산 — 5MB 파일 검색에서도 저비용.
+        const lineIndex = countNewlines(noteEditor.value, index);
         const style = window.getComputedStyle(noteEditor);
         const lineHeight = parseFloat(style.lineHeight) || 24;
         const paddingTop = parseFloat(style.paddingTop) || 0;

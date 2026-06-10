@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # ssMemoWeb 단일 파일 번들러
 # - 모든 ES 모듈을 import/export 키워드만 제거하고 순서대로 이어 붙입니다.
-# - CSS와 함께 release/index.single.html에 인라인합니다.
+# - CSS와 함께 release/index.html에 인라인합니다.
 # - 외부 라이브러리 의존성 없음, Python 표준 라이브러리만 사용.
 
 import re
