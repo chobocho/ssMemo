@@ -4,6 +4,7 @@
 # - CSS와 함께 release/index.html에 인라인합니다.
 # - 외부 라이브러리 의존성 없음, Python 표준 라이브러리만 사용.
 
+import base64
 import re
 from pathlib import Path
 
@@ -57,12 +58,29 @@ def bundle_js() -> str:
     return '\n'.join(parts)
 
 
+def favicon_data_uri() -> str:
+    # 단일 파일 산출물을 위해 파비콘을 data URI로 내장합니다.
+    # URL 인코딩 대신 base64를 쓰는 이유: SVG 안의 비 ASCII(한글 등)·따옴표·# 문자를
+    # 신경 쓰지 않고 바이트 그대로 보존하기 위함.
+    path = ROOT / 'src/favicon.svg'
+    if not path.exists():
+        raise FileNotFoundError('파비콘을 찾을 수 없습니다: src/favicon.svg')
+    encoded = base64.b64encode(path.read_bytes()).decode('ascii')
+    return f'data:image/svg+xml;base64,{encoded}'
+
+
 def main() -> None:
     css = (ROOT / 'src/style.css').read_text(encoding='utf-8')
     html = (ROOT / 'index.html').read_text(encoding='utf-8')
     bundled_js = bundle_js()
+    icon_uri = favicon_data_uri()
 
     # 함수형 replacement를 사용해 백슬래시 escape 해석을 피합니다.
+    html = re.sub(
+        r'<link\s+rel="icon"\s+type="image/svg\+xml"\s+href="\./src/favicon\.svg">',
+        lambda _m: f'<link rel="icon" type="image/svg+xml" href="{icon_uri}">',
+        html,
+    )
     html = re.sub(
         r'<link\s+rel="stylesheet"\s+href="\./src/style\.css">',
         lambda _m: f'<style>\n{css}\n</style>',

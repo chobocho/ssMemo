@@ -104,12 +104,13 @@ ssMemoWeb/
 │   ├── calc.js           # 코드 블럭 실행기 (토크나이저/파서/평가기)
 │   ├── memo-store.js     # 멀티 메모 CRUD + 레거시 마이그레이션
 │   ├── style.css
+│   ├── favicon.svg       # 메모지 모양 파비콘 (빌드 시 data URI로 내장)
 │   └── data-sources/
 │       ├── index.js      # 데이터 소스 팩토리
 │       ├── indexeddb.js  # 기본 영속 저장소
 │       ├── memory.js     # 폴백 인메모리 저장소
 │       └── rest.js       # 선택적 REST 저장소
-├── test/                  # 단위 테스트 (브라우저에서 /test/ 접속)
+├── test/                  # 단위 테스트 (브라우저에서 /test/ 접속, 번들러는 python3 test/test_bundle.py)
 ├── bundle.py             # 단일 파일 번들러
 ├── build.sh / build.bat  # 빌드 스크립트
 ├── readme.md             # 본 문서
@@ -120,7 +121,7 @@ ssMemoWeb/
 
 `build.sh` (Linux/macOS) 또는 `build.bat` (Windows)을 실행하면 `release/` 폴더에 JS/CSS가 모두 인라인된 단일 파일 `release/index.html`이 생성됩니다. 더블 클릭으로 브라우저에서 바로 열 수 있고 (서버 불필요), 원한다면 `cd release && python -m http.server 8001`로 띄울 수도 있습니다.
 
-단일 파일 번들은 `bundle.py` (Python 표준 라이브러리만 사용)가 ES 모듈을 위상 정렬 후 import/export 키워드를 제거하고 인라인합니다.
+단일 파일 번들은 `bundle.py` (Python 표준 라이브러리만 사용)가 ES 모듈을 위상 정렬 후 import/export 키워드를 제거하고 인라인합니다. 파비콘(`src/favicon.svg`)도 base64 data URI로 내장되어 외부 파일 참조가 없습니다.
 
 ## 라이선스
 

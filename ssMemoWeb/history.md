@@ -3,6 +3,13 @@
 날짜는 git 커밋 기준이 아닌 작업 항목 단위로 기록합니다.
 신규 변경은 위쪽에 추가합니다.
 
+### [2026-11-10 03:21] 빌드 산출물에 메모지 파비콘 내장
+- **기획:** 메모 앱 용도에 맞는 노란 메모지(접힌 모서리+글줄) SVG 파비콘을 만들고 빌드 시 단일 index.html에 내장.
+- **TC:** 정상 — data URI 내장·원본과 바이트 일치·외부 참조 없음·개발용 index.html 참조. 엣지 — 원본 누락 시 빌드 실패, 한글 포함 SVG 보존.
+- **개발:** `src/favicon.svg`, `index.html`, `bundle.py`, `test/test_bundle.py`, `readme.md`, `release/index.html`
+- **검증:** test_bundle 6 passed, 0 failed / 브라우저 단위 테스트 219 passed, 0 failed (memo-store는 IndexedDB 필요로 미실행)
+- **비고:** base64로 인코딩해 비 ASCII 문자 깨짐 방지. 구형 Safari는 SVG 파비콘 미지원.
+
 ## 2026-06-10
 
 - `readme.md` 갱신 — 버그 수정/개선 반영분 중 사용자 체감 변화 3건 문서화: ①화면 전환·페이지 닫기 시 즉시 저장 + 미저장 시 이탈 경고, ②모든 커스텀 팝업 ESC로 닫기, ③코드 실행기 소수/지수 표기 지원과 잘못된 지수 표기(`2e`) 에러 안내.
