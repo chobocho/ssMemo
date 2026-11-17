@@ -72,6 +72,7 @@ import { createStatusBar } from './ui/statusBar.ts';
 import { createStatusIndicator } from './ui/statusIndicator.ts';
 import { createTabBar } from './ui/tabBar.ts';
 import { createToolbar } from './ui/toolbar.ts';
+import type { ToolbarTier } from './ui/toolbar.ts';
 
 const APP_NAME = 'ssMemo2';
 const MOUNT_POINT_ID = 'app';
@@ -110,15 +111,17 @@ const TOOLBAR_COMMAND_IDS: readonly CommandId[] = [
   'help.show',
   MENU_COMMAND_ID,
 ];
-// Of those, the ones that leave the header on narrow screens. The menu still lists them.
-const SECONDARY_TOOLBAR_COMMAND_IDS: ReadonlySet<string> = new Set<CommandId>([
-  'search.open',
-  'view.preview',
-  'view.toggleWrap',
-  'view.fontSmaller',
-  'view.fontLarger',
-  'settings.language',
-  'help.show',
+// From which screen width a button is shown; the ones not listed are always there. The cover
+// screen of a foldable has room for four, the unfolded screen (about 580 CSS px) for seven. The
+// menu lists every command at any width.
+const TOOLBAR_TIERS: ReadonlyMap<string, ToolbarTier> = new Map<CommandId, ToolbarTier>([
+  ['search.open', 'medium'],
+  ['view.preview', 'medium'],
+  ['help.show', 'medium'],
+  ['view.toggleWrap', 'wide'],
+  ['view.fontSmaller', 'wide'],
+  ['view.fontLarger', 'wide'],
+  ['settings.language', 'wide'],
 ]);
 
 async function start(win: Window): Promise<void> {
@@ -578,7 +581,7 @@ async function start(win: Window): Promise<void> {
     doc,
     TOOLBAR_COMMAND_IDS.flatMap((id) => commands.get(id) ?? []),
     t,
-    { secondaryIds: SECONDARY_TOOLBAR_COMMAND_IDS, formatShortcut: describeShortcut },
+    { tierOf: (id) => TOOLBAR_TIERS.get(id) ?? 'always', formatShortcut: describeShortcut },
   );
   shell.header.insertBefore(toolbar.element, status.element);
 

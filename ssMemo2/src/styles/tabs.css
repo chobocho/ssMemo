@@ -2,6 +2,8 @@
 .tab-bar {
   display: flex;
   align-items: stretch;
+  -webkit-user-select: none;
+  user-select: none;
   border-block-end: var(--border-width) solid var(--color-border);
   background: var(--color-surface-muted);
 }

@@ -16,7 +16,23 @@
   box-sizing: border-box;
 }
 
+html {
+  /* Rotating a phone must not inflate the text. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* A quick second tap on a button is a second tap, not a zoom. */
+button,
+summary,
+[role="tab"] {
+  touch-action: manipulation;
+}
+
 body {
+  /* The page never scrolls; without this, pulling down at the top of a memo reloads the page
+     on mobile browsers. */
+  overscroll-behavior: none;
   margin: 0;
   /* Generic families only: the app must not depend on any font that is not already on the device. */
   font-family: system-ui, sans-serif;

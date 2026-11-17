@@ -2,6 +2,9 @@
 .toolbar {
   display: flex;
   gap: var(--space-1);
+  /* A long press on a button is not an attempt to select its icon. */
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .toolbar-button {
@@ -14,9 +17,13 @@
   cursor: pointer;
 }
 
-/* Given up on narrow screens, where these commands are reached through the menu instead. */
-.toolbar-button-secondary {
-  display: var(--toolbar-secondary-display);
+/* Shown only from a certain screen width on; below it these commands are reached through the menu. */
+.toolbar-button-medium {
+  display: var(--toolbar-medium-display);
+}
+
+.toolbar-button-wide {
+  display: var(--toolbar-wide-display);
 }
 
 .toolbar-button[aria-pressed="true"] {

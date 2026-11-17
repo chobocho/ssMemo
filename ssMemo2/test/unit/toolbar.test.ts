@@ -68,14 +68,19 @@ test('a toggle command shows whether it is on, and follows the setting after ref
   assert.equal(toggle?.getAttribute('aria-pressed'), 'false');
 });
 
-test('buttons of secondary commands are marked, so the stylesheet can hide them on narrow screens', () => {
+test('buttons are marked with the screen width from which they are shown, so the stylesheet can hide them below it', () => {
   const { document } = createTestDom();
   const command = (id: string): Command => ({ id, group: 'memo', labelKey: 'command.newMemo', icon: id, shortcuts: [], run: () => undefined });
   const toolbar = createToolbar(document, [command('a'), command('b'), command('c')], (key) => key, {
-    secondaryIds: new Set(['b']),
+    tierOf: (id) => (id === 'b' ? 'medium' : id === 'c' ? 'wide' : 'always'),
   });
-  const marked = [...toolbar.element.querySelectorAll('button')].map((button) => button.classList.contains('toolbar-button-secondary'));
-  assert.deepEqual(marked, [false, true, false]);
+  const classes = [...toolbar.element.querySelectorAll('button')].map((button) => button.className);
+  assert.deepEqual(classes, ['toolbar-button', 'toolbar-button toolbar-button-medium', 'toolbar-button toolbar-button-wide']);
+});
+
+test('without a tier rule every button is always shown', () => {
+  const { toolbar } = createHarness();
+  for (const button of toolbar.querySelectorAll('button')) assert.equal(button.className, 'toolbar-button');
 });
 
 test('the tooltip shows the shortcut as the given formatter writes it', () => {

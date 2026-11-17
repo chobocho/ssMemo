@@ -13,6 +13,15 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 16:25] 헤더·탭을 접힘·펼침 화면에 맞춤 (6.1 중 1/2)</h2>
+<ul>
+<li><b>기획:</b> 접힌 화면(약 300px)에서 헤더가 한 줄에 들어가게 제목을 시각적으로만 숨기고 버튼 4개를 둔다. 펼친 화면(580px)에는 🔍 📖 ❓를 더해 7개, PC 넓은 창에는 전부. 탭 폭을 줄이고 닫기 버튼을 44px로, 당겨서 새로고침·더블탭 확대·글자 부풀림을 막는다.</li>
+<li><b>TC:</b> 정상 — 폭 단계별 토큰 값(툴바 3단계, 제목, 탭 폭), 버튼의 단계 클래스. 경계 — 쓰는 토큰은 모두 정의되고 정의한 토큰은 모두 쓰임, 폭 단계는 기본값이 있는 토큰만 바꿈, 제목은 display:none이 아님.</li>
+<li><b>개발:</b> <code>src/styles/tokens.css</code>, <code>layout.css</code>, <code>manager.css</code>, <code>tabs.css</code>, <code>index.css</code>, <code>src/ui/toolbar.ts</code>, <code>src/main.ts</code>, 테스트 2개 파일</li>
+<li><b>검증:</b> 단위 848 passed, 빌드 64 passed, 0 failed</li>
+<li><b>비고:</b> 기기에서 본 적이 없어 계산과 측정값(M0)에만 근거함.</li>
+</ul>
+
 <h2>[2026-11-17 16:16] M5 릴리스 빌드 갱신</h2>
 <ul>
 <li><b>기획:</b> M5 릴리스 파일을 만든 뒤 Ctrl+B가 추가되어, 최종 코드로 다시 빌드한다. readme의 단축키 표에도 반영.</li>

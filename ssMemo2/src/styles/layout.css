@@ -24,9 +24,17 @@
   border-block-end: var(--border-width) solid var(--color-border);
 }
 
+/* On narrow and medium screens the title is clipped away to leave the row to the toolbar. It is
+   still there for screen readers, which "display: none" would not allow. */
 .app-title {
+  position: var(--title-position);
+  inline-size: var(--title-size);
+  block-size: var(--title-size);
   margin: 0;
+  overflow: hidden;
+  clip-path: var(--title-clip);
   font-size: var(--font-size-title);
+  white-space: nowrap;
 }
 
 /* The editor scrolls inside this area; the page itself never scrolls. While the preview is on,

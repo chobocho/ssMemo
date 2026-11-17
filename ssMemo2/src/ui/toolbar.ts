@@ -9,17 +9,28 @@ export interface Toolbar {
   refresh(): void;
 }
 
+/**
+ * From which screen width a button is shown: always, from a medium width on (an unfolded
+ * foldable), or only on wide screens. Hidden buttons stay reachable through the menu.
+ */
+export type ToolbarTier = 'always' | 'medium' | 'wide';
+
 export interface ToolbarOptions {
-  /** Commands whose buttons give way on narrow screens; they stay reachable through the menu. */
-  secondaryIds?: ReadonlySet<string>;
+  /** The tier of a command's button; without it every button is always shown. */
+  tierOf?: (commandId: string) => ToolbarTier;
   /** Turns a shortcut such as "Mod-o" into what is shown to the user. */
   formatShortcut?: (shortcut: string) => string;
 }
 
-const SECONDARY_CLASS = 'toolbar-button-secondary';
+// The stylesheet hides these classes below their width (see styles/manager.css and tokens.css).
+const TIER_CLASSES: Readonly<Record<ToolbarTier, string | undefined>> = {
+  always: undefined,
+  medium: 'toolbar-button-medium',
+  wide: 'toolbar-button-wide',
+};
 
 export function createToolbar(doc: Document, commands: readonly Command[], t: Translate, options: ToolbarOptions = {}): Toolbar {
-  const { secondaryIds, formatShortcut = (shortcut: string) => shortcut } = options;
+  const { tierOf, formatShortcut = (shortcut: string) => shortcut } = options;
   const element = doc.createElement('div');
   element.className = 'toolbar';
   element.setAttribute('role', 'toolbar');
@@ -33,7 +44,8 @@ export function createToolbar(doc: Document, commands: readonly Command[], t: Tr
     const button = doc.createElement('button');
     button.type = 'button';
     button.className = 'toolbar-button';
-    if (secondaryIds?.has(command.id)) button.classList.add(SECONDARY_CLASS);
+    const tierClass = TIER_CLASSES[tierOf?.(command.id) ?? 'always'];
+    if (tierClass) button.classList.add(tierClass);
     button.textContent = command.icon;
     // The icon alone says nothing to a screen reader.
     button.setAttribute('aria-label', label);

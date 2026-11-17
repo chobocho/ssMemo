@@ -42,8 +42,8 @@
   --page-gutter: var(--space-2);
 
   /* Tab strip: widest a tab may get, the close button's width, and the active-tab underline. */
-  --tab-max-width: 12rem;
-  --tab-close-width: 2.25rem;
+  --tab-max-width: 8rem;
+  --tab-close-width: var(--touch-target);
   --tab-indicator-width: 0.125rem;
 
   /* Markdown preview. Narrow screens show it instead of the editor, wide ones next to it. */
@@ -55,8 +55,13 @@
   --line-height-heading: 1.3;
   --quote-bar-width: 0.25rem;
 
-  /* Toolbar buttons of secondary commands appear only where the header has room for them. */
-  --toolbar-secondary-display: none;
+  /* Header. The title is clipped away where the row is needed for the toolbar; toolbar buttons
+     beyond the four main ones appear in two steps as the screen gets wider. */
+  --title-position: absolute;
+  --title-size: 1px;
+  --title-clip: inset(50%);
+  --toolbar-medium-display: none;
+  --toolbar-wide-display: none;
   /* Command menu: width reserved for the icon in front of each label. */
   --command-icon-width: 2rem;
 
@@ -86,6 +91,8 @@
   :root {
     --page-gutter: var(--space-3);
     --font-size-title: 1.25rem;
+    --toolbar-medium-display: inline-block;
+    --tab-max-width: 10rem;
   }
 }
 
@@ -93,7 +100,11 @@
 @media (min-width: 52.5em) {
   :root {
     --page-gutter: var(--space-4);
-    --toolbar-secondary-display: inline-block;
+    --title-position: static;
+    --title-size: auto;
+    --title-clip: none;
+    --toolbar-wide-display: inline-block;
+    --tab-max-width: 12rem;
     --preview-columns: minmax(0, 1fr) minmax(0, 1fr);
     --preview-editor-display: block;
   }
