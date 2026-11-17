@@ -13,6 +13,15 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 13:02] M4 릴리스 빌드</h2>
+<ul>
+<li><b>기획:</b> Phase 4 완료에 맞춰 <code>release/index.html</code>을 갱신.</li>
+<li><b>TC:</b> 정상 — <code>./build.sh</code> 후 <code>release/</code>에 <code>index.html</code>만 존재. 경계 — <code>python -m http.server 8001</code>로 받은 내용이 파일과 바이트 단위로 같은지 비교.</li>
+<li><b>개발:</b> <code>release/index.html</code></li>
+<li><b>검증:</b> 352,261바이트, build 0.1.0+6f52be2d, HTTP 200</li>
+<li><b>비고:</b> 브라우저 화면 확인은 <code>test/manual/checklist.md</code>의 M4 항목으로 남아 있음. M3보다 27KB 커짐(인코딩·파일·백업 코드).</li>
+</ul>
+
 <h2>[2026-11-17 13:02] readme와 수동 점검표 — M4</h2>
 <ul>
 <li><b>기획:</b> Phase 4에서 생긴 기능(메뉴, 파일 열기·저장, 인코딩, 백업)의 사용법과 제약을 readme에 적고, 브라우저에서 확인할 M4 항목 14개를 점검표에 추가.</li>
