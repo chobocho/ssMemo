@@ -1,6 +1,7 @@
 // Reads the facts for the diagnostics panel from the real window.
 // Kept apart from app/diagnostics.ts so the formatting can be unit-tested without a browser.
 import type { EnvironmentSnapshot } from '../app/diagnostics.ts';
+import { pickWidthClass } from '../app/widthClass.ts';
 
 // Foldable-related APIs that TypeScript's DOM typings do not describe yet.
 type FoldAwareNavigator = Navigator & { devicePosture?: { type?: string } };
@@ -34,6 +35,7 @@ export function readEnvironment(win: Window, buildId: string): EnvironmentSnapsh
     userAgent: win.navigator.userAgent,
     languages: win.navigator.languages,
     viewport: { width: win.innerWidth, height: win.innerHeight },
+    widthClass: pickWidthClass((query) => win.matchMedia(query).matches),
     visualViewport: visualViewport ? { width: visualViewport.width, height: visualViewport.height } : undefined,
     screen: { width: win.screen.width, height: win.screen.height },
     devicePixelRatio: win.devicePixelRatio,

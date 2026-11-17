@@ -13,6 +13,15 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 04:05] 디자인 토큰과 반응형 레이아웃 셸 (1.1)</h2>
+<ul>
+<li><b>기획:</b> M0 실측(펼친 폴드 약 580 CSS px, DPR 3.19)에 맞춰 폭 분기를 30em·52.5em으로 확정. 헤더·본문·하단이 <code>100dvh</code>를 채우고 진단 정보는 하단 접이식으로 이동.</li>
+<li><b>TC:</b> 정상 — 실측 폭 580px은 medium, 300px은 compact, 1280px은 expanded. 경계 — 분기 값 바로 아래와 정확히 같은 값, 폭 0, CSS의 폭 미디어 쿼리가 TS 상수와 일치하는지.</li>
+<li><b>개발:</b> <code>src/app/widthClass.ts</code>, <code>src/ui/appShell.ts</code>, <code>src/styles/layout.css</code>, <code>src/styles/tokens.css</code>, <code>src/styles/diagnostics.css</code>, <code>src/ui/diagnosticsPanel.ts</code>, <code>src/main.ts</code>, <code>test/unit/widthClass.test.ts</code> 외 4개 파일</li>
+<li><b>검증:</b> 단위 93 passed, 0 failed · 빌드 15 passed, 0 failed · tsc 오류 없음</li>
+<li><b>비고:</b> 접힌 화면 폭은 실측이 아니라 추정(약 300 CSS px). 브라우저 확인은 M1 점검표에서 진행.</li>
+</ul>
+
 <h2>[2026-11-17 03:52] M0 릴리스 빌드</h2>
 <ul>
 <li><b>기획:</b> 로드맵 결정대로 마일스톤 완료 시점에만 <code>release/index.html</code>을 커밋.</li>

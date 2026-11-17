@@ -1,6 +1,7 @@
 // Composition root: the only module that touches the real window and wires modules together.
 import { readBuildId } from './app/buildInfo.ts';
 import { describeEnvironment } from './app/diagnostics.ts';
+import { createAppShell } from './ui/appShell.ts';
 import { copyToClipboard } from './ui/clipboard.ts';
 import { createDiagnosticsPanel } from './ui/diagnosticsPanel.ts';
 import { readEnvironment } from './ui/environment.ts';
@@ -15,16 +16,19 @@ function start(win: Window): void {
     throw new Error(`Mount point #${MOUNT_POINT_ID} is missing`);
   }
 
+  const shell = createAppShell(doc, APP_NAME);
+
   const buildId = readBuildId(doc);
-  const panel = createDiagnosticsPanel(doc, APP_NAME, (text) => copyToClipboard(win, text));
-  const refresh = (): void => panel.update(describeEnvironment(readEnvironment(win, buildId)));
+  const diagnostics = createDiagnosticsPanel(doc, (text) => copyToClipboard(win, text));
+  const refresh = (): void => diagnostics.update(describeEnvironment(readEnvironment(win, buildId)));
 
   // Folding or unfolding the device and opening the on-screen keyboard both change the values.
   win.addEventListener('resize', refresh);
   win.visualViewport?.addEventListener('resize', refresh);
 
   refresh();
-  mountPoint.append(panel.element);
+  shell.footer.append(diagnostics.element);
+  mountPoint.append(shell.element);
 }
 
 start(window);

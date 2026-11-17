@@ -1,13 +1,46 @@
-/* Design tokens. Every dimension is defined here so no other stylesheet or script hard-codes one. */
+/* Design tokens. Every dimension and color is defined here so no other stylesheet or script hard-codes one. */
 :root {
   --space-2: 0.5rem;
+  --space-3: 0.75rem;
   --space-4: 1rem;
+
   --font-size-base: 1rem;
-  --font-size-title: 1.5rem;
+  --font-size-title: 1.125rem;
   --line-height-base: 1.5;
+
   /* Smallest comfortable touch target (44 CSS px at the default font size). */
   --touch-target: 2.75rem;
-  /* Diagnostics list: label column width, and the width below which a value wraps under its label. */
+  --border-width: 1px;
+
+  /* Light theme. A dark theme is a later roadmap item. */
+  --color-surface: #ffffff;
+  --color-text: #1f2328;
+  --color-border: #d0d7de;
+
+  /* Horizontal page margin; grows with the width class below. */
+  --page-gutter: var(--space-2);
+
+  /* Diagnostics list: label column width, the width below which a value wraps under its label,
+     and how much of the screen the opened panel may take from the editor. */
   --diagnostics-label-width: 13rem;
   --diagnostics-value-min-width: 10rem;
+  --diagnostics-max-height: 50dvh;
+}
+
+/* Width classes. These queries must equal WIDTH_CLASS_QUERIES in src/app/widthClass.ts; a test
+   enforces it. Compact is the default (cover screen, phones). */
+
+/* Medium: unfolded foldable, small tablets. */
+@media (min-width: 30em) {
+  :root {
+    --page-gutter: var(--space-3);
+    --font-size-title: 1.25rem;
+  }
+}
+
+/* Expanded: desktop windows, large tablets. */
+@media (min-width: 52.5em) {
+  :root {
+    --page-gutter: var(--space-4);
+  }
 }

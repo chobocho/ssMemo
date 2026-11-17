@@ -9,6 +9,7 @@ const fullSnapshot: EnvironmentSnapshot = {
   userAgent: 'TestBrowser/1.0',
   languages: ['ko-KR', 'en-US'],
   viewport: { width: 360, height: 740 },
+  widthClass: 'compact',
   visualViewport: { width: 360, height: 500 },
   screen: { width: 360, height: 800 },
   devicePixelRatio: 3,
@@ -29,6 +30,7 @@ test('describeEnvironment lists every fact in a stable order', () => {
   assert.deepEqual(describeEnvironment(fullSnapshot), [
     { label: 'build', value: '0.1.0+abcdef12' },
     { label: 'viewport', value: '360 × 740 CSS px' },
+    { label: 'width class', value: 'compact' },
     { label: 'visual viewport', value: '360 × 500 CSS px' },
     { label: 'screen', value: '360 × 800 CSS px' },
     { label: 'device pixel ratio', value: '3' },

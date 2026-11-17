@@ -1,0 +1,37 @@
+/* App shell: header, editor area and footer stacked to fill the visible viewport exactly. */
+.app-shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  /* dvh follows the browser bars and, with interactive-widget=resizes-content, the on-screen
+     keyboard, so the editor shrinks instead of being covered. */
+  block-size: 100dvh;
+  /* Stay clear of display cutouts and rounded corners. */
+  padding:
+    env(safe-area-inset-top)
+    env(safe-area-inset-right)
+    env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--touch-target);
+  padding-inline: var(--page-gutter);
+  border-block-end: var(--border-width) solid var(--color-border);
+}
+
+.app-title {
+  margin: 0;
+  font-size: var(--font-size-title);
+}
+
+/* The editor scrolls inside this area; the page itself never scrolls. */
+.app-main {
+  min-block-size: 0;
+  overflow: hidden;
+}
+
+.app-footer {
+  border-block-start: var(--border-width) solid var(--color-border);
+}

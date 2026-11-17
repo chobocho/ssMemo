@@ -1,8 +1,9 @@
-// Renders the diagnostics as a definition list with a copy button.
+// Renders the diagnostics as a collapsible definition list with a copy button.
 import { formatDiagnostics } from '../app/diagnostics.ts';
 import type { DiagnosticEntry } from '../app/diagnostics.ts';
 
 // English until the message catalog exists (roadmap item 2.1).
+const SUMMARY_LABEL = 'ℹ️ Diagnostics';
 const COPY_LABEL = '📋 Copy';
 const COPIED_STATUS = 'Copied.';
 const SELECTED_STATUS = 'Could not copy automatically. The list is selected: copy it from the system menu.';
@@ -31,15 +32,14 @@ function createRow(doc: Document, entry: DiagnosticEntry): HTMLElement {
  */
 export function createDiagnosticsPanel(
   doc: Document,
-  title: string,
   copyText: (text: string) => Promise<boolean>,
 ): DiagnosticsPanel {
-  const element = doc.createElement('section');
+  // <details> gives open/close behaviour and keyboard support without any script.
+  const element = doc.createElement('details');
   element.className = 'diagnostics';
 
-  const heading = doc.createElement('h1');
-  heading.className = 'diagnostics-title';
-  heading.textContent = title;
+  const summary = doc.createElement('summary');
+  summary.textContent = SUMMARY_LABEL;
 
   const list = doc.createElement('dl');
   list.className = 'diagnostics-list';
@@ -57,7 +57,11 @@ export function createDiagnosticsPanel(
   actions.className = 'diagnostics-actions';
   actions.append(copyButton, status);
 
-  element.append(heading, list, actions);
+  const body = doc.createElement('div');
+  body.className = 'diagnostics-body';
+  body.append(list, actions);
+
+  element.append(summary, body);
 
   let currentEntries: readonly DiagnosticEntry[] = [];
 

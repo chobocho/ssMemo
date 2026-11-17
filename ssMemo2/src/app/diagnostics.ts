@@ -1,6 +1,7 @@
 // Describes the runtime environment as label/value pairs.
 // The project has no automated browser tests, so this is what the user copies back when
 // something looks wrong on a device: viewport, pixel ratio, fold state, storage support.
+import type { WidthClass } from './widthClass.ts';
 
 const UNSUPPORTED = 'unsupported';
 const UNKNOWN = 'unknown';
@@ -21,6 +22,8 @@ export interface EnvironmentSnapshot {
   languages: readonly string[];
   /** Layout viewport in CSS pixels. */
   viewport: Size;
+  /** Which layout the stylesheet is applying right now. */
+  widthClass: WidthClass;
   /** Visible part of the viewport (shrinks with the on-screen keyboard); undefined if unsupported. */
   visualViewport: Size | undefined;
   screen: Size;
@@ -74,6 +77,7 @@ export function describeEnvironment(snapshot: EnvironmentSnapshot): DiagnosticEn
   return [
     { label: 'build', value: snapshot.buildId },
     { label: 'viewport', value: formatCssSize(snapshot.viewport) },
+    { label: 'width class', value: snapshot.widthClass },
     { label: 'visual viewport', value: formatCssSize(snapshot.visualViewport) },
     { label: 'screen', value: formatCssSize(snapshot.screen) },
     { label: 'device pixel ratio', value: isUsableRatio(ratio) ? String(round(ratio, RATIO_DECIMALS)) : UNKNOWN },
