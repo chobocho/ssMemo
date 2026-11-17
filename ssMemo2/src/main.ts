@@ -207,7 +207,7 @@ async function start(win: Window): Promise<void> {
         preview.contentMayHaveChanged();
       },
     },
-    { lineWrapping: settings.lineWrapping, phrases: createSearchPhrases(t) },
+    { lineWrapping: settings.lineWrapping, phrases: createSearchPhrases(t), ariaLabel: t('editor.label') },
   );
 
   const timers = {
@@ -587,7 +587,7 @@ async function start(win: Window): Promise<void> {
     doc,
     TOOLBAR_COMMAND_IDS.flatMap((id) => commands.get(id) ?? []),
     t,
-    { tierOf: (id) => TOOLBAR_TIERS.get(id) ?? 'always', formatShortcut: describeShortcut },
+    { tierOf: (id) => TOOLBAR_TIERS.get(id) ?? 'always', formatShortcut: describeShortcut, label: t('toolbar.label') },
   );
   shell.header.insertBefore(toolbar.element, status.element);
 
@@ -605,6 +605,7 @@ async function start(win: Window): Promise<void> {
   shell.tabBarHost.append(
     createTabBar(doc, {
       tabs,
+      panel: shell.editorHost,
       labels: { newMemo: t('command.newMemo'), closeTab: (title) => t('tab.close', { title }) },
       onActivate: (tabId) => workspace.activateTab(tabId),
       onClose: (tabId) => void closeTab(tabId),
@@ -612,7 +613,16 @@ async function start(win: Window): Promise<void> {
     }),
   );
 
+  // The browser's own tab, its history and a screen reader's page list all show the page title;
+  // with the memo's name in it, several open pages can be told apart.
+  const updatePageTitle = (): void => {
+    const activeTab = tabs.getTabs().find((tab) => tab.id === tabs.getActiveId());
+    doc.title = activeTab ? `${activeTab.title} - ${APP_NAME}` : APP_NAME;
+  };
+  tabs.subscribe(updatePageTitle);
+
   await workspace.start();
+  updatePageTitle();
 
   // Save when the page is hidden or left. A phone browser may never fire "beforeunload", and
   // a save started from there would not be awaited anyway, so that event is only for the warning.

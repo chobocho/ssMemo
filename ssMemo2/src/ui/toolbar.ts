@@ -20,6 +20,8 @@ export interface ToolbarOptions {
   tierOf?: (commandId: string) => ToolbarTier;
   /** Turns a shortcut such as "Mod-o" into what is shown to the user. */
   formatShortcut?: (shortcut: string) => string;
+  /** Accessible name of the toolbar as a whole. */
+  label?: string;
 }
 
 // The stylesheet hides these classes below their width (see styles/manager.css and tokens.css).
@@ -34,6 +36,7 @@ export function createToolbar(doc: Document, commands: readonly Command[], t: Tr
   const element = doc.createElement('div');
   element.className = 'toolbar';
   element.setAttribute('role', 'toolbar');
+  if (options.label !== undefined) element.setAttribute('aria-label', options.label);
 
   const toggles: { button: HTMLButtonElement; isOn: () => boolean }[] = [];
 

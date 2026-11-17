@@ -830,7 +830,8 @@ test('markup typed into a memo is shown as text in the preview, never run', asyn
   assert.ok(pane);
   assert.equal(pane.querySelectorAll('img, a, script').length, 0);
   assert.match(pane.textContent ?? '', /<img src=x/);
-  assert.equal(page.document.title, 'ssMemo2');
+  // The injected code would have changed the title.
+  assert.equal(page.document.title, 'Shopping - ssMemo2');
   assert.deepEqual(page.errors, []);
   page.close();
 });
@@ -994,6 +995,30 @@ test('F1 opens the help, which lists every command with its keys and holds the d
   await wait(50);
   await pickFromMenu(page, 'Help');
   assert.ok(topDialog(page).querySelector('.diagnostics'));
+  page.close();
+});
+
+test('the page title names the memo that is showing', async () => {
+  const page = await openPage({ factory: await seededFactory() });
+  assert.equal(page.document.title, 'Shopping - ssMemo2');
+  await page.click('.tab [role="tab"]', 1);
+  assert.equal(page.document.title, 'Ideas - ssMemo2');
+  page.close();
+});
+
+test('the parts of the page are named for screen readers', async () => {
+  const page = await openPage({ factory: await seededFactory() });
+  const { document } = page;
+  assert.equal(document.querySelector('.toolbar')?.getAttribute('aria-label'), 'Tools');
+  assert.equal(document.querySelector('.cm-content')?.getAttribute('aria-label'), 'Memo text');
+  const panel = document.querySelector('[role="tabpanel"]');
+  const activeTab = document.querySelector('[role="tab"][aria-selected="true"]');
+  assert.ok(panel && activeTab);
+  assert.equal(panel.getAttribute('aria-labelledby'), activeTab.id);
+  assert.equal(activeTab.getAttribute('aria-controls'), panel.id);
+  // One heading for the page, even where it is not shown.
+  assert.equal(document.querySelectorAll('h1').length, 1);
+  assert.deepEqual(page.errors, []);
   page.close();
 });
 

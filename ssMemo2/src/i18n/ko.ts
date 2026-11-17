@@ -79,6 +79,9 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'search.replacedMatches': '$개를 바꿨습니다',
   'search.replacedOnLine': '$번째 줄에서 바꿨습니다',
 
+  'toolbar.label': '도구 모음',
+  'editor.label': '메모 내용',
+
   'statusbar.position': '줄 {line}, 칸 {column}',
   'statusbar.selection': '{count}자 선택',
   'statusbar.size': '{characters}자 · {lines}줄',

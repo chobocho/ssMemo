@@ -82,6 +82,9 @@ export const en = {
   'search.replacedMatches': 'replaced $ matches',
   'search.replacedOnLine': 'replaced match on line $',
 
+  'toolbar.label': 'Tools',
+  'editor.label': 'Memo text',
+
   'statusbar.position': 'Ln {line}, Col {column}',
   'statusbar.selection': '{count} selected',
   'statusbar.size': '{characters} characters · {lines} lines',

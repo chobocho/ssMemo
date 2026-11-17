@@ -29,6 +29,23 @@ summary,
   touch-action: manipulation;
 }
 
+/* One focus ring for everything that can be reached with the keyboard. It is drawn inside the
+   element, so it is never cut off by a scrolling strip or the edge of the page. */
+:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-accent);
+  outline-offset: calc(-1 * var(--focus-ring-width));
+}
+
+/* On the accent-coloured button an inner ring of the same colour would not show. */
+.button-primary:focus-visible {
+  outline-offset: var(--focus-ring-width);
+}
+
+/* In the text itself the caret shows where the focus is; a frame around the whole area is noise. */
+.cm-content:focus-visible {
+  outline: none;
+}
+
 body {
   /* The page never scrolls; without this, pulling down at the top of a memo reloads the page
      on mobile browsers. */

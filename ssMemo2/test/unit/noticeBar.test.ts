@@ -79,3 +79,13 @@ test('warnings are not affected by the timers of info messages', () => {
   assert.deepEqual(harness.texts(), ['Storage is full']);
   assert.equal(harness.bar.element.querySelector('.notice-info'), null);
 });
+
+test('a warning interrupts a screen reader, a confirmation waits its turn', () => {
+  const harness = createHarness();
+  harness.bar.show('Storage is full');
+  harness.bar.show('Saved', 'info');
+  const roles = [...harness.bar.element.querySelectorAll('.notice')].map((notice) => notice.getAttribute('role'));
+  assert.deepEqual(roles, ['alert', 'status']);
+  // Not on the container: that would announce every confirmation as urgently as a warning.
+  assert.equal(harness.bar.element.hasAttribute('role'), false);
+});

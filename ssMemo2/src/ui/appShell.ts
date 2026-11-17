@@ -19,6 +19,8 @@ export interface AppShell {
   footer: HTMLElement;
 }
 
+const EDITOR_PANEL_ID = 'editor-panel';
+
 export function createAppShell(doc: Document, title: string): AppShell {
   const element = doc.createElement('div');
   element.className = 'app-shell';
@@ -40,6 +42,8 @@ export function createAppShell(doc: Document, title: string): AppShell {
   main.className = 'app-main';
   const editorHost = doc.createElement('div');
   editorHost.className = 'editor-pane';
+  // The tab strip refers to this area by its id.
+  editorHost.id = EDITOR_PANEL_ID;
   const previewHost = doc.createElement('div');
   previewHost.className = 'preview-host';
   main.append(editorHost, previewHost);

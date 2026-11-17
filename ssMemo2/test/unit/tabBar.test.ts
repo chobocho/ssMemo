@@ -8,6 +8,11 @@ import { createTestDom } from '../helpers/dom.ts';
 interface Harness {
   tabs: TabManager;
   bar: HTMLElement;
+  /** The area the tabs switch, i.e. where the editor is. */
+  panel: HTMLElement;
+  document: Document;
+  /** Sends a key press to the tab that has the focus. */
+  press(key: string): KeyboardEvent;
   /** What the callbacks were called with, in order, e.g. "activate:a". */
   calls: string[];
   entries(): HTMLElement[];
@@ -15,21 +20,31 @@ interface Harness {
 }
 
 function createHarness(): Harness {
-  const { document } = createTestDom();
+  const { document, window } = createTestDom();
   const tabs = createTabManager();
   const calls: string[] = [];
+  const panel = document.createElement('div');
+  panel.id = 'editor-panel';
   const bar = createTabBar(document, {
     tabs,
+    panel,
     labels: { newMemo: 'New memo', closeTab: (title) => `Close ${title}` },
     onActivate: (tabId) => calls.push(`activate:${tabId}`),
     onClose: (tabId) => calls.push(`close:${tabId}`),
     onNew: () => calls.push('new'),
   });
-  document.body.append(bar);
+  document.body.append(bar, panel);
   const entries = (): HTMLElement[] => [...bar.querySelectorAll<HTMLElement>('.tab')];
   return {
     tabs,
     bar,
+    panel,
+    document,
+    press(key) {
+      const event = new window.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+      (document.activeElement ?? document.body).dispatchEvent(event);
+      return event;
+    },
     calls,
     entries,
     titles: () => entries().map((entry) => entry.querySelector('.tab-title')?.textContent),
@@ -130,4 +145,101 @@ test('a title is shown as text, never interpreted as markup', () => {
   assert.deepEqual(harness.titles(), [hostile]);
   assert.equal(harness.bar.querySelector('img'), null);
   assert.equal(harness.bar.querySelector('b'), null);
+});
+
+// --- keyboard and screen reader ---------------------------------------------
+
+/** Three tabs a, b, c with b active, as the user would have them after clicking b. */
+function threeTabs(): Harness {
+  const harness = createHarness();
+  for (const id of ['a', 'b', 'c']) harness.tabs.open(id, `Tab ${id}`);
+  harness.tabs.activate('b');
+  return harness;
+}
+
+const tabButtons = (harness: Harness): HTMLButtonElement[] => [...harness.bar.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+
+test('the Tab key stops at the strip once: only the active tab is in the tab order', () => {
+  const harness = threeTabs();
+  assert.deepEqual(tabButtons(harness).map((button) => button.tabIndex), [-1, 0, -1]);
+  // Close buttons are reached with Delete instead of taking a stop each.
+  for (const button of harness.bar.querySelectorAll<HTMLButtonElement>('.tab-close')) assert.equal(button.tabIndex, -1);
+  assert.equal(harness.bar.querySelector<HTMLButtonElement>('.tab-new')?.tabIndex, 0);
+});
+
+test('arrow keys move to the neighbouring tab and wrap around at the ends', () => {
+  const harness = threeTabs();
+  tabButtons(harness)[1]?.focus();
+  assert.equal(harness.press('ArrowRight').defaultPrevented, true);
+  harness.press('ArrowLeft');
+  assert.deepEqual(harness.calls, ['activate:c', 'activate:a']);
+
+  // From the last tab forward is the first, from the first backward the last.
+  harness.calls.length = 0;
+  harness.tabs.activate('c');
+  harness.press('ArrowRight');
+  harness.tabs.activate('a');
+  harness.press('ArrowLeft');
+  assert.deepEqual(harness.calls, ['activate:a', 'activate:c']);
+});
+
+test('Home and End jump to the first and the last tab', () => {
+  const harness = threeTabs();
+  tabButtons(harness)[1]?.focus();
+  harness.press('End');
+  harness.press('Home');
+  assert.deepEqual(harness.calls, ['activate:c', 'activate:a']);
+});
+
+test('Delete closes the tab that has the focus', () => {
+  const harness = threeTabs();
+  tabButtons(harness)[1]?.focus();
+  assert.equal(harness.press('Delete').defaultPrevented, true);
+  assert.deepEqual(harness.calls, ['close:b']);
+});
+
+test('other keys are left alone', () => {
+  const harness = threeTabs();
+  tabButtons(harness)[1]?.focus();
+  for (const key of ['ArrowDown', 'Enter', 'a', 'Tab']) assert.equal(harness.press(key).defaultPrevented, false, key);
+  assert.deepEqual(harness.calls, []);
+});
+
+test('the focus stays on the strip when the active tab changes while it is in use', () => {
+  // The strip is rebuilt on every change, which would otherwise drop the focus onto the page.
+  const harness = threeTabs();
+  tabButtons(harness)[1]?.focus();
+  harness.tabs.activate('c');
+  assert.equal(harness.document.activeElement, tabButtons(harness)[2]);
+  harness.tabs.close('c');
+  assert.equal(harness.document.activeElement?.getAttribute('aria-selected'), 'true');
+});
+
+test('the focus is not pulled into the strip when it is somewhere else', () => {
+  const harness = threeTabs();
+  const elsewhere = harness.document.createElement('button');
+  harness.document.body.append(elsewhere);
+  elsewhere.focus();
+  harness.tabs.activate('c');
+  assert.equal(harness.document.activeElement, elsewhere);
+});
+
+test('each tab says which area it controls, and that area is named after the active tab', () => {
+  const harness = threeTabs();
+  const [first, active] = tabButtons(harness);
+  assert.ok(first && active);
+  assert.equal(active.getAttribute('aria-controls'), 'editor-panel');
+  assert.ok(active.id.length > 0);
+  assert.notEqual(first.id, active.id);
+  assert.equal(harness.panel.getAttribute('role'), 'tabpanel');
+  assert.equal(harness.panel.getAttribute('aria-labelledby'), active.id);
+
+  harness.tabs.activate('a');
+  assert.equal(harness.panel.getAttribute('aria-labelledby'), tabButtons(harness)[0]?.id);
+});
+
+test('the wrappers around the tabs do not get in the way of the tab list', () => {
+  const harness = threeTabs();
+  assert.equal(harness.bar.querySelector('[role="tablist"]')?.getAttribute('aria-orientation'), 'horizontal');
+  for (const entry of harness.entries()) assert.equal(entry.getAttribute('role'), 'presentation');
 });

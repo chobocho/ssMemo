@@ -23,6 +23,8 @@ export interface EditorStateOptions {
   lineWrapping?: boolean;
   /** Translations of the editor's own texts (the search panel), keyed by the English original. */
   phrases?: Readonly<Record<string, string>>;
+  /** Accessible name of the editing area. */
+  ariaLabel?: string;
 }
 
 export interface EditorStats {
@@ -127,7 +129,7 @@ export function lineWrappingEffect(enabled: boolean): StateEffect<unknown> {
 
 /** Editor state for `doc`. Needs no DOM, so the configuration can be tested headlessly. */
 export function createEditorState(doc: string, options: EditorStateOptions = {}): EditorState {
-  const { onDocChange, onViewUpdate, lineWrapping = true, phrases = {} } = options;
+  const { onDocChange, onViewUpdate, lineWrapping = true, phrases = {}, ariaLabel } = options;
   return EditorState.create({
     doc,
     extensions: [
@@ -137,6 +139,8 @@ export function createEditorState(doc: string, options: EditorStateOptions = {})
       // At the top: on a phone the bottom of the editor is where the keyboard is.
       search({ top: true }),
       EditorState.phrases.of(phrases),
+      // Without a name a screen reader announces the editing area only as "text box".
+      ariaLabel === undefined ? [] : EditorView.contentAttributes.of({ 'aria-label': ariaLabel }),
       keymap.of(EDITOR_KEYMAP),
       editorTheme,
       EditorView.updateListener.of((update) => {

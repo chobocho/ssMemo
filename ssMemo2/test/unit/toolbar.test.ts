@@ -89,3 +89,10 @@ test('the tooltip shows the shortcut as the given formatter writes it', () => {
   const toolbar = createToolbar(document, [command], () => 'Open', { formatShortcut: (shortcut) => `<${shortcut}>` });
   assert.equal(toolbar.element.querySelector('button')?.title, 'Open (<Mod-o>)');
 });
+
+test('the toolbar is named, so a screen reader can tell it from other groups of buttons', () => {
+  const { document } = createTestDom();
+  const toolbar = createToolbar(document, [], (key) => key, { label: 'Tools' });
+  assert.equal(toolbar.element.getAttribute('role'), 'toolbar');
+  assert.equal(toolbar.element.getAttribute('aria-label'), 'Tools');
+});

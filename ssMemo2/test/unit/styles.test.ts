@@ -119,3 +119,56 @@ test('wherever the preview takes the place of the editor, there is a button to g
     assert.equal(backShown, editorHidden, widthClass);
   }
 });
+
+// --- accessibility ----------------------------------------------------------
+
+/** Relative luminance of an #rrggbb colour, as WCAG defines it. */
+function luminance(hex: string): number {
+  const match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  assert.ok(match, `expected a colour like #1f2328, got ${hex}`);
+  const [red, green, blue] = match.slice(1).map((channel) => {
+    const value = Number.parseInt(channel, 16) / 255;
+    return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * (red ?? 0) + 0.7152 * (green ?? 0) + 0.0722 * (blue ?? 0);
+}
+
+function contrast(foreground: string, background: string): number {
+  const [lighter, darker] = [luminance(foreground), luminance(background)].sort((left, right) => right - left);
+  return ((lighter ?? 0) + 0.05) / ((darker ?? 0) + 0.05);
+}
+
+test('the contrast helper agrees with the known extremes', () => {
+  assert.equal(Math.round(contrast('#000000', '#ffffff')), 21);
+  assert.equal(contrast('#777777', '#777777'), 1);
+});
+
+test('every text colour is readable on the background it is used on', () => {
+  // WCAG AA asks for 4.5 : 1 for text of normal size.
+  const pairs: [string, string][] = [
+    ['--color-text', '--color-surface'],
+    ['--color-text', '--color-surface-muted'],
+    ['--color-text-muted', '--color-surface'],
+    ['--color-text-muted', '--color-surface-muted'],
+    ['--color-accent', '--color-surface'],
+    ['--color-accent', '--color-surface-muted'],
+    ['--color-on-accent', '--color-accent'],
+    ['--color-danger', '--color-surface'],
+    ['--color-text', '--color-warning-surface'],
+    ['--color-text', '--color-info-surface'],
+  ];
+  for (const [foreground, background] of pairs) {
+    const ratio = contrast(valueAt('compact', foreground) ?? '', valueAt('compact', background) ?? '');
+    assert.ok(ratio >= 4.5, `${foreground} on ${background} is only ${ratio.toFixed(2)} : 1`);
+  }
+});
+
+test('keyboard focus is always visible, except in the text area where the caret shows it', () => {
+  const base = read('src/styles/index.css');
+  assert.match(base, /:focus-visible\s*\{[^}]*outline:\s*var\(--focus-ring-width\) solid var\(--color-accent\)/);
+  const stylesheets = listFiles('src/styles', ['.css']).map((file) => ({ file, css: read(file) }));
+  for (const { file, css } of stylesheets) {
+    const removals = [...css.matchAll(/([^{}]+)\{[^}]*outline:\s*(?:none|0)\b/g)].map((match) => (match[1] ?? '').trim());
+    assert.deepEqual(removals.filter((selector) => !selector.includes('.cm-content')), [], file);
+  }
+});

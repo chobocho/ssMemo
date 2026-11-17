@@ -276,3 +276,46 @@ test('busy cleans up when the browser closes its dialog anyway', () => {
   assert.equal(harness.document.querySelector('dialog'), null);
   done();
 });
+
+// --- names for screen readers -----------------------------------------------
+
+/** The text of the element a dialog is named by. */
+function nameOf(harness: Harness): string | null | undefined {
+  const labelledBy = harness.topDialog().getAttribute('aria-labelledby');
+  assert.ok(labelledBy, 'the dialog has no aria-labelledby');
+  return harness.document.getElementById(labelledBy)?.textContent;
+}
+
+test('a dialog with a title is named by it', () => {
+  const harness = createHarness();
+  void harness.modals.choose('Language', [{ label: 'English', value: 'en' }]);
+  assert.equal(nameOf(harness), 'Language');
+  harness.pressEscape();
+  void harness.modals.open(() => ({ title: 'Memos', content: harness.document.createElement('div') }));
+  assert.equal(nameOf(harness), 'Memos');
+});
+
+test('a question is named by what it asks', () => {
+  const harness = createHarness();
+  void harness.modals.confirm('Delete "Shopping"?');
+  assert.equal(nameOf(harness), 'Delete "Shopping"?');
+  harness.pressEscape();
+  void harness.modals.prompt('New title', { initialValue: 'old', validate: () => undefined });
+  assert.match(nameOf(harness) ?? '', /^New title/);
+});
+
+test('the busy dialog is named by its message', () => {
+  const harness = createHarness();
+  const done = harness.modals.busy('Opening notes.txt');
+  assert.equal(nameOf(harness), 'Opening notes.txt');
+  done();
+});
+
+test('dialogs that are open at the same time have different names', () => {
+  const harness = createHarness();
+  void harness.modals.open(() => ({ title: 'Memos', content: harness.document.createElement('div') }));
+  const first = harness.topDialog().getAttribute('aria-labelledby');
+  void harness.modals.confirm('Delete?');
+  assert.notEqual(harness.topDialog().getAttribute('aria-labelledby'), first);
+  assert.equal(nameOf(harness), 'Delete?');
+});

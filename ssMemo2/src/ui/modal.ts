@@ -90,7 +90,17 @@ function showDialog<T>(doc: Document, fill: (dialog: HTMLDialogElement, close: (
   });
 }
 
+const LABEL_ID_PREFIX = 'modal-label-';
+
 export function createModals(doc: Document, labels: ModalLabels): Modals {
+  let labelCount = 0;
+  /** Names the dialog by one of its elements, which is what a screen reader announces when it opens. */
+  const nameBy = (dialog: HTMLDialogElement, element: HTMLElement): void => {
+    labelCount += 1;
+    element.id = `${LABEL_ID_PREFIX}${labelCount}`;
+    dialog.setAttribute('aria-labelledby', element.id);
+  };
+
   const createActions = (...buttons: HTMLButtonElement[]): HTMLElement => {
     const actions = doc.createElement('div');
     actions.className = 'modal-actions';
@@ -111,6 +121,7 @@ export function createModals(doc: Document, labels: ModalLabels): Modals {
         const confirm = createButton(doc, confirmLabel, 'button button-primary');
         confirm.addEventListener('click', () => close(true));
 
+        nameBy(dialog, text);
         dialog.append(text, createActions(cancel, confirm));
       });
       return confirmed === true;
@@ -155,6 +166,7 @@ export function createModals(doc: Document, labels: ModalLabels): Modals {
         });
 
         form.append(label, problem, createActions(cancel, confirm));
+        nameBy(dialog, label);
         dialog.append(form);
       });
     },
@@ -173,6 +185,7 @@ export function createModals(doc: Document, labels: ModalLabels): Modals {
           button.addEventListener('click', () => close(choice.value));
           list.append(button);
         }
+        nameBy(dialog, heading);
         dialog.append(heading, list);
       });
     },
@@ -185,6 +198,7 @@ export function createModals(doc: Document, labels: ModalLabels): Modals {
       // Nothing else on the page changes meanwhile, so screen readers are told what is going on.
       text.setAttribute('role', 'status');
       text.textContent = message;
+      nameBy(dialog, text);
       dialog.append(text);
 
       // Escape must not hide the indicator while the work is still running.
@@ -203,6 +217,7 @@ export function createModals(doc: Document, labels: ModalLabels): Modals {
         const heading = doc.createElement('h2');
         heading.className = 'modal-title';
         heading.textContent = title;
+        nameBy(dialog, heading);
         dialog.append(heading, content);
       });
     },

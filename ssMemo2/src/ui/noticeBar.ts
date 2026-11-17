@@ -21,8 +21,6 @@ const DISMISS_SYMBOL = '✕';
 export function createNoticeBar(doc: Document, dismissLabel: string, scheduleRemoval: (remove: () => void) => void): NoticeBar {
   const element = doc.createElement('div');
   element.className = 'notice-bar';
-  // Announced immediately by screen readers: these messages are about possible data loss.
-  element.setAttribute('role', 'alert');
 
   const showing = new Map<string, HTMLElement>();
 
@@ -34,6 +32,9 @@ export function createNoticeBar(doc: Document, dismissLabel: string, scheduleRem
 
       const notice = doc.createElement('div');
       notice.className = kind === 'info' ? 'notice notice-info' : 'notice';
+      // A warning is about possible data loss and interrupts a screen reader; a confirmation is
+      // read when the reader gets to it.
+      notice.setAttribute('role', kind === 'info' ? 'status' : 'alert');
       // Removes this very element, so a late timer cannot take away a newer message with the same text.
       const remove = (): void => {
         notice.remove();

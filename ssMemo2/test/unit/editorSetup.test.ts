@@ -172,3 +172,10 @@ test('redo stays on Ctrl+Y everywhere once Ctrl+Shift+Z belongs to the app', () 
     }
   }
 });
+
+test('the editing area can be given a name for screen readers', () => {
+  const named = createEditorState('', { ariaLabel: 'Memo text' }).facet(EditorView.contentAttributes);
+  assert.ok(named.some((entry) => typeof entry === 'object' && entry['aria-label'] === 'Memo text'));
+  const unnamed = createEditorState('').facet(EditorView.contentAttributes);
+  assert.equal(unnamed.some((entry) => typeof entry === 'object' && 'aria-label' in entry), false);
+});

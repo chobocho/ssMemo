@@ -193,6 +193,8 @@ export interface MountOptions {
   lineWrapping: boolean;
   /** Translations of the editor's own texts, keyed by the English original. */
   phrases: Readonly<Record<string, string>>;
+  /** Accessible name of the editing area. */
+  ariaLabel: string;
 }
 
 /** What can be done to the visible document from outside the editor. */
@@ -218,12 +220,13 @@ export type MountedEditor = EditorTabs & EditorActions;
 
 /** Creates the editor inside `parent`. */
 export function mountEditorTabs(parent: HTMLElement, callbacks: EditorCallbacks, options: MountOptions): MountedEditor {
-  const { lineWrapping, phrases } = options;
+  const { lineWrapping, phrases, ariaLabel } = options;
   const tabsRef: { current?: EditorTabs } = {};
   const createState = (text: string, wrap: boolean): EditorState =>
     createEditorState(text, {
       lineWrapping: wrap,
       phrases,
+      ariaLabel,
       onDocChange: () => {
         const tabId = tabsRef.current?.getActiveTabId();
         if (tabId !== undefined) callbacks.onDocChange(tabId);
