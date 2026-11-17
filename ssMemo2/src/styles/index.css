@@ -2,6 +2,7 @@
 @import "./tokens.css";
 @import "./layout.css";
 @import "./status.css";
+@import "./modal.css";
 @import "./diagnostics.css";
 
 *,

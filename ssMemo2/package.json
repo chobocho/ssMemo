@@ -16,9 +16,11 @@
     "verify": "npm run check && npm test && npm run build && npm run test:build"
   },
   "devDependencies": {
+    "@types/jsdom": "^30.0.0",
     "@types/node": "^24.19.2",
     "esbuild": "^0.28.2",
     "fake-indexeddb": "^6.2.8",
+    "jsdom": "^31.0.1",
     "typescript": "~6.0"
   },
   "dependencies": {

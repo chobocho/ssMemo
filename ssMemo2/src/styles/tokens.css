@@ -19,18 +19,27 @@
   --touch-target: 2.75rem;
   --border-width: 1px;
   --radius-small: 0.25rem;
+  --radius-medium: 0.5rem;
 
   /* Light theme. A dark theme is a later roadmap item. */
   --color-surface: #ffffff;
   --color-text: #1f2328;
   --color-text-muted: #59636e;
   --color-border: #d0d7de;
+  --color-accent: #0969da;
+  --color-on-accent: #ffffff;
+  --color-danger: #cf222e;
+  --color-backdrop: rgb(0 0 0 / 40%);
   /* Messages about data that may not be kept. */
   --color-warning-surface: #fff8c5;
   --color-warning-border: #d4a72c;
 
   /* Horizontal page margin; grows with the width class below. */
   --page-gutter: var(--space-2);
+
+  /* Dialogs: preferred width (never wider than the screen) and how tall they may grow. */
+  --modal-width: 28rem;
+  --modal-max-height: 85dvh;
 
   /* Diagnostics list: label column width, the width below which a value wraps under its label,
      and how much of the screen the opened panel may take from the editor. */

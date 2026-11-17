@@ -20,6 +20,7 @@ const NOT_YET_WIRED: readonly string[] = [
   'src/app/shortcut.ts',
   'src/app/tabManager.ts',
   'src/editor/editorTabs.ts',
+  'src/ui/modal.ts',
 ];
 
 interface InlineParts {
