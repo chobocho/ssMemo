@@ -13,6 +13,15 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 12:06] 인코딩 디코더 이식 (4.1)</h2>
+<ul>
+<li><b>기획:</b> ssMemoWeb의 <code>encoding.js</code>를 옮기고 BOM(UTF-8, UTF-16LE/BE) 판별을 추가. 조합형 판별은 바이트 범위 추정 대신 CP949로 읽어 깨질 때만 조합형과 비교.</li>
+<li><b>TC:</b> 정상 — UTF-8·UTF-16·CP949·조합형 자동 판별, 수동 재디코딩. 경계 — 빈 파일, BOM만 있는 파일, 잘린 UTF-16, 깨진 바이트 뒤의 줄바꿈 보존.</li>
+<li><b>개발:</b> <code>src/lib/encoding.ts</code>, <code>test/unit/encoding.test.ts</code>, <code>test/build/buildOutput.test.ts</code></li>
+<li><b>검증:</b> 단위 417 passed, 빌드 28 passed, 0 failed</li>
+<li><b>비고:</b> 원본의 조합형 중성·종성 표가 규격과 달랐음(예: '글'). Python 코덱으로 만든 기준값으로 고쳤고 11,172자 전부 일치 확인. 조합형 한자·기호는 미지원.</li>
+</ul>
+
 <h2>[2026-11-17 10:12] M3 릴리스 빌드</h2>
 <ul>
 <li><b>기획:</b> Phase 3 완료에 맞춰 <code>release/index.html</code>을 갱신.</li>
