@@ -179,107 +179,10 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <li><b>비고:</b> 일부러 충돌(Ctrl+I)을 되살려 테스트가 잡는지 확인함.</li>
 </ul>
 
-<h2>[2026-11-17 15:12] 검색 (5.1)</h2>
-<ul>
-<li><b>기획:</b> CodeMirror 검색 패널(찾기·바꾸기)을 편집기 위쪽에 두고 문구를 한·영으로 번역. 여는 키(Ctrl+F, Ctrl+I)와 다음·이전(F3, Ctrl+. , Ctrl+,)은 앱 명령이라 포커스가 어디 있든 동작. 검색어와 패널 열림 상태는 탭을 바꿔도 따라간다.</li>
-<li><b>TC:</b> 정상 — 패널 열기, 다음 찾기로 선택, 탭 전환 시 검색어 유지, 한글 문구. 경계 — 패키지가 쓰는 문구를 설치본에서 직접 대조, 숫자 자리($) 보존, 첫 탭·같은 탭·교체 때는 전달 없음.</li>
-<li><b>개발:</b> <code>src/editor/editorSetup.ts</code>, <code>editorTabs.ts</code>, <code>searchPhrases.ts</code>, <code>cm6.ts</code>, <code>src/app/commandTable.ts</code>, <code>src/main.ts</code>, <code>package.json</code>, <code>src/i18n/ko.ts</code> 외 7개 파일</li>
-<li><b>검증:</b> 단위 677 passed, 빌드 46 passed, 0 failed</li>
-<li><b>비고:</b> <code>@codemirror/search</code> 추가로 28KB 증가. 통합 테스트의 고정 300ms 부팅 대기를 준비 확인으로 바꿈(부하 때 1회 실패).</li>
-</ul>
-
-<h2>[2026-11-17 15:03] 명령 정의를 데이터 표로 분리 (5.2 준비)</h2>
-<ul>
-<li><b>기획:</b> 명령의 이름·아이콘·단축키·그룹을 <code>commandTable.ts</code>의 데이터로 두고 동작은 따로 붙인다. 앱을 띄우지 않고 표를 읽을 수 있어야 도움말 생성과 단축키 충돌 검사가 가능하다. 메뉴는 그룹 제목 아래에 나열.</li>
-<li><b>TC:</b> 정상 — 표의 모든 명령에 동작 연결, 켜짐 상태 전달, 그룹 제목 순서대로 표시. 경계 — id 중복, 없는 문구 키, 잘못된 단축키, 빈 그룹, 그룹이 섞인 순서.</li>
-<li><b>개발:</b> <code>src/app/commandTable.ts</code>, <code>commands.ts</code>, <code>src/ui/commandMenu.ts</code>, <code>src/main.ts</code>, <code>src/styles/menu.css</code>, <code>src/i18n/en.ts</code>, <code>ko.ts</code>, 테스트 4개 파일</li>
-<li><b>검증:</b> 단위 667 passed, 빌드 43 passed, 0 failed</li>
-<li><b>비고:</b> 동작을 빠뜨리면 컴파일 오류가 난다.</li>
-</ul>
-
-<h2>[2026-11-17 13:02] M4 릴리스 빌드</h2>
-<ul>
-<li><b>기획:</b> Phase 4 완료에 맞춰 <code>release/index.html</code>을 갱신.</li>
-<li><b>TC:</b> 정상 — <code>./build.sh</code> 후 <code>release/</code>에 <code>index.html</code>만 존재. 경계 — <code>python -m http.server 8001</code>로 받은 내용이 파일과 바이트 단위로 같은지 비교.</li>
-<li><b>개발:</b> <code>release/index.html</code></li>
-<li><b>검증:</b> 352,261바이트, build 0.1.0+6f52be2d, HTTP 200</li>
-<li><b>비고:</b> 브라우저 화면 확인은 <code>test/manual/checklist.md</code>의 M4 항목으로 남아 있음. M3보다 27KB 커짐(인코딩·파일·백업 코드).</li>
-</ul>
-
-<h2>[2026-11-17 13:02] readme와 수동 점검표 — M4</h2>
-<ul>
-<li><b>기획:</b> Phase 4에서 생긴 기능(메뉴, 파일 열기·저장, 인코딩, 백업)의 사용법과 제약을 readme에 적고, 브라우저에서 확인할 M4 항목 14개를 점검표에 추가.</li>
-<li><b>TC:</b> 문서 변경이라 자동 검사 대상이 아님. 깨진 글자(U+FFFD)가 없는지만 확인.</li>
-<li><b>개발:</b> <code>readme.md</code>, <code>test/manual/checklist.md</code></li>
-<li><b>검증:</b> 단위 659 passed, 빌드 43 passed, 0 failed (코드 변경 없음)</li>
-<li><b>비고:</b> 5MB 시험 파일을 만드는 명령을 점검표에 넣음.</li>
-</ul>
-
-<h2>[2026-11-17 13:01] 대화상자 위에 놓은 파일 처리 (4.3 보완)</h2>
-<ul>
-<li><b>기획:</b> 끌어다 놓기를 앱 영역에서만 받으면, 대화상자 위에 놓은 파일은 브라우저가 그 파일로 이동해 버린다. 페이지 전체에서 받되 대화상자가 열려 있으면 열지 않고 무시한다.</li>
-<li><b>TC:</b> 경계 — 메뉴 대화상자가 열린 상태에서 파일을 놓으면 기본 동작이 막히고 탭이 늘지 않음(빌드된 페이지에서 확인, 수정 전 실패).</li>
-<li><b>개발:</b> <code>src/main.ts</code>, <code>src/styles/layout.css</code>, <code>test/build/appSmoke.test.ts</code></li>
-<li><b>검증:</b> 단위 659 passed, 빌드 43 passed, 0 failed</li>
-<li><b>비고:</b> Phase 4 코드를 다시 읽다가 발견.</li>
-</ul>
-
-<h2>[2026-11-17 12:57] 5MB 성능 점검 (4.9)</h2>
-<ul>
-<li><b>기획:</b> 5MB 파일이 지나는 단계(판별·디코딩, 편집기 상태, 본문 읽기, 파일 쓰기, 백업 왕복)를 이 기기에서 재고, 느린 곳을 고친다.</li>
-<li><b>TC:</b> 5MB 입력으로 단계마다 2.5초 상한을 두는 회귀 방지 테스트. 이미 충족하는 요구라 RED 단계는 없음.</li>
-<li><b>개발:</b> <code>src/lib/encoding.ts</code>, <code>test/unit/performance.test.ts</code></li>
-<li><b>검증:</b> 단위 659 passed, 빌드 42 passed, 0 failed</li>
-<li><b>비고:</b> 실측(ms) — UTF-8 61, CP949 113, UTF-16 37, 편집기 상태 24, 본문 읽기 5, CRLF 쓰기 71, 백업 직렬화+인코딩 58, 파싱 42. 조합형만 650이어서 문자열 생성을 UTF-16 바이트 + TextDecoder로 바꿔 약 95로 줄임(11,172자 결과 동일). 브라우저 렌더링 속도는 수동 점검 M4-14.</li>
-</ul>
-
-<h2>[2026-11-17 12:52] 백업 내보내기·가져오기 화면 (4.8)</h2>
-<ul>
-<li><b>기획:</b> 메뉴의 📤 백업 내보내기와 📥 백업 가져오기. 가져올 때 백업 내용과 현재 메모 수를 보여 주고 추가·교체를 고르며, 교체는 한 번 더 확인한 뒤 설정까지 적용하고 페이지를 다시 연다. 임시 모드에서도 내보낼 수 있고, 가져오기는 추가만 제공.</li>
-<li><b>TC:</b> 정상 — 내보내기(입력 중인 내용 포함), 추가, 교체, 빌드된 페이지에서 왕복. 경계 — 백업 아님·더 새 형식·빈 백업·읽기 실패, 확인 거절, 쓰기 실패 시 무변경, UTF-16로 다시 저장된 백업, 손상 기록 수 안내.</li>
-<li><b>개발:</b> <code>src/app/backupActions.ts</code>, <code>src/app/noticeText.ts</code>, <code>src/main.ts</code>, <code>src/i18n/en.ts</code>, <code>ko.ts</code>, 테스트 4개 파일</li>
-<li><b>검증:</b> 단위 653 passed, 빌드 42 passed, 0 failed</li>
-<li><b>비고:</b> 교체 뒤 새로고침은 jsdom이 지원하지 않아 저장 결과와 다시 연 페이지로 확인.</li>
-</ul>
-
-<h2>[2026-11-17 12:46] 백업 가져오기 — 검증과 병합·교체 (4.7)</h2>
-<ul>
-<li><b>기획:</b> 백업을 관대하게 읽는다(앱 이름과 문서 목록만 필수, 나머지는 없으면 채움). 병합은 덮어쓰지 않고 같은 id의 다른 문서를 사본으로, 교체는 전부 지우고 백업으로 바꾼다. 저장소에 전부 쓰거나 아무것도 안 쓰는 <code>writeDocuments</code> 추가.</li>
-<li><b>TC:</b> 정상 — 내보낸 백업 재읽기, 병합(추가·동일 건너뜀·사본), 교체. 경계 — JSON 아님, 다른 앱, 더 새 형식, 손으로 쓴 최소 백업, 본문 없는 항목 집계, BOM, 중복 id, 긴 제목, 쓰기 실패 시 삭제까지 롤백, 덮어쓴 문서의 rev 이어가기.</li>
-<li><b>개발:</b> <code>src/app/backup.ts</code>, <code>src/storage/storagePort.ts</code>, <code>memoryStorage.ts</code>, <code>indexedDbStorage.ts</code>, 테스트 3개 파일</li>
-<li><b>검증:</b> 단위 628 passed, 빌드 37 passed, 0 failed</li>
-</ul>
-
-<h2>[2026-11-17 12:42] 백업 내보내기 형식 (4.6)</h2>
-<ul>
-<li><b>기획:</b> 모든 문서와 설정을 JSON 하나로 만든다. 사람이 읽고 고칠 수 있게 들여쓰고, 저장소가 계산하는 값(rev, 길이)은 빼며, 문서는 만든 순서로 정렬. 저장소에는 한 트랜잭션으로 전부 읽는 <code>getAllDocuments</code>를 추가.</li>
-<li><b>TC:</b> 정상 — 본문·source·설정 포함, 직렬화 후 다시 읽으면 동일, 파일 이름은 로컬 시각. 경계 — 빈 저장소, 따옴표·탭·이모지·짝 없는 서러게이트, 한글은 이스케이프 없이, 읽지 못한 레코드 수 집계(메타 없는 본문 포함).</li>
-<li><b>개발:</b> <code>src/app/backup.ts</code>, <code>src/storage/storagePort.ts</code>, <code>memoryStorage.ts</code>, <code>indexedDbStorage.ts</code>, 테스트 4개 파일</li>
-<li><b>검증:</b> 단위 590 passed, 빌드 37 passed, 0 failed</li>
-<li><b>비고:</b> 화면 연결은 4.8.</li>
-</ul>
-
-<h2>[2026-11-17 12:38] 로컬 파일로 저장 (4.5)</h2>
-<ul>
-<li><b>기획:</b> 💾(Ctrl+S)로 보이는 탭을 파일로 저장. File System Access API가 있으면 고른 파일에 쓰고 다음부터 제자리 저장, 없으면 다운로드. 인코딩·BOM·줄바꿈을 유지하며, CP949·조합형은 확인을 받은 뒤 UTF-8로 저장.</li>
-<li><b>TC:</b> 정상 — 메모·파일 저장, 제자리 저장, 다른 이름으로 저장, 저장 후 source 갱신. 경계 — 선택창 취소, 쓰기 실패 시 원본 보존, 변환 거절, 선택창 금지 시 다운로드, 빈 파일, 파일 이름에 못 쓰는 글자.</li>
-<li><b>개발:</b> <code>src/app/localFiles.ts</code>, <code>workspace.ts</code>, <code>documentStore.ts</code>, <code>src/ui/fileIo.ts</code>, <code>noticeBar.ts</code>, <code>src/main.ts</code>, <code>src/lib/textFile.ts</code>, <code>src/i18n/ko.ts</code> 외 13개 파일</li>
-<li><b>검증:</b> 단위 573 passed, 빌드 37 passed, 0 failed</li>
-<li><b>비고:</b> 실제 저장 대화상자와 쓰기 권한 요청은 브라우저에서 확인 필요. 파일 연결은 새로고침하면 사라진다.</li>
-</ul>
-
-<h2>[2026-11-17 12:26] 인코딩 전환과 깨짐 안내 (4.4)</h2>
-<ul>
-<li><b>기획:</b> 메뉴의 🔤 인코딩으로 같은 바이트를 다른 인코딩으로 다시 읽는다. 원본 바이트는 첫 편집 전까지만 메모리에 두며, 편집했거나 복원된 파일은 거절하고 이유를 알린다. 상태 줄 끝에 인코딩·BOM·줄바꿈을 표시.</li>
-<li><b>TC:</b> 정상 — 재디코딩 후 본문·source 교체, 실행 취소 이력 초기화, 첫 편집 때 새 source로 저장. 경계 — 메모 탭, 바이트 없는 탭, 대화상자가 열린 사이 편집, 같은 인코딩 선택, 큰 파일의 로딩 표시.</li>
-<li><b>개발:</b> <code>src/app/localFiles.ts</code>, <code>workspace.ts</code>, <code>noticeText.ts</code>, <code>src/editor/editorTabs.ts</code>, <code>src/main.ts</code>, <code>src/i18n/en.ts</code>, <code>ko.ts</code>, 테스트 5개 파일</li>
-<li><b>검증:</b> 단위 531 passed, 빌드 34 passed, 0 failed</li>
-</ul>
-
 <hr>
 <h3>Archive</h3>
 <ul>
-<li><a href="history/archive/history-2026-11.html">2026-11</a> — 37 entries</li>
+<li><a href="history/archive/history-2026-11.html">2026-11</a> — 48 entries</li>
 </ul>
 
 </body>
