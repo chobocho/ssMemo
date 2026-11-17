@@ -53,7 +53,7 @@
 | Alt + P | 마크다운 미리보기 |
 | Ctrl + F / Ctrl + I | 찾기 |
 | F3 / Ctrl + . / Ctrl + > | 다음 찾기 |
-| Shift + F3 / Ctrl + , / Ctrl + < | 이전 찾기 |
+| Shift + F3 / Ctrl + , / Ctrl + < / Ctrl + B | 이전 찾기 |
 | Ctrl + 6 / Ctrl + H | 맨 위로 |
 | Ctrl + 4 / Ctrl + E | 맨 아래로 |
 | Alt + B / Alt + F | 한 화면 위로 / 아래로 |
