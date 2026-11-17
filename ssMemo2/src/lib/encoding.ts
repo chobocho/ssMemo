@@ -47,8 +47,7 @@ const HANGUL_SYLLABLE_BASE = 0xac00;
 const SYLLABLES_PER_INITIAL = 588;
 const SYLLABLES_PER_MEDIAL = 28;
 
-// String.fromCharCode takes its characters as arguments, and engines limit how many there can be.
-const FROM_CHAR_CODE_CHUNK = 0x8000;
+const BYTES_PER_UTF16_UNIT = 2;
 
 /**
  * A table from a 5-bit Johab field to the index Unicode uses, -1 where the code is unassigned.
@@ -111,37 +110,36 @@ function isJohabTrailByte(value: number): boolean {
 }
 
 /**
- * O(n) time, O(n) extra space. Code units are collected in a typed array and turned into text
- * chunk by chunk: appending to a string per character took tens of seconds on a 6 MB file.
+ * O(n) time, O(n) extra space. The characters are written as UTF-16 bytes and turned into text
+ * by the browser in one go. Appending to a string per character took tens of seconds on a 6 MB
+ * file in ssMemoWeb, and String.fromCharCode in chunks was still eight times slower than this.
  */
 function decodeJohab(bytes: Uint8Array): string {
   const length = bytes.length;
   // Upper bound: every byte becomes one character.
-  const codes = new Uint16Array(length);
-  let count = 0;
+  const units = new Uint8Array(length * BYTES_PER_UTF16_UNIT);
+  let size = 0;
   for (let i = 0; i < length; i++) {
     const lead = bytes[i] ?? 0;
-    if (lead < 0x80) {
-      codes[count++] = lead;
-      continue;
+    // ASCII by default; a syllable or a replacement character otherwise.
+    let character = lead;
+    if (lead >= 0x80) {
+      const trail = bytes[i + 1] ?? 0;
+      const syllable = isJohabSyllablePair(lead, trail) ? johabSyllable(lead, trail) : -1;
+      if (syllable >= 0) {
+        character = syllable;
+        i++;
+      } else {
+        // Symbols and Hanja have no simple rule and are shown as a replacement character.
+        character = REPLACEMENT_CHARACTER;
+        if (isJohabTrailByte(trail)) i++;
+      }
     }
-    const trail = bytes[i + 1] ?? 0;
-    const syllable = isJohabSyllablePair(lead, trail) ? johabSyllable(lead, trail) : -1;
-    if (syllable >= 0) {
-      codes[count++] = syllable;
-      i++;
-      continue;
-    }
-    // Symbols and Hanja have no simple rule and are shown as a replacement character.
-    codes[count++] = REPLACEMENT_CHARACTER;
-    if (isJohabTrailByte(trail)) i++;
+    // Low byte first, to match the little-endian decoder below on any hardware.
+    units[size++] = character & 0xff;
+    units[size++] = character >> 8;
   }
-
-  let text = '';
-  for (let start = 0; start < count; start += FROM_CHAR_CODE_CHUNK) {
-    text += String.fromCharCode(...codes.subarray(start, Math.min(start + FROM_CHAR_CODE_CHUNK, count)));
-  }
-  return text;
+  return new TextDecoder(DECODER_LABELS['UTF-16LE'], { ignoreBOM: true }).decode(units.subarray(0, size));
 }
 
 /** O(n). */
@@ -215,8 +213,6 @@ export function looksGarbled(text: string): boolean {
 /** The encodings encodeText can produce. Browsers have no encoder for the legacy Korean ones. */
 const WRITABLE_ENCODINGS = ['UTF-8', 'UTF-16LE', 'UTF-16BE'] as const;
 export type WritableEncoding = (typeof WRITABLE_ENCODINGS)[number];
-
-const BYTES_PER_UTF16_UNIT = 2;
 
 export function isWritableEncoding(encoding: TextEncoding): encoding is WritableEncoding {
   return (WRITABLE_ENCODINGS as readonly TextEncoding[]).includes(encoding);
