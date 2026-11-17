@@ -10,6 +10,7 @@ import type { BackupProblem } from './backup.ts';
 import type { CalcNotice } from './calcActions.ts';
 import type { ShareNotice } from './shareActions.ts';
 import type { BackupNotice, BackupSummary } from './backupActions.ts';
+import type { BackupReminderNotice } from './backupReminder.ts';
 import { MAX_TITLE_LENGTH } from './documentStore.ts';
 import type { TitleProblem } from './documentStore.ts';
 import type { FileNotice } from './localFiles.ts';
@@ -146,6 +147,12 @@ export function describeCalcError(code: CalcErrorCode, detail: string, t: Transl
   // An "unexpected token" without a token means the input ended in the middle of an expression.
   if (code === 'unexpected-token' && detail === '') return t('calc.error.incomplete');
   return t(CALC_ERROR_KEYS[code], { detail });
+}
+
+export function describeBackupReminder(notice: BackupReminderNotice, t: Translate): string {
+  // The command is named by its label in the menu, so the two cannot drift apart.
+  const command = t('command.exportBackup');
+  return notice.kind === 'backup-never' ? t('notice.backupNever', { command }) : t('notice.backupOld', { days: notice.days, command });
 }
 
 export function describeShareNotice(notice: ShareNotice, t: Translate): string {

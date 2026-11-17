@@ -1,6 +1,7 @@
 // Composition root: the only module that touches the real window and wires modules together.
 import type { ImportMode } from './app/backup.ts';
 import { createBackupActions } from './app/backupActions.ts';
+import { createBackupReminder } from './app/backupReminder.ts';
 import { createCalcActions } from './app/calcActions.ts';
 import type { CalcDialogAction } from './app/calcActions.ts';
 import { readBuildId } from './app/buildInfo.ts';
@@ -18,6 +19,7 @@ import { createPreview } from './app/preview.ts';
 import {
   SAVE_STATE_KEYS,
   describeBackupNotice,
+  describeBackupReminder,
   describeBackupSummary,
   describeCalcError,
   describeCalcNotice,
@@ -279,6 +281,8 @@ async function start(win: Window): Promise<void> {
     statusBar.setText(formatEditorStats(editor.getStats(), t, workspace.getActiveDocument()?.source));
   };
 
+  const backupReminder = createBackupReminder({ storage: opened.storage, now: () => new Date() });
+
   const trash = createTrash({
     storage: opened.storage,
     now: () => new Date(),
@@ -378,6 +382,7 @@ async function start(win: Window): Promise<void> {
     confirmReplace: (count) => modals.confirm(t('backup.replaceConfirm', { count }), t('backup.replaceAccept')),
     showBusy: () => modals.busy(t('backup.busy')),
     onNotice: (notice) => {
+      if (notice.kind === 'backup-exported') void backupReminder.noteBackup();
       // A complete export or import is merely confirmed; everything else needs to be read.
       const isPlainSuccess =
         (notice.kind === 'backup-exported' && notice.unreadable === 0) || (notice.kind === 'backup-imported' && notice.skipped === 0);
@@ -762,6 +767,18 @@ async function start(win: Window): Promise<void> {
 
   await workspace.start();
   updatePageTitle();
+
+  // A reminder to make a backup, where memos are kept at all. Not waited for: the app is ready.
+  if (opened.mode === 'persistent') {
+    void workspace
+      .listMemos()
+      .then((listing) => backupReminder.check(listing.documents.length))
+      .then((due) => {
+        if (due) notices.show(describeBackupReminder(due, t));
+      })
+      // The list could not be read. Whatever is wrong with the storage is reported where it matters.
+      .catch(() => undefined);
+  }
 
   // Save when the page is hidden or left. A phone browser may never fire "beforeunload", and
   // a save started from there would not be awaited anyway, so that event is only for the warning.

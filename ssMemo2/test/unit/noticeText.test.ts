@@ -5,6 +5,7 @@ import { MAX_TITLE_LENGTH } from '../../src/app/documentStore.ts';
 import {
   SAVE_STATE_KEYS,
   describeBackupNotice,
+  describeBackupReminder,
   describeCalcError,
   describeCalcNotice,
   describeBackupSummary,
@@ -248,4 +249,13 @@ test('describeShareNotice has words of its own for every way sharing can end bad
   // Where sharing is impossible the user is pointed to what works instead.
   assert.match(describeShareNotice({ kind: 'share-unsupported' }, t), /file/i);
   assert.match(describeShareNotice({ kind: 'share-too-long' }, t), /file/i);
+});
+
+test('describeBackupReminder says how old the backup is, or that there is none, and where to make one', () => {
+  const never = describeBackupReminder({ kind: 'backup-never' }, t);
+  const old = describeBackupReminder({ kind: 'backup-old', days: 45 }, t);
+  assert.notEqual(never, old);
+  assert.equal(old.includes('45'), true);
+  // Both name the command by the label it has in the menu.
+  for (const message of [never, old]) assert.equal(message.includes(en['command.exportBackup']), true, message);
 });

@@ -207,6 +207,8 @@ export const en = {
   'notice.calcNothingToRun': 'Select what to calculate, or put the cursor on a line with a calculation.',
   'notice.calcMemoryNotSaved': 'The variables could not be stored. They apply until this page is closed.',
   'notice.backupExported': 'Backup saved with {count} memo(s).',
+  'notice.backupNever': 'No backup has been made yet, and the memos exist only in this browser. Menu ☰ → {command} writes them all to one file.',
+  'notice.backupOld': 'The last backup is {days} days old. Menu ☰ → {command} writes all memos to one file.',
   'notice.backupUnreadableRecords': '{count} damaged record(s) could not be included.',
   'notice.backupExportFailed': 'The backup could not be saved.',
   'notice.backupUnreadableFile': 'The backup file could not be read.',

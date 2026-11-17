@@ -202,6 +202,8 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'notice.calcNothingToRun': '계산할 내용을 선택하거나, 계산식이 있는 줄에 커서를 두세요.',
   'notice.calcMemoryNotSaved': '변수를 저장하지 못했습니다. 이 페이지를 닫을 때까지만 유지됩니다.',
   'notice.backupExported': '메모 {count}개를 백업 파일로 저장했습니다.',
+  'notice.backupNever': '아직 백업한 적이 없고, 메모는 이 브라우저에만 있습니다. 메뉴 ☰ → {command}로 모든 메모를 파일 하나에 저장할 수 있습니다.',
+  'notice.backupOld': '마지막 백업 후 {days}일이 지났습니다. 메뉴 ☰ → {command}로 모든 메모를 파일 하나에 저장할 수 있습니다.',
   'notice.backupUnreadableRecords': '손상된 기록 {count}개는 넣지 못했습니다.',
   'notice.backupExportFailed': '백업을 저장하지 못했습니다.',
   'notice.backupUnreadableFile': '백업 파일을 읽지 못했습니다.',

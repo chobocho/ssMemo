@@ -326,6 +326,71 @@ test('a memo can be renamed and deleted from the memo list', async () => {
   page.close();
 });
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** A browser in which the app has been used for `days` days, with or without a backup back then. */
+async function factoryUsedFor(days: number, backedUp: boolean): Promise<IDBFactory> {
+  const factory = await seededFactory();
+  const storage = await openIndexedDbStorage(factory);
+  const then = new Date(Date.now() - days * DAY_MS).toISOString();
+  await storage.setValue('backupReminder', backedUp ? { lastBackupAt: then, countingSince: then } : { countingSince: then });
+  storage.close();
+  return factory;
+}
+
+function backupReminders(page: Page): string[] {
+  return page.noticeTexts().filter((text) => text.includes('Export backup'));
+}
+
+test('after a month without a backup the app reminds once, and not again at the next visit', async () => {
+  const factory = await factoryUsedFor(40, false);
+  const page = await openPage({ factory });
+  await wait(100);
+  assert.equal(backupReminders(page).length, 1);
+  assert.equal(backupReminders(page)[0]?.includes('No backup has been made yet'), true);
+  assert.deepEqual(page.errors, []);
+  page.close();
+
+  const reloaded = await openPage({ factory });
+  await wait(100);
+  assert.deepEqual(backupReminders(reloaded), []);
+  reloaded.close();
+});
+
+test('the reminder tells the age of the last backup, and exporting one is remembered', async () => {
+  const factory = await factoryUsedFor(45, true);
+  const page = await openPage({ factory });
+  await wait(100);
+  assert.equal(backupReminders(page)[0]?.includes('45 days'), true);
+
+  await pickFromMenu(page, 'Export backup');
+  await wait(200);
+  assert.equal((await page.downloads()).length, 1);
+  const storage = await openIndexedDbStorage(factory);
+  const stored = (await storage.getValue('backupReminder')) as { lastBackupAt?: string };
+  storage.close();
+  assert.ok(Date.now() - Date.parse(stored.lastBackupAt ?? '') < 60_000, `last backup recorded as ${stored.lastBackupAt}`);
+  page.close();
+});
+
+test('there is no reminder on a first visit, shortly after a backup, or in a temporary session', async () => {
+  const first = await openPage({ factory: new FakeIndexedDbFactory() });
+  await wait(100);
+  assert.deepEqual(backupReminders(first), []);
+  first.close();
+
+  const recent = await openPage({ factory: await factoryUsedFor(3, true) });
+  await wait(100);
+  assert.deepEqual(backupReminders(recent), []);
+  recent.close();
+
+  // Nothing is kept there, so there is nothing to back up either.
+  const temporary = await openPage({ factory: await factoryUsedFor(40, false), url: `${PAGE_URL}?safe` });
+  await wait(100);
+  assert.deepEqual(backupReminders(temporary), []);
+  temporary.close();
+});
+
 test('the share command hands the memo on screen to the system', async () => {
   const shared: unknown[] = [];
   const page = await openPage({ factory: await seededFactory(), share: async (content) => void shared.push(content) });
