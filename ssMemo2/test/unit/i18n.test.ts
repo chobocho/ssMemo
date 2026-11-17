@@ -33,6 +33,17 @@ test('resolveLocale compares the whole primary subtag, not a prefix', () => {
   assert.equal(resolveLocale(['kok-IN']), FALLBACK_LOCALE);
 });
 
+test('resolveLocale lets a saved language choice override the browser', () => {
+  assert.equal(resolveLocale(['en-US'], 'ko'), 'ko');
+  assert.equal(resolveLocale(['ko-KR'], 'en'), 'en');
+});
+
+test('resolveLocale follows the browser when the choice is automatic or not a supported language', () => {
+  assert.equal(resolveLocale(['ko-KR'], 'auto'), 'ko');
+  assert.equal(resolveLocale(['ko-KR'], 'ja'), 'ko');
+  assert.equal(resolveLocale(['ko-KR'], undefined), 'ko');
+});
+
 // --- catalogs ---------------------------------------------------------------
 
 test('both catalogs define exactly the same keys', () => {

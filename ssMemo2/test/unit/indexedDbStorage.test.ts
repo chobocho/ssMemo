@@ -84,3 +84,14 @@ test('IndexedDbStorage: a second connection sees writes and its stale save is a 
   tabA.close();
   tabB.close();
 });
+
+test('IndexedDbStorage: values are still there after closing and reopening', async () => {
+  const factory = new FakeIndexedDbFactory();
+  const first = await openIndexedDbStorage(factory);
+  await first.setValue('settings', { language: 'ko' });
+  first.close();
+
+  const second = await openIndexedDbStorage(factory);
+  assert.deepEqual(await second.getValue('settings'), { language: 'ko' });
+  second.close();
+});

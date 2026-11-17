@@ -13,6 +13,15 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 09:48] 설정과 키-값 저장 (3.4)</h2>
+<ul>
+<li><b>기획:</b> 저장소에 문서와 분리된 키-값 저장(<code>getValue</code>/<code>setValue</code>)을 추가하고, 그 위에 언어·줄바꿈·글자 크기 설정을 둠. 설정은 편의 기능이므로 읽기·쓰기 실패가 앱을 멈추거나 오류 안내를 띄우지 않게 함.</li>
+<li><b>TC:</b> 정상 — 값 왕복, 덮어쓰기, 다시 열어도 유지, 저장된 언어가 브라우저 언어보다 우선. 경계 — 없는 키, 값이 사본인지, 문서 id와 같은 키, 저장 불가 값, 닫힌 연결, 필드별 손상 복구, 미지원 언어·제공하지 않는 글자 크기, 크기 단계의 양 끝.</li>
+<li><b>개발:</b> <code>src/app/settings.ts</code>, <code>src/storage/storagePort.ts</code>, <code>src/storage/memoryStorage.ts</code>, <code>src/storage/indexedDbStorage.ts</code>, <code>src/i18n/i18n.ts</code>, <code>test/unit/settings.test.ts</code>, <code>test/helpers/storageContract.ts</code> 외 4개 파일</li>
+<li><b>검증:</b> 단위 288 passed, 0 failed · 빌드 16 passed, 0 failed · tsc 오류 없음</li>
+<li><b>비고:</b> DB 버전은 그대로 1(<code>kv</code> 저장소를 2.3에서 미리 만들어 둠). 설정 화면 연결은 3.9.</li>
+</ul>
+
 <h2>[2026-11-17 09:46] 탭별 편집 상태 유지 (3.3)</h2>
 <ul>
 <li><b>기획:</b> 편집기 화면은 하나만 두고 탭마다 <code>EditorState</code>를 따로 보관해 교체. 상태는 탭을 처음 볼 때 만들어, 복원된 탭이 많아도 열어 보기 전에는 비용이 없음.</li>

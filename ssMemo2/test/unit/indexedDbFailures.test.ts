@@ -101,6 +101,8 @@ test('connection: operations after close are rejected as connection-lost', async
   storage.close();
   await assert.rejects(storage.listDocuments(), rejectsWith('connection-lost'));
   await assert.rejects(storage.saveDocument(draft('a', 'text'), NEW_DOCUMENT_REV), rejectsWith('connection-lost'));
+  await assert.rejects(storage.getValue('settings'), rejectsWith('connection-lost'));
+  await assert.rejects(storage.setValue('settings', {}), rejectsWith('connection-lost'));
 });
 
 test('connection: when another tab needs the database, it is released and the app is told once', async () => {
@@ -225,4 +227,10 @@ test('damaged: a malformed record can be replaced by creating the document anew'
   const meta = await storage.saveDocument(draft('a', 'repaired'), NEW_DOCUMENT_REV);
   assert.equal(meta.rev, 1);
   assert.deepEqual(await storage.listDocuments(), { documents: [meta], corruptCount: 0 });
+});
+
+test('write: a value that cannot be stored is reported as a failed write', async () => {
+  const storage = await openIndexedDbStorage(new FakeIndexedDbFactory());
+  await assert.rejects(storage.setValue('settings', { callback: () => undefined }), rejectsWith('write-failed'));
+  assert.equal(await storage.getValue('settings'), undefined);
 });

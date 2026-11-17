@@ -135,4 +135,54 @@ export function defineStorageContract(label: string, createStorage: () => Promis
       assert.equal((await storage.getDocument(id))?.content, content, id);
     }
   });
+
+  test(`${label}: a value that was never set is undefined`, async () => {
+    const storage = await createStorage();
+    assert.equal(await storage.getValue('settings'), undefined);
+  });
+
+  test(`${label}: values of every plain-data type survive a round trip`, async () => {
+    const storage = await createStorage();
+    const samples: Record<string, unknown> = {
+      object: { language: 'ko', nested: { wrap: true, sizes: [1, 2.5] } },
+      array: ['a', 1, null],
+      text: '한글 값',
+      number: 0,
+      flag: false,
+      nothing: null,
+    };
+    for (const [key, value] of Object.entries(samples)) {
+      await storage.setValue(key, value);
+      assert.deepEqual(await storage.getValue(key), value, key);
+    }
+  });
+
+  test(`${label}: setting a key again replaces its value and leaves other keys alone`, async () => {
+    const storage = await createStorage();
+    await storage.setValue('settings', { version: 1 });
+    await storage.setValue('session', { tabs: [] });
+    await storage.setValue('settings', { version: 2 });
+    assert.deepEqual(await storage.getValue('settings'), { version: 2 });
+    assert.deepEqual(await storage.getValue('session'), { tabs: [] });
+  });
+
+  test(`${label}: stored values are copies, in both directions`, async () => {
+    const storage = await createStorage();
+    const input = { tabs: ['a'] };
+    await storage.setValue('session', input);
+    input.tabs.push('changed after saving');
+    const loaded = (await storage.getValue('session')) as { tabs: string[] };
+    assert.deepEqual(loaded, { tabs: ['a'] });
+    loaded.tabs.push('changed after loading');
+    assert.deepEqual(await storage.getValue('session'), { tabs: ['a'] });
+  });
+
+  test(`${label}: values and documents do not share a namespace`, async () => {
+    const storage = await createStorage();
+    await storage.saveDocument(draft('same-name', 'document text'), NEW_DOCUMENT_REV);
+    await storage.setValue('same-name', 'value text');
+    assert.equal((await storage.getDocument('same-name'))?.content, 'document text');
+    assert.equal(await storage.getValue('same-name'), 'value text');
+    assert.equal((await storage.listDocuments()).documents.length, 1);
+  });
 }

@@ -5,6 +5,7 @@ import type { StoragePort, StoredDocument } from './storagePort.ts';
 
 export function createMemoryStorage(): StoragePort {
   const documents = new Map<string, StoredDocument>();
+  const values = new Map<string, unknown>();
 
   // Metadata is a flat record of strings and numbers, so a shallow copy is a full copy.
   // Copies keep callers from changing stored data by mutating what they were given.
@@ -26,6 +27,15 @@ export function createMemoryStorage(): StoragePort {
 
     async deleteDocument(id) {
       return documents.delete(id);
+    },
+
+    // structuredClone copies on the way in and out, as IndexedDB does.
+    async getValue(key) {
+      return structuredClone(values.get(key));
+    },
+
+    async setValue(key, value) {
+      values.set(key, structuredClone(value));
     },
   };
 }

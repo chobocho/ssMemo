@@ -98,4 +98,13 @@ export interface StoragePort {
 
   /** Resolves to whether a document was actually removed. */
   deleteDocument(id: string): Promise<boolean>;
+
+  /**
+   * A small piece of app state stored under a name (settings, the open tabs). Kept apart from
+   * documents. Resolves to undefined if the key was never set.
+   */
+  getValue(key: string): Promise<unknown>;
+
+  /** `value` must be plain data (objects, arrays, strings, numbers, booleans, null). */
+  setValue(key: string, value: unknown): Promise<void>;
 }

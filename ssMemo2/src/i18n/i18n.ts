@@ -28,10 +28,12 @@ function primarySubtag(languageTag: string): string {
 }
 
 /**
- * Picks the app locale from the browser's language list (navigator.languages, most preferred
- * first): the first entry whose primary language is supported wins.
+ * Picks the app locale. A language the user chose in the settings wins; otherwise (no choice,
+ * "auto", or a value this version does not support) the first supported entry of the browser's
+ * language list (navigator.languages, most preferred first) is used.
  */
-export function resolveLocale(browserLanguages: readonly string[]): Locale {
+export function resolveLocale(browserLanguages: readonly string[], preferred?: string): Locale {
+  if (preferred !== undefined && isLocale(preferred)) return preferred;
   for (const languageTag of browserLanguages) {
     const subtag = primarySubtag(languageTag);
     if (isLocale(subtag)) return subtag;

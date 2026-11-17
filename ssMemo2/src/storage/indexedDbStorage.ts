@@ -26,7 +26,8 @@ const DATABASE_VERSION = 1;
 const META_STORE = 'docMeta';
 const BODY_STORE = 'docBody';
 const KEY_VALUE_STORE = 'kv';
-const DOCUMENT_STORES = [META_STORE, BODY_STORE];
+const DOCUMENT_STORES: readonly string[] = [META_STORE, BODY_STORE];
+const VALUE_STORES: readonly string[] = [KEY_VALUE_STORE];
 
 // Opening normally takes milliseconds. A request that is blocked by another tab or stuck in a
 // broken browser profile fires no event at all, so only a timeout can end the wait.
@@ -130,7 +131,7 @@ function openDatabase(factory: IDBFactory, timeoutMs: number): Promise<IDBDataba
 }
 
 /**
- * Runs `work` in one transaction over the document stores and resolves, once the transaction has
+ * Runs `work` in one transaction over `storeNames` and resolves, once the transaction has
  * committed, with the value of the function `work` returned.
  *
  * `work` must issue its requests synchronously or from request callbacks (never after an await),
@@ -139,13 +140,14 @@ function openDatabase(factory: IDBFactory, timeoutMs: number): Promise<IDBDataba
  */
 function runTransaction<T>(
   database: IDBDatabase,
+  storeNames: readonly string[],
   mode: IDBTransactionMode,
   work: (transaction: IDBTransaction, abort: (error: unknown) => void) => () => T,
 ): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     let transaction: IDBTransaction;
     try {
-      transaction = database.transaction(DOCUMENT_STORES, mode);
+      transaction = database.transaction([...storeNames], mode);
     } catch (error) {
       // The connection is closing or closed; no transaction can be started on it any more.
       reject(new StorageError('connection-lost', 'The storage connection is closed', { cause: error }));
@@ -183,18 +185,19 @@ function createStorage(database: IDBDatabase, onConnectionLost: () => void): Ind
   database.onclose = () => disconnect(true);
 
   const run = <T>(
+    storeNames: readonly string[],
     mode: IDBTransactionMode,
     work: (transaction: IDBTransaction, abort: (error: unknown) => void) => () => T,
   ): Promise<T> => {
     if (!connected) {
       return Promise.reject(new StorageError('connection-lost', 'The storage connection is closed'));
     }
-    return runTransaction(database, mode, work);
+    return runTransaction(database, storeNames, mode, work);
   };
 
   return {
     listDocuments() {
-      return run('readonly', (transaction) => {
+      return run(DOCUMENT_STORES, 'readonly', (transaction) => {
         const request = transaction.objectStore(META_STORE).getAll();
         return (): DocumentListing => {
           const documents: DocumentMeta[] = [];
@@ -210,7 +213,7 @@ function createStorage(database: IDBDatabase, onConnectionLost: () => void): Ind
     },
 
     getDocument(id) {
-      return run('readonly', (transaction) => {
+      return run(DOCUMENT_STORES, 'readonly', (transaction) => {
         const metaRequest = transaction.objectStore(META_STORE).get(id);
         const bodyRequest = transaction.objectStore(BODY_STORE).get(id);
         return (): StoredDocument | undefined => {
@@ -222,7 +225,7 @@ function createStorage(database: IDBDatabase, onConnectionLost: () => void): Ind
     },
 
     saveDocument(draft, expectedRev) {
-      return run('readwrite', (transaction, abort) => {
+      return run(DOCUMENT_STORES, 'readwrite', (transaction, abort) => {
         const metaStore = transaction.objectStore(META_STORE);
         const existing = metaStore.get(draft.id);
         let meta: DocumentMeta | undefined;
@@ -246,13 +249,32 @@ function createStorage(database: IDBDatabase, onConnectionLost: () => void): Ind
     },
 
     deleteDocument(id) {
-      return run('readwrite', (transaction) => {
+      return run(DOCUMENT_STORES, 'readwrite', (transaction) => {
         const metaStore = transaction.objectStore(META_STORE);
         // getKey answers "did it exist" without loading the record.
         const existing = metaStore.getKey(id);
         metaStore.delete(id);
         transaction.objectStore(BODY_STORE).delete(id);
         return (): boolean => existing.result !== undefined;
+      });
+    },
+
+    getValue(key) {
+      return run(VALUE_STORES, 'readonly', (transaction) => {
+        const request = transaction.objectStore(KEY_VALUE_STORE).get(key);
+        return (): unknown => (isRecord(request.result) ? request.result.value : undefined);
+      });
+    },
+
+    setValue(key, value) {
+      return run(VALUE_STORES, 'readwrite', (transaction, abort) => {
+        try {
+          transaction.objectStore(KEY_VALUE_STORE).put({ key, value });
+        } catch (error) {
+          // Thrown synchronously when the value cannot be stored (it holds a function, for example).
+          abort(error);
+        }
+        return (): void => undefined;
       });
     },
 
