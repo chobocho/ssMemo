@@ -1,0 +1,79 @@
+/* The help dialog: commands with their shortcuts, notes, and the folded-away notices. */
+.help-heading {
+  margin: var(--space-3) 0 var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+}
+
+.help-list,
+.help-note-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.help-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+  padding-block: var(--space-1);
+  border-block-end: var(--border-width) solid var(--color-surface-muted);
+}
+
+.help-icon {
+  flex: none;
+  inline-size: var(--command-icon-width);
+  text-align: center;
+}
+
+.help-label {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.help-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.help-key {
+  padding: 0 var(--space-1);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-small);
+  background: var(--color-surface-muted);
+  font: inherit;
+  font-size: var(--font-size-small);
+  white-space: nowrap;
+}
+
+.help-note-list li {
+  padding-block: var(--space-1);
+  overflow-wrap: anywhere;
+}
+
+.help-text {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.help-licenses {
+  margin-block-start: var(--space-3);
+}
+
+/* One line of text plus padding makes the row a full touch target, like the diagnostics below. */
+.help-licenses > summary {
+  padding-block: var(--space-3);
+  cursor: pointer;
+}
+
+.help-license-text {
+  margin: var(--space-2) 0 0;
+  font-family: var(--editor-font-family);
+  font-size: var(--font-size-small);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

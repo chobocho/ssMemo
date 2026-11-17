@@ -953,6 +953,42 @@ test('a right click on text that is not an address is left to the browser', asyn
   page.close();
 });
 
+test('F1 opens the help, which lists every command with its keys and holds the diagnostics', async () => {
+  const page = await openPage({ factory: await seededFactory() });
+  // The diagnostics no longer take a line of their own under the editor.
+  assert.equal(page.document.querySelector('.app-footer .diagnostics'), null);
+
+  const press = await pressKey(page, { key: 'F1', code: 'F1' });
+  assert.equal(press.defaultPrevented, true);
+  const help = topDialog(page);
+  const rowOf = (label: string): Element | undefined =>
+    [...help.querySelectorAll('.help-row')].find((row) => row.querySelector('.help-label')?.textContent === label);
+  const keysOf = (label: string): (string | null)[] => [...(rowOf(label)?.querySelectorAll('kbd') ?? [])].map((key) => key.textContent);
+
+  assert.deepEqual(keysOf('Save to file'), ['Ctrl+S']);
+  assert.deepEqual(keysOf('Find'), ['Ctrl+F', 'Ctrl+I']);
+  assert.deepEqual(keysOf('Green square'), ['Ctrl+Shift+Z']);
+  assert.deepEqual(keysOf('Encoding'), []);
+  // Generated from the same table as the menu, so nothing is missing.
+  const menuCommandCount = help.querySelectorAll('.help-row').length;
+  assert.ok(menuCommandCount >= 35, `only ${menuCommandCount} commands listed`);
+
+  assert.match(help.querySelector('.help-about')?.textContent ?? '', /ssMemo2, build 0\.1\.0\+[0-9a-f]{8}/);
+  assert.match(help.querySelector('.help-notes')?.textContent ?? '', /Redo is Ctrl\+Y/);
+  assert.match(help.querySelector('.help-license-text')?.textContent ?? '', /@codemirror\/view[\s\S]*MIT License[\s\S]*Permission is hereby granted/);
+  const diagnostics = help.querySelector('.diagnostics');
+  assert.ok(diagnostics);
+  assert.match(diagnostics.textContent ?? '', /0\.1\.0\+[0-9a-f]{8}/);
+  assert.deepEqual(page.errors, []);
+
+  // Opening it a second time works: the diagnostics panel is moved, not consumed.
+  help.close();
+  await wait(50);
+  await pickFromMenu(page, 'Help');
+  assert.ok(topDialog(page).querySelector('.diagnostics'));
+  page.close();
+});
+
 test('the search panel speaks the language of the app', async () => {
   const factory = await seededFactory();
   const storage = await openIndexedDbStorage(factory);

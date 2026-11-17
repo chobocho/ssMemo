@@ -46,6 +46,7 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'command.exportBackup': '백업 내보내기',
   'command.importBackup': '백업 가져오기',
   'command.language': '언어',
+  'command.help': '도움말',
   'command.menu': '메뉴',
 
   'group.memo': '메모와 탭',
@@ -146,6 +147,18 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'calc.error.factorialNotInteger': 'factorial에는 정수를 넣어야 합니다.',
   'calc.error.factorialNegative': 'factorial은 음수에 대해 정의되지 않습니다.',
   'calc.error.factorialTooLarge': 'factorial은 {detail}까지만 계산합니다.',
+
+  'help.notes': '알아 둘 점',
+  'help.note.autosave': '메모는 입력을 멈추면 잠시 뒤 자동으로 저장됩니다. 탭의 점은 아직 저장되지 않은 변경이 있다는 표시입니다.',
+  'help.note.files': '파일은 화면에 끌어다 놓아도 열립니다. 보기만 한 파일은 흔적을 남기지 않고, 고친 파일은 메모로 남습니다.',
+  'help.note.redo': '다시 실행은 {redo}입니다. {symbol}은 기호를 넣는 키입니다.',
+  'help.note.calc': '계산은 선택한 내용이나 현재 줄에 적용됩니다: + - * / // ( ), 변수, sin cos tan factorial, # 주석. 정수는 자릿수 제한 없이 정확합니다.',
+  'help.note.url': '선택한 웹 주소를 오른쪽 클릭하면 열립니다.',
+  'help.note.safe': '페이지 주소 끝에 ?safe를 붙이면 저장된 메모를 건드리지 않고 시작합니다.',
+  'help.about': '정보',
+  'help.build': '{name}, 빌드 {build}',
+  'help.licenses': '오픈 소스 라이선스',
+  'help.licensesIntro': '이 앱에는 다음 오픈 소스 소프트웨어가 들어 있습니다.',
 
   'preview.label': '미리보기',
   'preview.tooLong': '메모가 너무 길어 미리보기를 표시하지 않습니다(최대 {max}자).',

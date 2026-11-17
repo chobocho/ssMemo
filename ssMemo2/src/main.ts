@@ -4,12 +4,14 @@ import { createBackupActions } from './app/backupActions.ts';
 import { createCalcActions } from './app/calcActions.ts';
 import type { CalcDialogAction } from './app/calcActions.ts';
 import { readBuildId } from './app/buildInfo.ts';
-import { COMMAND_GROUPS, SYMBOL_COMMAND_IDS, bindCommands, iconOf } from './app/commandTable.ts';
+import { COMMAND_DEFINITIONS, COMMAND_GROUPS, SYMBOL_COMMAND_IDS, bindCommands, iconOf } from './app/commandTable.ts';
 import type { CommandId } from './app/commandTable.ts';
 import { createCommandRegistry } from './app/commands.ts';
 import type { Command } from './app/commands.ts';
 import { describeEnvironment } from './app/diagnostics.ts';
 import { createDocumentStore, findTitleProblem } from './app/documentStore.ts';
+import { buildHelpGroups } from './app/helpContent.ts';
+import { formatThirdPartyNotices } from './app/licenses.ts';
 import { createLocalFiles } from './app/localFiles.ts';
 import { createPreview } from './app/preview.ts';
 import {
@@ -60,6 +62,7 @@ import { createDiagnosticsPanel } from './ui/diagnosticsPanel.ts';
 import { isApplePlatform, readEnvironment } from './ui/environment.ts';
 import { installFileDrop } from './ui/fileDrop.ts';
 import { createFileIo } from './ui/fileIo.ts';
+import { createHelpContent } from './ui/helpDialog.ts';
 import { createMemoManager } from './ui/memoManager.ts';
 import { createModals } from './ui/modal.ts';
 import { nextPaint } from './ui/nextPaint.ts';
@@ -104,6 +107,7 @@ const TOOLBAR_COMMAND_IDS: readonly CommandId[] = [
   'view.fontSmaller',
   'view.fontLarger',
   'settings.language',
+  'help.show',
   MENU_COMMAND_ID,
 ];
 // Of those, the ones that leave the header on narrow screens. The menu still lists them.
@@ -114,6 +118,7 @@ const SECONDARY_TOOLBAR_COMMAND_IDS: ReadonlySet<string> = new Set<CommandId>([
   'view.fontSmaller',
   'view.fontLarger',
   'settings.language',
+  'help.show',
 ]);
 
 async function start(win: Window): Promise<void> {
@@ -173,7 +178,8 @@ async function start(win: Window): Promise<void> {
   win.addEventListener('resize', refreshDiagnostics);
   win.visualViewport?.addEventListener('resize', refreshDiagnostics);
   refreshDiagnostics();
-  shell.footer.append(statusBar.element, diagnostics.element);
+  // The diagnostics live in the help dialog; the footer is one line, so the editor keeps the room.
+  shell.footer.append(statusBar.element);
 
   // A custom property, not a size computed here: the stylesheet decides what it applies to.
   const applyEditorFontSize = (sizeRem: number): void => {
@@ -489,6 +495,31 @@ async function start(win: Window): Promise<void> {
     onNotice: (notice) => notices.show(describeCalcNotice(notice, t), notice.kind === 'calc-nothing-to-run' ? 'info' : 'warning'),
   });
 
+  const showHelp = (): void => {
+    refreshDiagnostics();
+    void modals.open(() => ({
+      title: t('command.help'),
+      content: createHelpContent(doc, {
+        groups: buildHelpGroups(COMMAND_DEFINITIONS, COMMAND_GROUPS, t, describeShortcut),
+        notesTitle: t('help.notes'),
+        notes: [
+          t('help.note.autosave'),
+          t('help.note.files'),
+          t('help.note.redo', { redo: describeShortcut('Mod-y'), symbol: describeShortcut('Mod-Shift-z') }),
+          t('help.note.calc'),
+          t('help.note.url'),
+          t('help.note.safe'),
+        ],
+        aboutTitle: t('help.about'),
+        aboutText: t('help.build', { name: APP_NAME, build: facts.buildId }),
+        licensesTitle: t('help.licenses'),
+        licensesIntro: t('help.licensesIntro'),
+        licensesText: formatThirdPartyNotices(),
+        diagnostics: diagnostics.element,
+      }),
+    }));
+  };
+
   const groupLabelKeys = new Map<string, MessageKey>(COMMAND_GROUPS.map((group) => [group.id, group.labelKey]));
   // Every command except the menu itself, for narrow screens where the toolbar shows only a few.
   const showMenu = (): void => {
@@ -538,6 +569,7 @@ async function start(win: Window): Promise<void> {
       'backup.export': () => void backups.exportBackup(),
       'backup.import': () => void backups.importBackup(),
       'settings.language': () => void chooseLanguage(),
+      'help.show': showHelp,
       'app.menu': showMenu,
     }),
   );

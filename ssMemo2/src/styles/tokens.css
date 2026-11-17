@@ -73,11 +73,9 @@
   --modal-width: 28rem;
   --modal-max-height: 85dvh;
 
-  /* Diagnostics list: label column width, the width below which a value wraps under its label,
-     and how much of the screen the opened panel may take from the editor. */
+  /* Diagnostics list: label column width, and the width below which a value wraps under its label. */
   --diagnostics-label-width: 13rem;
   --diagnostics-value-min-width: 10rem;
-  --diagnostics-max-height: 50dvh;
 }
 
 /* Width classes. These queries must equal WIDTH_CLASS_QUERIES in src/app/widthClass.ts; a test

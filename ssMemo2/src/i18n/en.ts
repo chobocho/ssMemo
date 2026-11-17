@@ -45,6 +45,7 @@ export const en = {
   'command.exportBackup': 'Export backup',
   'command.importBackup': 'Import backup',
   'command.language': 'Language',
+  'command.help': 'Help',
   'command.menu': 'Menu',
 
   'group.memo': 'Memos and tabs',
@@ -150,6 +151,18 @@ export const en = {
   'calc.error.factorialNotInteger': 'factorial needs a whole number.',
   'calc.error.factorialNegative': 'factorial is not defined for negative numbers.',
   'calc.error.factorialTooLarge': 'factorial works for numbers up to {detail}.',
+
+  'help.notes': 'Good to know',
+  'help.note.autosave': 'Memos are saved by themselves shortly after you stop typing. A dot on a tab marks changes that are not saved yet.',
+  'help.note.files': 'Files can also be opened by dropping them on the page. A file you only look at leaves nothing behind; one you edit is kept as a memo.',
+  'help.note.redo': 'Redo is {redo}. {symbol} inserts a symbol instead.',
+  'help.note.calc': 'Calculate works on the selected text or the current line: + - * / // ( ), variables, sin cos tan factorial, # comments. Whole numbers keep every digit.',
+  'help.note.url': 'Right-clicking a selected web address opens it.',
+  'help.note.safe': 'Add ?safe to the page address to start without touching the stored memos.',
+  'help.about': 'About',
+  'help.build': '{name}, build {build}',
+  'help.licenses': 'Open-source licenses',
+  'help.licensesIntro': 'This app contains the following open-source software.',
 
   'preview.label': 'Preview',
   'preview.tooLong': 'This memo is too long to preview (at most {max} characters).',

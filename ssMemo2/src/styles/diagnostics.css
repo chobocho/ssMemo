@@ -1,15 +1,13 @@
-/* Diagnostics: a collapsible list of the facts a user copies back when reporting a problem. */
+/* Diagnostics: a collapsible list of the facts a user copies back when reporting a problem.
+   It is shown at the end of the help dialog, which does the scrolling. */
 .diagnostics > summary {
   /* Padding around one line of text makes the row at least one touch target tall. */
-  padding: var(--space-3) var(--page-gutter);
+  padding-block: var(--space-3);
   cursor: pointer;
 }
 
-/* Opened, the panel scrolls on its own so it can never push the editor off the screen. */
 .diagnostics-body {
-  max-block-size: var(--diagnostics-max-height);
-  padding: 0 var(--page-gutter) var(--space-4);
-  overflow-y: auto;
+  padding-block-end: var(--space-2);
 }
 
 .diagnostics-list {
