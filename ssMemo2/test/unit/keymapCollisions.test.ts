@@ -111,6 +111,13 @@ test('the shortcuts ssMemoWeb users know are all there', () => {
     'Mod-e': 'move.end',
     'Alt-b': 'move.pageUp',
     'Alt-f': 'move.pageDown',
+    'Mod-l': 'insert.divider',
+    'Mod-Shift-a': 'insert.arrow',
+    'Mod-Shift-c': 'insert.check',
+    'Mod-Shift-o': 'insert.box',
+    'Mod-Shift-r': 'insert.note',
+    'Mod-Shift-x': 'insert.cross',
+    'Mod-Shift-z': 'insert.green',
   };
   for (const [shortcut, id] of Object.entries(expected)) assert.equal(byShortcut.get(shortcut), id, shortcut);
 });

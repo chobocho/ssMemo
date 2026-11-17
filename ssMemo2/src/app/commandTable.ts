@@ -11,6 +11,7 @@ export const COMMAND_GROUPS = [
   { id: 'file', labelKey: 'group.file' },
   { id: 'search', labelKey: 'group.search' },
   { id: 'move', labelKey: 'group.move' },
+  { id: 'insert', labelKey: 'group.insert' },
   { id: 'view', labelKey: 'group.view' },
   { id: 'backup', labelKey: 'group.backup' },
   { id: 'app', labelKey: 'group.app' },
@@ -43,6 +44,15 @@ export const COMMAND_DEFINITIONS = [
   { id: 'move.pageUp', group: 'move', labelKey: 'command.pageUp', icon: '⬆️', shortcuts: ['Alt-b'] },
   { id: 'move.pageDown', group: 'move', labelKey: 'command.pageDown', icon: '⬇️', shortcuts: ['Alt-f'] },
 
+  // For the symbol commands the icon is the symbol that gets inserted.
+  { id: 'insert.divider', group: 'insert', labelKey: 'command.insertDivider', icon: '➖', shortcuts: ['Mod-l'] },
+  { id: 'insert.arrow', group: 'insert', labelKey: 'command.insertArrow', icon: '→', shortcuts: ['Mod-Shift-a'] },
+  { id: 'insert.check', group: 'insert', labelKey: 'command.insertCheck', icon: '✅', shortcuts: ['Mod-Shift-c'] },
+  { id: 'insert.box', group: 'insert', labelKey: 'command.insertBox', icon: '□', shortcuts: ['Mod-Shift-o'] },
+  { id: 'insert.note', group: 'insert', labelKey: 'command.insertNote', icon: '※', shortcuts: ['Mod-Shift-r'] },
+  { id: 'insert.cross', group: 'insert', labelKey: 'command.insertCross', icon: '❎', shortcuts: ['Mod-Shift-x'] },
+  { id: 'insert.green', group: 'insert', labelKey: 'command.insertGreen', icon: '🟩', shortcuts: ['Mod-Shift-z'] },
+
   { id: 'view.toggleWrap', group: 'view', labelKey: 'command.toggleWrap', icon: '↩️', shortcuts: ['Alt-z'] },
   { id: 'view.fontSmaller', group: 'view', labelKey: 'command.fontSmaller', icon: 'A−', shortcuts: [] },
   { id: 'view.fontLarger', group: 'view', labelKey: 'command.fontLarger', icon: 'A+', shortcuts: [] },
@@ -55,6 +65,13 @@ export const COMMAND_DEFINITIONS = [
 ] as const satisfies readonly (CommandDefinition & { group: GroupId })[];
 
 export type CommandId = (typeof COMMAND_DEFINITIONS)[number]['id'];
+
+/** The commands that insert the symbol shown as their icon. */
+export const SYMBOL_COMMAND_IDS = ['insert.arrow', 'insert.check', 'insert.box', 'insert.note', 'insert.cross', 'insert.green'] as const satisfies readonly CommandId[];
+
+export function iconOf(id: CommandId): string {
+  return COMMAND_DEFINITIONS.find((definition) => definition.id === id)?.icon ?? '';
+}
 
 /** What a command does. Commands that switch something on and off also report their state. */
 export type CommandBehavior = (() => void) | { run(): void; isOn(): boolean };

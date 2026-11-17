@@ -702,6 +702,44 @@ test('the keys for the start and the end of the document move the cursor there',
   page.close();
 });
 
+test('symbol and divider keys insert at the cursor, and the insertion can be undone and is saved', async () => {
+  const factory = await seededFactory();
+  const page = await openPage({ factory });
+  const lines = (): string[] => [...page.document.querySelectorAll('.cm-line')].map((line) => line.textContent ?? '');
+
+  // Ctrl+Shift+C: a check mark at the cursor, which is at the start of "milk".
+  const symbol = await pressKey(page, { key: 'C', code: 'KeyC', ctrlKey: true, shiftKey: true });
+  assert.equal(symbol.defaultPrevented, true);
+  assert.deepEqual(lines(), [`${String.fromCodePoint(0x2705)}milk`]);
+
+  // Ctrl+Z takes it out again: the insertion went through the editor's history.
+  await pressKey(page, { key: 'z', code: 'KeyZ', ctrlKey: true });
+  assert.deepEqual(lines(), ['milk']);
+
+  // Ctrl+Shift+Z is a symbol here, not redo.
+  await pressKey(page, { key: 'Z', code: 'KeyZ', ctrlKey: true, shiftKey: true });
+  assert.deepEqual(lines(), [`${String.fromCodePoint(0x1f7e9)}milk`]);
+  await pressKey(page, { key: 'z', code: 'KeyZ', ctrlKey: true });
+
+  // Ctrl+L at the end of the text: the divider goes on a line of its own.
+  await pressKey(page, { key: 'e', code: 'KeyE', ctrlKey: true });
+  await pressKey(page, { key: 'l', code: 'KeyL', ctrlKey: true });
+  assert.deepEqual(lines(), ['milk', String.fromCharCode(0x2500).repeat(50)]);
+
+  await wait(AUTOSAVE_WAIT_MS);
+  assert.equal(await storedContent(factory, 'a'), `milk\n${String.fromCharCode(0x2500).repeat(50)}`);
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
+test('a symbol picked from the menu is inserted too', async () => {
+  const page = await openPage({ factory: await seededFactory() });
+  await pickFromMenu(page, 'Arrow');
+  assert.equal(page.editorText(), `${String.fromCharCode(0x2192)}milk`);
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
 test('the search panel speaks the language of the app', async () => {
   const factory = await seededFactory();
   const storage = await openIndexedDbStorage(factory);

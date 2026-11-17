@@ -157,3 +157,18 @@ test('the texts of the editor itself are translated with the given phrases', () 
   // Without phrases the editor falls back to its English originals.
   assert.equal(createEditorState('').phrase('Find'), 'Find');
 });
+
+test('redo stays on Ctrl+Y everywhere once Ctrl+Shift+Z belongs to the app', () => {
+  // ssMemoWeb inserts a symbol with Ctrl+Shift+Z. Editors on Mac and Linux use that key for
+  // redo; taking only that spelling away must leave the other one working on every platform.
+  const bindings = createEditorState('').facet(keymap).flat();
+  const redoBindings = bindings.filter((binding) => binding.key === 'Mod-y');
+  assert.equal(redoBindings.length, 1);
+  assert.equal(redoBindings[0]?.mac, undefined);
+  for (const binding of bindings) {
+    for (const key of [binding.key, binding.mac, binding.linux, binding.win]) {
+      assert.notEqual(key, 'Mod-Shift-z');
+      assert.notEqual(key, 'Ctrl-Shift-z');
+    }
+  }
+});

@@ -68,13 +68,27 @@ const editorTheme = EditorView.theme({
 const KEYS_LEFT_TO_THE_APP: ReadonlySet<string> = new Set([
   // "Select parent syntax" in the editor; the app opens the search with it, as ssMemoWeb did.
   'Mod-i',
+  // Redo on Mac and Linux; the app inserts a symbol with it, as ssMemoWeb did. Redo keeps Mod-y.
+  'Mod-Shift-z',
+  'Ctrl-Shift-z',
 ]);
 // Of the search key bindings only this one is used: the keys that open the panel and step
 // through the matches belong to the app, so they also work while the focus is outside the editor.
 const SEARCH_PANEL_CLOSE_KEY = 'Escape';
 
-function isLeftToTheApp(binding: KeyBinding): boolean {
-  return [binding.key, binding.mac, binding.linux, binding.win].some((key) => key !== undefined && KEYS_LEFT_TO_THE_APP.has(key));
+const BINDING_KEY_FIELDS = ['key', 'mac', 'linux', 'win'] as const;
+
+/**
+ * The binding without the keys that belong to the app, or undefined if no key is left. Only the
+ * offending spelling goes: "Mod-y, on Mac Mod-Shift-z" keeps Mod-y and then applies on Mac too.
+ */
+function withoutAppKeys(binding: KeyBinding): KeyBinding | undefined {
+  const kept: KeyBinding = { ...binding };
+  for (const field of BINDING_KEY_FIELDS) {
+    const key = kept[field];
+    if (key !== undefined && KEYS_LEFT_TO_THE_APP.has(key)) delete kept[field];
+  }
+  return BINDING_KEY_FIELDS.some((field) => kept[field] !== undefined) ? kept : undefined;
 }
 
 /** Everything the editor reacts to by itself. */
@@ -82,7 +96,7 @@ export const EDITOR_KEYMAP: readonly KeyBinding[] = [
   ...defaultKeymap,
   ...historyKeymap,
   ...searchKeymap.filter((binding) => binding.key === SEARCH_PANEL_CLOSE_KEY),
-].filter((binding) => !isLeftToTheApp(binding));
+].flatMap((binding) => withoutAppKeys(binding) ?? []);
 
 // One compartment for all states, so the same effect switches wrapping in any of them without
 // touching their text or undo history.

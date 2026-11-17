@@ -69,6 +69,12 @@ export interface EditorTabs {
   setLineWrapping(enabled: boolean): void;
   /** Facts about the visible tab; undefined while no tab is shown. */
   getStats(): EditorStats | undefined;
+  /**
+   * Edits the visible document: `build` gets its current state and returns the change to make.
+   * The change goes through the editor like typing does, so it can be undone and is saved.
+   * Does nothing while no tab is shown.
+   */
+  apply(build: (state: EditorState) => TransactionSpec): void;
   /** Call after something outside the editor changed its text metrics (the font size). */
   remeasure(): void;
 }
@@ -154,6 +160,10 @@ export function createEditorTabs(view: EditorViewPort, options: EditorTabsOption
 
     getStats: () => (activeTabId === undefined ? undefined : getEditorStats(view.state)),
 
+    apply(build) {
+      if (activeTabId !== undefined) view.dispatch(build(view.state));
+    },
+
     remeasure: () => view.requestMeasure(),
   };
 }
@@ -184,6 +194,8 @@ export interface EditorActions {
   /** Moves the cursor one screenful up or down. */
   pageUp(): void;
   pageDown(): void;
+  /** Puts the keyboard focus into the document. */
+  focus(): void;
 }
 
 export type MountedEditor = EditorTabs & EditorActions;
@@ -228,5 +240,6 @@ export function mountEditorTabs(parent: HTMLElement, callbacks: EditorCallbacks,
     goToEnd: () => void cursorDocEnd(view),
     pageUp: () => void cursorPageUp(view),
     pageDown: () => void cursorPageDown(view),
+    focus: () => view.focus(),
   };
 }

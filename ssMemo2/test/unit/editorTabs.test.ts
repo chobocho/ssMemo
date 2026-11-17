@@ -362,3 +362,38 @@ test('nothing is transferred when the visible tab is shown again, replaced or wa
   harness.tabs.show('b', 'beta');
   assert.deepEqual(harness.transfers, []);
 });
+
+// --- apply ------------------------------------------------------------------
+
+test('apply edits the visible document through the change it is given', () => {
+  const harness = createHarness();
+  harness.tabs.show('a', 'alpha');
+  harness.tabs.apply((state) => ({ changes: { from: state.doc.length, insert: '!' } }));
+  assert.equal(harness.view.state.doc.toString(), 'alpha!');
+  // Like typing, it can be undone.
+  assert.equal(harness.undo(), true);
+  assert.equal(harness.view.state.doc.toString(), 'alpha');
+});
+
+test('apply builds the change from the state as it is now, not as it was when the tab opened', () => {
+  const harness = createHarness();
+  harness.tabs.show('a', 'alpha');
+  harness.type('new ');
+  let seen = '';
+  harness.tabs.apply((state) => {
+    seen = state.doc.toString();
+    return {};
+  });
+  assert.equal(seen, 'new alpha');
+});
+
+test('apply does nothing while no tab is shown', () => {
+  const harness = createHarness();
+  let called = false;
+  harness.tabs.apply(() => {
+    called = true;
+    return { changes: { from: 0, insert: 'x' } };
+  });
+  assert.equal(called, false);
+  assert.equal(harness.view.state.doc.toString(), '');
+});

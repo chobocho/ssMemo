@@ -2,7 +2,7 @@
 import type { ImportMode } from './app/backup.ts';
 import { createBackupActions } from './app/backupActions.ts';
 import { readBuildId } from './app/buildInfo.ts';
-import { COMMAND_GROUPS, bindCommands } from './app/commandTable.ts';
+import { COMMAND_GROUPS, SYMBOL_COMMAND_IDS, bindCommands, iconOf } from './app/commandTable.ts';
 import type { CommandId } from './app/commandTable.ts';
 import { createCommandRegistry } from './app/commands.ts';
 import type { Command } from './app/commands.ts';
@@ -28,6 +28,7 @@ import { formatShortcut } from './app/shortcut.ts';
 import type { LanguageSetting, Settings } from './app/settings.ts';
 import { adjacentTabId, createTabManager } from './app/tabManager.ts';
 import { createWorkspace } from './app/workspace.ts';
+import { insertDivider, insertText } from './editor/editorActions.ts';
 import { mountEditorTabs } from './editor/editorTabs.ts';
 import { createSearchPhrases } from './editor/searchPhrases.ts';
 import type { MessageKey } from './i18n/en.ts';
@@ -356,6 +357,15 @@ async function start(win: Window): Promise<void> {
     win.location.reload();
   };
 
+  // Edits made from a button or the menu leave the focus there; typing should go on in the memo.
+  const editInPlace = (build: Parameters<typeof editor.apply>[0]): void => {
+    editor.apply(build);
+    editor.focus();
+  };
+  const symbolCommands = Object.fromEntries(
+    SYMBOL_COMMAND_IDS.map((id) => [id, () => editInPlace((state) => insertText(state, iconOf(id)))]),
+  ) as Record<(typeof SYMBOL_COMMAND_IDS)[number], () => void>;
+
   const groupLabelKeys = new Map<string, MessageKey>(COMMAND_GROUPS.map((group) => [group.id, group.labelKey]));
   // Every command except the menu itself, for narrow screens where the toolbar shows only a few.
   const showMenu = (): void => {
@@ -393,6 +403,8 @@ async function start(win: Window): Promise<void> {
       'move.end': () => editor.goToEnd(),
       'move.pageUp': () => editor.pageUp(),
       'move.pageDown': () => editor.pageDown(),
+      'insert.divider': () => editInPlace(insertDivider),
+      ...symbolCommands,
       'view.toggleWrap': { run: toggleLineWrapping, isOn: () => settings.lineWrapping },
       'view.fontSmaller': () => stepFontSize(-1),
       'view.fontLarger': () => stepFontSize(1),
