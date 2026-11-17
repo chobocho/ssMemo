@@ -1,0 +1,18 @@
+{
+  "name": "ssmemo2",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Single-file HTML5 memo app (TypeScript + CodeMirror 6) that runs on air-gapped networks",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "check": "tsc -p tsconfig.test.json",
+    "test": "node --test \"test/unit/**/*.test.ts\""
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "typescript": "~6.0"
+  }
+}
