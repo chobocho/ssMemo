@@ -367,6 +367,58 @@ test('an opened file is stored once it is edited and comes back after a reload',
   reloaded.close();
 });
 
+/** Opens the menu and picks the command with the given label. */
+async function pickFromMenu(page: Page, label: string): Promise<void> {
+  toolbarButton(page, 'Menu').click();
+  await wait(50);
+  const item = [...topDialog(page).querySelectorAll<HTMLElement>('.command-item')].find(
+    (candidate) => candidate.querySelector('.command-label')?.textContent === label,
+  );
+  assert.ok(item, `the menu has no command labelled ${label}`);
+  item.click();
+  await wait(50);
+}
+
+async function pickChoice(page: Page, label: string): Promise<void> {
+  const choice = [...topDialog(page).querySelectorAll<HTMLElement>('.choice')].find((candidate) => candidate.textContent === label);
+  assert.ok(choice, `no choice labelled ${label}`);
+  choice.click();
+  await wait(100);
+}
+
+test('a file read with the wrong encoding can be read again with another one', async () => {
+  const page = await openPage({ factory: new FakeIndexedDbFactory() });
+  const statusBar = (): string => page.document.querySelector('.status-bar')?.textContent ?? '';
+  const korean = String.fromCharCode(0xc548, 0xb155);
+  toolbarButton(page, 'Open file').click();
+  await chooseFiles(page, [new page.window.File([new Uint8Array([0xbe, 0xc8, 0xb3, 0xe7, 0x0d, 0x0a, 0x61])], 'legacy.txt')]);
+  assert.match(statusBar(), /CP949 · CRLF$/);
+
+  await pickFromMenu(page, 'Encoding');
+  assert.equal(topDialog(page).querySelector('.choice[aria-pressed="true"]')?.textContent, 'CP949');
+  await pickChoice(page, 'UTF-8');
+  assert.match(statusBar(), /UTF-8 · CRLF$/);
+  assert.equal(page.editorText()?.includes(korean), false);
+  assert.equal(page.noticeTexts().length, 1);
+  assert.match(page.noticeTexts()[0] ?? '', /legacy\.txt.*UTF-8/);
+
+  await pickFromMenu(page, 'Encoding');
+  await pickChoice(page, 'CP949');
+  assert.match(statusBar(), /CP949 · CRLF$/);
+  assert.equal(page.editorText()?.startsWith(korean), true);
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
+test('the encoding of a memo cannot be changed, and the user is told why', async () => {
+  const page = await openPage({ factory: await seededFactory() });
+  await pickFromMenu(page, 'Encoding');
+  assert.equal(page.document.querySelector('dialog[open]'), null);
+  assert.equal(page.noticeTexts().length, 1);
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
 test('?safe starts in temporary mode without loading the stored memos', async () => {
   const page = await openPage({ factory: await seededFactory(), url: `${PAGE_URL}?safe` });
   assert.deepEqual(page.errors, []);

@@ -1,6 +1,7 @@
 // Turns what the workspace and the storage report into the text shown to the user.
 // Kept apart from the DOM code so the mapping can be tested and stays in one place.
 import type { MessageKey } from '../i18n/en.ts';
+import type { Eol, TextFormat } from '../lib/textFile.ts';
 import type { Translate } from '../i18n/i18n.ts';
 import type { StorageMode, TemporaryReason } from '../storage/openStorage.ts';
 import type { AutosaveState } from './autosave.ts';
@@ -58,6 +59,10 @@ export function describeFileNotice(notice: FileNotice, t: Translate): string {
       return t('notice.fileUnreadable', { name: notice.fileName });
     case 'file-garbled':
       return t('notice.fileGarbled', { name: notice.fileName, encoding: notice.encoding });
+    case 'encoding-not-a-file':
+      return t('notice.encodingNotFile');
+    case 'encoding-locked':
+      return t('notice.encodingLocked');
   }
 }
 
@@ -96,14 +101,23 @@ export function formatTimestamp(iso: string, locale: string, timeZone?: string):
 }
 
 const STATUS_SEPARATOR = ' · ';
+// Technical names, the same in every language.
+const EOL_LABELS: Readonly<Record<Eol, string>> = { lf: 'LF', crlf: 'CRLF', cr: 'CR' };
+const BOM_SUFFIX = ' BOM';
 
-/** The status bar text for the visible memo; empty while there is none. */
-export function formatEditorStats(stats: EditorStats | undefined, t: Translate): string {
+/**
+ * The status bar text for the visible memo; empty while there is none. `format` is given for a
+ * tab that shows a file, whose encoding and line ending are then shown at the end.
+ */
+export function formatEditorStats(stats: EditorStats | undefined, t: Translate, format?: TextFormat): string {
   if (!stats) return '';
   const parts = [t('statusbar.position', { line: stats.cursorLine, column: stats.cursorColumn })];
   if (stats.selectedCharacters > 0) {
     parts.push(t('statusbar.selection', { count: stats.selectedCharacters }));
   }
   parts.push(t('statusbar.size', { characters: stats.characters, lines: stats.lines }));
+  if (format) {
+    parts.push(`${format.encoding}${format.hasBom ? BOM_SUFFIX : ''}`, EOL_LABELS[format.eol]);
+  }
   return parts.join(STATUS_SEPARATOR);
 }

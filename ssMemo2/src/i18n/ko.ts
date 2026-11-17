@@ -16,6 +16,7 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'command.newMemo': '새 메모',
   'command.manageMemos': '메모 목록',
   'command.openFile': '파일 열기',
+  'command.encoding': '인코딩',
   'command.closeTab': '탭 닫기',
   'command.nextTab': '다음 탭',
   'command.previousTab': '이전 탭',
@@ -69,7 +70,9 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'notice.fileTooLarge': '{max}MB보다 큰 파일은 열 수 없습니다: {name}',
   'notice.fileNotText': '텍스트 파일이 아니어서 열지 않았습니다: {name}',
   'notice.fileUnreadable': '파일을 읽지 못했습니다: {name}',
-  'notice.fileGarbled': '{name} 파일을 {encoding} 인코딩으로 읽었는데 글자가 깨져 보입니다.',
+  'notice.fileGarbled': '{name} 파일을 {encoding} 인코딩으로 읽었는데 글자가 깨져 보입니다. 메뉴 ☰ → 🔤 인코딩에서 다른 인코딩으로 다시 읽어 보세요.',
+  'notice.encodingNotFile': '인코딩은 이 기기에서 연 파일에서만 바꿀 수 있습니다.',
+  'notice.encodingLocked': '인코딩은 파일을 연 직후, 편집하기 전에만 바꿀 수 있습니다. 다르게 읽으려면 파일을 다시 여세요.',
 
   'file.loading': '{name} 여는 중…',
 

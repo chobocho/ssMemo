@@ -72,6 +72,12 @@ function createHarness(storage: StoragePort = createMemoryStorage(), maxTabs?: n
       },
       getText: (tabId) => texts.get(tabId),
       getCursor: (tabId) => cursors.get(tabId),
+      // Like the real editor: new content, cursor at the start, and no edit is reported.
+      replace(tabId, text) {
+        if (!texts.has(tabId)) return;
+        texts.set(tabId, text);
+        cursors.set(tabId, 0);
+      },
       remove(tabId) {
         texts.delete(tabId);
         cursors.delete(tabId);
@@ -694,4 +700,106 @@ test('a file name that cannot be a title is fitted, and the source keeps the rea
   await harness.workspace.flushAll();
   const sources = (await harness.storage.listDocuments()).documents.map((meta) => meta.source?.fileName).sort();
   assert.deepEqual(sources, ['   ', longName]);
+});
+
+// --- the visible document and its encoding -----------------------------------
+
+const FILE_BYTES = new Uint8Array([0xbe, 0xc8, 0xb3, 0xe7]);
+
+test('getActiveDocument describes a memo tab as having no file', async () => {
+  const harness = createHarness(await storageWithTwoMemos());
+  await harness.workspace.start();
+  assert.deepEqual(harness.workspace.getActiveDocument(), {
+    tabId: harness.visibleTab(),
+    title: 'newer memo',
+    source: undefined,
+    originalBytes: undefined,
+  });
+});
+
+test('getActiveDocument describes a freshly opened file with its source and bytes', async () => {
+  const harness = createHarness();
+  await harness.workspace.start();
+  harness.workspace.openFile({ text: 'file text', source: FILE_SOURCE, bytes: FILE_BYTES });
+  const active = harness.workspace.getActiveDocument();
+  assert.equal(active?.title, 'notes.txt');
+  assert.deepEqual(active?.source, FILE_SOURCE);
+  assert.equal(active?.originalBytes, FILE_BYTES);
+});
+
+test('the bytes of a file are let go as soon as its text is edited', async () => {
+  const harness = createHarness();
+  await harness.workspace.start();
+  harness.workspace.openFile({ text: 'file text', source: FILE_SOURCE, bytes: FILE_BYTES });
+  harness.type('file text, edited');
+  const active = harness.workspace.getActiveDocument();
+  assert.equal(active?.originalBytes, undefined);
+  assert.deepEqual(active?.source, FILE_SOURCE);
+});
+
+test('a file restored from an earlier visit has its source but no bytes', async () => {
+  const storage = createMemoryStorage();
+  const first = createHarness(storage);
+  await first.workspace.start();
+  first.workspace.openFile({ text: 'v1', source: FILE_SOURCE, bytes: FILE_BYTES });
+  first.type('v2');
+  await first.workspace.flushAll();
+
+  const second = createHarness(storage);
+  await second.workspace.start();
+  const active = second.workspace.getActiveDocument();
+  assert.deepEqual(active?.source, FILE_SOURCE);
+  assert.equal(active?.originalBytes, undefined);
+});
+
+test('redecode replaces the text and the source of an untouched file without storing anything', async () => {
+  const harness = createHarness();
+  await harness.workspace.start();
+  harness.workspace.openFile({ text: 'garbled', source: FILE_SOURCE, bytes: FILE_BYTES });
+  const tabId = harness.visibleTab() ?? '';
+  const utf8Source: DocumentSource = { ...FILE_SOURCE, encoding: 'UTF-8' };
+
+  assert.equal(harness.workspace.redecode(tabId, 'readable', utf8Source), true);
+  assert.equal(harness.visibleText(), 'readable');
+  const active = harness.workspace.getActiveDocument();
+  assert.deepEqual(active?.source, utf8Source);
+  // Still the same bytes, so yet another encoding can be tried.
+  assert.equal(active?.originalBytes, FILE_BYTES);
+  await harness.advance(ONE_HOUR_MS);
+  assert.equal(harness.workspace.hasUnsavedChanges(), false);
+  assert.deepEqual((await harness.storage.listDocuments()).documents, []);
+});
+
+test('after redecode, the first edit stores the new text with the new source', async () => {
+  const harness = createHarness();
+  await harness.workspace.start();
+  harness.workspace.openFile({ text: 'garbled', source: FILE_SOURCE, bytes: FILE_BYTES });
+  const utf8Source: DocumentSource = { ...FILE_SOURCE, encoding: 'UTF-8' };
+  harness.workspace.redecode(harness.visibleTab() ?? '', 'readable', utf8Source);
+  harness.type('readable, edited');
+  await harness.workspace.flushAll();
+  const { documents } = await harness.storage.listDocuments();
+  assert.deepEqual(documents[0]?.source, utf8Source);
+  assert.deepEqual(await stored(harness.storage), [['notes.txt', 'readable, edited']]);
+});
+
+test('redecode is refused once the file was edited, so the edits are not thrown away', async () => {
+  const harness = createHarness();
+  await harness.workspace.start();
+  harness.workspace.openFile({ text: 'file text', source: FILE_SOURCE, bytes: FILE_BYTES });
+  harness.type('my edits');
+  assert.equal(harness.workspace.redecode(harness.visibleTab() ?? '', 'another decoding', FILE_SOURCE), false);
+  assert.equal(harness.visibleText(), 'my edits');
+});
+
+test('redecode is refused for a memo, a file without bytes and an unknown tab', async () => {
+  const harness = createHarness(await storageWithTwoMemos());
+  await harness.workspace.start();
+  assert.equal(harness.workspace.redecode(harness.visibleTab() ?? '', 'text', FILE_SOURCE), false);
+  assert.equal(harness.visibleText(), 'newer text');
+
+  harness.workspace.openFile({ text: 'file text', source: FILE_SOURCE });
+  assert.equal(harness.workspace.redecode(harness.visibleTab() ?? '', 'text', FILE_SOURCE), false);
+  assert.equal(harness.visibleText(), 'file text');
+  assert.equal(harness.workspace.redecode('no-such-tab', 'text', FILE_SOURCE), false);
 });

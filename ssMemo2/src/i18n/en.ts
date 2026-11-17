@@ -15,6 +15,7 @@ export const en = {
   'command.newMemo': 'New memo',
   'command.manageMemos': 'Memo list',
   'command.openFile': 'Open file',
+  'command.encoding': 'Encoding',
   'command.closeTab': 'Close tab',
   'command.nextTab': 'Next tab',
   'command.previousTab': 'Previous tab',
@@ -70,7 +71,10 @@ export const en = {
   'notice.fileTooLarge': 'Files larger than {max} MB cannot be opened: {name}',
   'notice.fileNotText': 'Not a text file, so it was not opened: {name}',
   'notice.fileUnreadable': 'The file could not be read: {name}',
-  'notice.fileGarbled': '{name} was read as {encoding}, but the text looks garbled.',
+  'notice.fileGarbled': '{name} was read as {encoding}, but the text looks garbled. Try another one: Menu ☰ → 🔤 Encoding.',
+  'notice.encodingNotFile': 'Only a file opened from this device has an encoding to change.',
+  'notice.encodingLocked':
+    'The encoding can be changed only right after opening a file, before editing it. Open the file again to read it differently.',
 
   'file.loading': 'Opening {name}…',
 

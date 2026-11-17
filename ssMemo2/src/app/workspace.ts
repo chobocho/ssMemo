@@ -31,6 +31,7 @@ export interface WorkspaceEditor {
   show(tabId: string, initialText: string, initialCursor?: number): void;
   getText(tabId: string): string | undefined;
   getCursor(tabId: string): number | undefined;
+  replace(tabId: string, text: string): void;
   remove(tabId: string): void;
 }
 
@@ -55,6 +56,18 @@ export interface OpenedFile {
   text: string;
   /** The file's name and the form it is in, so it can be written back the same way. */
   source: DocumentSource;
+  /** The file as it was read, so it can be decoded again if the encoding was guessed wrong. */
+  bytes?: Uint8Array;
+}
+
+/** What the visible tab holds, for the commands that deal with files. */
+export interface ActiveDocument {
+  tabId: string;
+  title: string;
+  /** Present when the tab shows a file, whether opened just now or restored from an earlier visit. */
+  source: DocumentSource | undefined;
+  /** The file's bytes; only for as long as the text is exactly what was decoded from them. */
+  originalBytes: Uint8Array | undefined;
 }
 
 export type CloseResult =
@@ -74,6 +87,12 @@ export interface Workspace {
    * files that are merely looked at leave nothing behind. Returns false at the tab limit.
    */
   openFile(file: OpenedFile): boolean;
+  getActiveDocument(): ActiveDocument | undefined;
+  /**
+   * Replaces the text of a file tab with another decoding of the same bytes. Refused (false) once
+   * the tab was edited, because the edits would be lost, and for tabs that are not fresh files.
+   */
+  redecode(tabId: string, text: string, source: DocumentSource): boolean;
   activateTab(tabId: string): void;
   /**
    * Saves the tab's pending changes and closes it. If they cannot be saved the tab stays open and
@@ -102,6 +121,8 @@ interface OpenMemo {
   title: string;
   /** For an opened file without a stored document yet: what its first save has to record. */
   source: DocumentSource | undefined;
+  /** The opened file's bytes, kept until the first edit so another encoding can be tried. */
+  originalBytes: Uint8Array | undefined;
   /** Text and cursor the editor starts from when the tab is shown for the first time. */
   initialText: string;
   initialCursor: number;
@@ -117,6 +138,7 @@ interface TabContent {
   /** Present when the tab shows a stored document. */
   meta?: DocumentMeta;
   source?: DocumentSource;
+  originalBytes?: Uint8Array;
   cursor?: number;
 }
 
@@ -200,6 +222,7 @@ export function createWorkspace(options: WorkspaceOptions): Workspace {
       meta: content.meta,
       title,
       source: content.source,
+      originalBytes: content.originalBytes,
       initialText: content.text,
       initialCursor: content.cursor ?? 0,
       saveState: undefined,
@@ -322,9 +345,31 @@ export function createWorkspace(options: WorkspaceOptions): Workspace {
     openFile(file) {
       saveActiveTab();
       const title = toValidTitle(file.source.fileName, options.defaultTitle);
-      if (!addTab({ title, text: file.text, source: file.source })) return false;
+      if (!addTab({ title, text: file.text, source: file.source, originalBytes: file.bytes })) return false;
       showActiveTab();
       persistSession();
+      return true;
+    },
+
+    getActiveDocument() {
+      const memo = activeMemo();
+      if (!memo) return undefined;
+      return {
+        tabId: memo.tabId,
+        title: memo.title,
+        // Once the document is stored, its metadata is what the next save writes.
+        source: memo.meta ? memo.meta.source : memo.source,
+        originalBytes: memo.originalBytes,
+      };
+    },
+
+    redecode(tabId, text, source) {
+      const memo = memos.get(tabId);
+      // The bytes are there only while the text is untouched, which also means nothing was stored
+      // yet: there is no document to update, only what the first save will write.
+      if (!memo?.originalBytes || memo.meta) return false;
+      memo.source = source;
+      editor.replace(tabId, text);
       return true;
     },
 
@@ -375,7 +420,12 @@ export function createWorkspace(options: WorkspaceOptions): Workspace {
     },
 
     handleEdit(tabId) {
-      memos.get(tabId)?.autosave.notifyChange();
+      const memo = memos.get(tabId);
+      if (!memo) return;
+      // From here on another decoding would discard what the user typed; the bytes (as large as
+      // the file) are of no further use.
+      memo.originalBytes = undefined;
+      memo.autosave.notifyChange();
     },
 
     async flushAll() {

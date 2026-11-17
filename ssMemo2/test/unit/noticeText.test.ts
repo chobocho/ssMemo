@@ -103,6 +103,27 @@ test('formatEditorStats shows nothing when there is no document', () => {
   assert.equal(formatEditorStats(undefined, t), '');
 });
 
+test('formatEditorStats ends with the encoding and line ending of a file', () => {
+  const stats = { characters: 10, lines: 1, cursorLine: 1, cursorColumn: 1, selectedCharacters: 0 };
+  assert.equal(
+    formatEditorStats(stats, t, { encoding: 'CP949', eol: 'crlf', hasBom: false }),
+    'Ln 1, Col 1 · 10 characters · 1 lines · CP949 · CRLF',
+  );
+  assert.equal(
+    formatEditorStats(stats, t, { encoding: 'UTF-8', eol: 'lf', hasBom: true }),
+    'Ln 1, Col 1 · 10 characters · 1 lines · UTF-8 BOM · LF',
+  );
+  assert.match(formatEditorStats(stats, t, { encoding: 'UTF-16BE', eol: 'cr', hasBom: false }), /UTF-16BE · CR$/);
+  assert.equal(formatEditorStats(undefined, t, { encoding: 'UTF-8', eol: 'lf', hasBom: false }), '');
+});
+
+test('describeFileNotice explains why an encoding cannot be changed', () => {
+  const notAFile = describeFileNotice({ kind: 'encoding-not-a-file' }, t);
+  const locked = describeFileNotice({ kind: 'encoding-locked' }, t);
+  assert.ok(notAFile.length > 0 && locked.length > 0);
+  assert.notEqual(notAFile, locked);
+});
+
 test('describeFileNotice names the file in every message', () => {
   const notices = [
     { kind: 'file-too-large', fileName: 'big.log', maxBytes: 10 * 1024 * 1024 },

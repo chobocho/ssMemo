@@ -24,6 +24,8 @@ import { adjacentTabId, createTabManager } from './app/tabManager.ts';
 import { createWorkspace } from './app/workspace.ts';
 import { mountEditorTabs } from './editor/editorTabs.ts';
 import { createTranslator, resolveLocale } from './i18n/i18n.ts';
+import { TEXT_ENCODINGS } from './lib/encoding.ts';
+import type { TextEncoding } from './lib/encoding.ts';
 import { isSafeModeRequested, openStorage } from './storage/openStorage.ts';
 import type { DocumentMeta } from './storage/storagePort.ts';
 import { createAppShell } from './ui/appShell.ts';
@@ -146,7 +148,7 @@ async function start(win: Window): Promise<void> {
         editedSinceStart = true;
         workspace.handleEdit(tabId);
       },
-      onViewUpdate: () => statusBar.setText(formatEditorStats(editor.getStats(), t)),
+      onViewUpdate: () => statusBar.setText(formatEditorStats(editor.getStats(), t, workspace.getActiveDocument()?.source)),
     },
     settings.lineWrapping,
   );
@@ -176,6 +178,14 @@ async function start(win: Window): Promise<void> {
   const localFiles = createLocalFiles({
     openFile: (file) => workspace.openFile(file),
     onNotice: (notice) => notices.show(describeFileNotice(notice, t)),
+    getActiveDocument: () => workspace.getActiveDocument(),
+    redecode: (tabId, text, source) => workspace.redecode(tabId, text, source),
+    chooseEncoding: (current) =>
+      modals.choose<TextEncoding>(
+        t('command.encoding'),
+        TEXT_ENCODINGS.map((encoding) => ({ label: encoding, value: encoding })),
+        current,
+      ),
     showLoading: (fileName) => modals.busy(t('file.loading', { name: fileName })),
     yieldToUi: () => nextPaint(win),
   });
@@ -304,6 +314,7 @@ async function start(win: Window): Promise<void> {
   const commands = createCommandRegistry([
     { id: 'memo.manage', labelKey: 'command.manageMemos', icon: '📋', shortcuts: ['Alt-o'], run: showMemoManager },
     { id: 'file.open', labelKey: 'command.openFile', icon: '📂', shortcuts: ['Mod-o'], run: () => void openLocalFiles() },
+    { id: 'file.encoding', labelKey: 'command.encoding', icon: '🔤', shortcuts: [], run: () => void localFiles.changeEncoding() },
     { id: 'memo.new', labelKey: 'command.newMemo', icon: '➕', shortcuts: ['Alt-n'], run: () => workspace.newMemo() },
     { id: 'tab.close', labelKey: 'command.closeTab', icon: '✕', shortcuts: ['Alt-w'], run: closeActiveTab },
     { id: 'tab.next', labelKey: 'command.nextTab', icon: '▶', shortcuts: ['Alt-PageDown'], run: () => stepTab(1) },

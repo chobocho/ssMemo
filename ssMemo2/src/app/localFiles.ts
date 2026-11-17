@@ -4,7 +4,8 @@
 import { looksGarbled } from '../lib/encoding.ts';
 import type { TextEncoding } from '../lib/encoding.ts';
 import { looksBinary, readTextFile } from '../lib/textFile.ts';
-import type { OpenedFile } from './workspace.ts';
+import type { DocumentSource } from '../storage/storagePort.ts';
+import type { ActiveDocument, OpenedFile } from './workspace.ts';
 
 /** Larger files are refused: neither the editor nor the browser storage is meant for them. */
 export const MAX_FILE_BYTES = 10 * 1024 * 1024;
@@ -26,12 +27,21 @@ export type FileNotice =
   | { kind: 'file-not-text'; fileName: string }
   | { kind: 'file-unreadable'; fileName: string }
   /** The file was opened, but the text suggests the encoding was guessed wrong. */
-  | { kind: 'file-garbled'; fileName: string; encoding: TextEncoding };
+  | { kind: 'file-garbled'; fileName: string; encoding: TextEncoding }
+  /** The encoding was to be changed, but the visible tab is a memo, not a file. */
+  | { kind: 'encoding-not-a-file' }
+  /** The encoding can no longer be changed: the file's bytes are gone or the text was edited. */
+  | { kind: 'encoding-locked' };
 
 export interface LocalFilesOptions {
   /** Shows a decoded file in a tab; false if no more tabs can be opened (see Workspace.openFile). */
   openFile(file: OpenedFile): boolean;
   onNotice(notice: FileNotice): void;
+  getActiveDocument(): ActiveDocument | undefined;
+  /** Replaces a tab's text with another decoding of its file (see Workspace.redecode). */
+  redecode(tabId: string, text: string, source: DocumentSource): boolean;
+  /** Lets the user pick an encoding; `current` is the one in use. Resolves undefined if they back out. */
+  chooseEncoding(current: TextEncoding): Promise<TextEncoding | undefined>;
   /** Shows that `fileName` is being opened. Returns the function that removes the indicator. */
   showLoading(fileName: string): () => void;
   /** Resolves once the browser had a chance to draw and to handle input. */
@@ -41,6 +51,8 @@ export interface LocalFilesOptions {
 export interface LocalFiles {
   /** Opens each file in a tab of its own, in the order given. Never rejects. */
   openFiles(files: readonly PickedFile[]): Promise<void>;
+  /** Asks for another encoding and reads the visible file again with it. Never rejects. */
+  changeEncoding(): Promise<void>;
 }
 
 type OpenOutcome = 'opened' | 'skipped' | 'no-room';
@@ -75,7 +87,7 @@ export function createLocalFiles(options: LocalFilesOptions): LocalFiles {
       await pause();
       const { text, format } = readTextFile(bytes);
       await pause();
-      if (!options.openFile({ text, source: { fileName: file.name, ...format } })) return 'no-room';
+      if (!options.openFile({ text, source: { fileName: file.name, ...format }, bytes })) return 'no-room';
       if (looksGarbled(text)) {
         onNotice({ kind: 'file-garbled', fileName: file.name, encoding: format.encoding });
       }
@@ -94,6 +106,39 @@ export function createLocalFiles(options: LocalFilesOptions): LocalFiles {
       for (const file of files) {
         // Without a free tab there is no point in reading the rest.
         if ((await openOne(file)) === 'no-room') break;
+      }
+    },
+
+    async changeEncoding() {
+      const active = options.getActiveDocument();
+      if (!active?.source) {
+        onNotice({ kind: 'encoding-not-a-file' });
+        return;
+      }
+      const { source, originalBytes: bytes, tabId } = active;
+      if (!bytes) {
+        onNotice({ kind: 'encoding-locked' });
+        return;
+      }
+      const encoding = await options.chooseEncoding(source.encoding);
+      if (encoding === undefined || encoding === source.encoding) return;
+
+      const isLarge = bytes.length >= LOADING_INDICATOR_BYTES;
+      const hideLoading = isLarge ? options.showLoading(source.fileName) : undefined;
+      try {
+        if (isLarge) await options.yieldToUi();
+        const { text, format } = readTextFile(bytes, encoding);
+        if (isLarge) await options.yieldToUi();
+        if (!options.redecode(tabId, text, { fileName: source.fileName, ...format })) {
+          // Edited while the dialog was open.
+          onNotice({ kind: 'encoding-locked' });
+          return;
+        }
+        if (looksGarbled(text)) {
+          onNotice({ kind: 'file-garbled', fileName: source.fileName, encoding });
+        }
+      } finally {
+        hideLoading?.();
       }
     },
   };

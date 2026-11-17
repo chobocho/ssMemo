@@ -13,6 +13,14 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 12:26] 인코딩 전환과 깨짐 안내 (4.4)</h2>
+<ul>
+<li><b>기획:</b> 메뉴의 🔤 인코딩으로 같은 바이트를 다른 인코딩으로 다시 읽는다. 원본 바이트는 첫 편집 전까지만 메모리에 두며, 편집했거나 복원된 파일은 거절하고 이유를 알린다. 상태 줄 끝에 인코딩·BOM·줄바꿈을 표시.</li>
+<li><b>TC:</b> 정상 — 재디코딩 후 본문·source 교체, 실행 취소 이력 초기화, 첫 편집 때 새 source로 저장. 경계 — 메모 탭, 바이트 없는 탭, 대화상자가 열린 사이 편집, 같은 인코딩 선택, 큰 파일의 로딩 표시.</li>
+<li><b>개발:</b> <code>src/app/localFiles.ts</code>, <code>workspace.ts</code>, <code>noticeText.ts</code>, <code>src/editor/editorTabs.ts</code>, <code>src/main.ts</code>, <code>src/i18n/en.ts</code>, <code>ko.ts</code>, 테스트 5개 파일</li>
+<li><b>검증:</b> 단위 531 passed, 빌드 34 passed, 0 failed</li>
+</ul>
+
 <h2>[2026-11-17 12:22] 명령 메뉴 (4.10)</h2>
 <ul>
 <li><b>기획:</b> 파일·백업 명령이 늘면 접힌 화면에서 툴바가 넘친다. ☰ 버튼(Alt+M)이 모든 명령을 아이콘·이름·단축키와 함께 보여 주고, 줄바꿈·글자 크기·언어 버튼은 넓은 화면의 툴바에만 남긴다.</li>

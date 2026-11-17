@@ -2,7 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { LOADING_INDICATOR_BYTES, MAX_FILE_BYTES, createLocalFiles } from '../../src/app/localFiles.ts';
 import type { FileNotice, LocalFiles, PickedFile } from '../../src/app/localFiles.ts';
-import type { OpenedFile } from '../../src/app/workspace.ts';
+import type { ActiveDocument, OpenedFile } from '../../src/app/workspace.ts';
+import type { TextEncoding } from '../../src/lib/encoding.ts';
+import type { DocumentSource } from '../../src/storage/storagePort.ts';
 
 const UTF8_BOM = [0xef, 0xbb, 0xbf];
 // "an-nyeong" in CP949; not valid UTF-8.
@@ -15,6 +17,15 @@ interface Harness {
   notices: FileNotice[];
   /** Everything that happened, in order: "show a.txt", "yield", "read a.txt", "open a.txt", "hide a.txt". */
   events: string[];
+  /** What the workspace reports as the visible tab; a test sets it. */
+  active: { document: ActiveDocument | undefined };
+  /** The encoding the user picks in the dialog; undefined backs out. */
+  answer: { encoding: TextEncoding | undefined };
+  /** Encodings the dialog was opened with as the current one. */
+  asked: TextEncoding[];
+  redecoded: { tabId: string; text: string; source: DocumentSource }[];
+  /** Whether the workspace accepts a new decoding. */
+  redecodeAllowed: { value: boolean };
   /** A file whose declared size can differ from its content, as for a file changed after it was picked. */
   file(name: string, content: readonly number[] | string, declaredSize?: number): PickedFile;
   /** A file that cannot be read. */
@@ -25,7 +36,22 @@ function createHarness(tabLimit = Number.POSITIVE_INFINITY): Harness {
   const opened: OpenedFile[] = [];
   const notices: FileNotice[] = [];
   const events: string[] = [];
+  const active: Harness['active'] = { document: undefined };
+  const answer: Harness['answer'] = { encoding: undefined };
+  const asked: TextEncoding[] = [];
+  const redecoded: Harness['redecoded'] = [];
+  const redecodeAllowed = { value: true };
   const files = createLocalFiles({
+    getActiveDocument: () => active.document,
+    redecode(tabId, text, source) {
+      if (!redecodeAllowed.value) return false;
+      redecoded.push({ tabId, text, source });
+      return true;
+    },
+    async chooseEncoding(current) {
+      asked.push(current);
+      return answer.encoding;
+    },
     openFile(file) {
       if (opened.length >= tabLimit) return false;
       events.push(`open ${file.source.fileName}`);
@@ -46,6 +72,11 @@ function createHarness(tabLimit = Number.POSITIVE_INFINITY): Harness {
     opened,
     notices,
     events,
+    active,
+    answer,
+    asked,
+    redecoded,
+    redecodeAllowed,
     file(name, content, declaredSize) {
       const bytes = typeof content === 'string' ? new TextEncoder().encode(content) : new Uint8Array(content);
       return {
@@ -84,7 +115,7 @@ test('each file is decoded and opened, in the order given', async () => {
     harness.file('legacy.txt', [...CP949_WORD, 0x0a]),
     harness.file('plain.md', '# title\n'),
   ]);
-  assert.deepEqual(harness.opened, [
+  assert.deepEqual(harness.opened.map(({ text, source }) => ({ text, source })), [
     { text: 'a\r\nb', source: { fileName: 'windows.txt', encoding: 'UTF-8', eol: 'crlf', hasBom: true } },
     { text: '\uC548\uB155\n', source: { fileName: 'legacy.txt', encoding: 'CP949', eol: 'lf', hasBom: false } },
     { text: '# title\n', source: { fileName: 'plain.md', encoding: 'UTF-8', eol: 'lf', hasBom: false } },
@@ -95,7 +126,8 @@ test('each file is decoded and opened, in the order given', async () => {
 test('an empty file opens as an empty tab', async () => {
   const harness = createHarness();
   await harness.files.openFiles([harness.file('empty.txt', [])]);
-  assert.deepEqual(harness.opened, [{ text: '', source: { fileName: 'empty.txt', encoding: 'UTF-8', eol: 'lf', hasBom: false } }]);
+  assert.deepEqual(harness.opened.map((file) => file.source), [{ fileName: 'empty.txt', encoding: 'UTF-8', eol: 'lf', hasBom: false }]);
+  assert.equal(harness.opened[0]?.text, '');
 });
 
 test('a file over the size limit is refused without being read', async () => {
@@ -190,4 +222,102 @@ test('the loading indicator is removed when no tab is left for the file', async 
   const harness = createHarness(0);
   await harness.files.openFiles([harness.file('large.txt', 'x', LOADING_INDICATOR_BYTES)]);
   assert.equal(harness.events.at(-1), 'hide large.txt');
+});
+
+test('an opened file comes with its bytes, so it can be decoded again', async () => {
+  const harness = createHarness();
+  await harness.files.openFiles([harness.file('legacy.txt', CP949_WORD)]);
+  assert.deepEqual([...(harness.opened[0]?.bytes ?? [])], CP949_WORD);
+});
+
+// --- changing the encoding --------------------------------------------------
+
+const CP949_SOURCE: DocumentSource = { fileName: 'legacy.txt', encoding: 'CP949', eol: 'lf', hasBom: false };
+
+function fileTab(bytes: readonly number[] | undefined, source: DocumentSource = CP949_SOURCE): ActiveDocument {
+  return { tabId: 'tab-1', title: source.fileName, source, originalBytes: bytes ? new Uint8Array(bytes) : undefined };
+}
+
+test('changeEncoding reads the same bytes again with the chosen encoding', async () => {
+  const harness = createHarness();
+  // UTF-16LE text without a byte order mark: "a", CR, LF, "b".
+  harness.active.document = fileTab([0x61, 0x00, 0x0d, 0x00, 0x0a, 0x00, 0x62, 0x00]);
+  harness.answer.encoding = 'UTF-16LE';
+  await harness.files.changeEncoding();
+  assert.deepEqual(harness.asked, ['CP949']);
+  assert.deepEqual(harness.redecoded, [
+    { tabId: 'tab-1', text: 'a\r\nb', source: { fileName: 'legacy.txt', encoding: 'UTF-16LE', eol: 'crlf', hasBom: false } },
+  ]);
+  assert.deepEqual(harness.notices, []);
+});
+
+test('changeEncoding does nothing when the user backs out or picks the encoding already in use', async () => {
+  const harness = createHarness();
+  harness.active.document = fileTab(CP949_WORD);
+  await harness.files.changeEncoding();
+  harness.answer.encoding = 'CP949';
+  await harness.files.changeEncoding();
+  assert.deepEqual(harness.redecoded, []);
+  assert.deepEqual(harness.notices, []);
+});
+
+test('changeEncoding explains that a memo has no encoding to change', async () => {
+  const harness = createHarness();
+  harness.active.document = { tabId: 'tab-1', title: 'memo', source: undefined, originalBytes: undefined };
+  await harness.files.changeEncoding();
+  assert.deepEqual(harness.notices, [{ kind: 'encoding-not-a-file' }]);
+  assert.deepEqual(harness.asked, []);
+
+  harness.notices.length = 0;
+  harness.active.document = undefined;
+  await harness.files.changeEncoding();
+  assert.deepEqual(harness.notices, [{ kind: 'encoding-not-a-file' }]);
+});
+
+test('changeEncoding explains that an edited or restored file cannot be read again', async () => {
+  const harness = createHarness();
+  harness.active.document = fileTab(undefined);
+  harness.answer.encoding = 'UTF-8';
+  await harness.files.changeEncoding();
+  assert.deepEqual(harness.notices, [{ kind: 'encoding-locked' }]);
+  // Asking for an encoding first and refusing afterwards would be a wasted question.
+  assert.deepEqual(harness.asked, []);
+});
+
+test('changeEncoding reports it when the workspace refuses the new text', async () => {
+  // The tab was edited while the dialog was open.
+  const harness = createHarness();
+  harness.active.document = fileTab(CP949_WORD);
+  harness.answer.encoding = 'UTF-8';
+  harness.redecodeAllowed.value = false;
+  await harness.files.changeEncoding();
+  assert.deepEqual(harness.notices, [{ kind: 'encoding-locked' }]);
+});
+
+test('changeEncoding hints at trying again when the result looks garbled', async () => {
+  const harness = createHarness();
+  harness.active.document = fileTab(CP949_WORD);
+  harness.answer.encoding = 'UTF-8';
+  await harness.files.changeEncoding();
+  assert.equal(harness.redecoded.length, 1);
+  assert.deepEqual(harness.notices, [{ kind: 'file-garbled', fileName: 'legacy.txt', encoding: 'UTF-8' }]);
+});
+
+test('changeEncoding shows the loading indicator for a large file and removes it afterwards', async () => {
+  const harness = createHarness();
+  harness.active.document = fileTab([...new Uint8Array(LOADING_INDICATOR_BYTES).fill(0x61)]);
+  harness.answer.encoding = 'UTF-8';
+  await harness.files.changeEncoding();
+  assert.equal(harness.events[0], 'show legacy.txt');
+  assert.equal(harness.events[1], 'yield');
+  assert.equal(harness.events.at(-1), 'hide legacy.txt');
+  assert.equal(harness.redecoded.length, 1);
+});
+
+test('changeEncoding of a small file shows no indicator', async () => {
+  const harness = createHarness();
+  harness.active.document = fileTab(CP949_WORD);
+  harness.answer.encoding = 'Johab';
+  await harness.files.changeEncoding();
+  assert.deepEqual(harness.events, []);
 });

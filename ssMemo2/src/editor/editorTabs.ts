@@ -23,7 +23,7 @@ export interface EditorTabsOptions {
   lineWrappingEffect(enabled: boolean): StateEffect<unknown>;
   /** Initial line-wrapping setting. */
   lineWrapping: boolean;
-  /** Called after another tab became the visible one. */
+  /** Called after the visible document was exchanged: another tab is shown, or its text was replaced. */
   onShow?: () => void;
 }
 
@@ -36,6 +36,12 @@ export interface EditorTabs {
   show(tabId: string, initialText: string, initialCursor?: number): void;
   /** Current text of a tab, whether visible or not; undefined if the tab is unknown. */
   getText(tabId: string): string | undefined;
+  /**
+   * Gives a tab entirely new content, as when its file is read again with another encoding.
+   * The undo history is dropped (it belongs to the old text) and the cursor moves to the start.
+   * Does nothing for a tab that was never shown.
+   */
+  replace(tabId: string, text: string): void;
   /** Forgets a tab. If it is the visible one, another tab has to be shown next. */
   remove(tabId: string): void;
   getActiveTabId(): string | undefined;
@@ -86,6 +92,19 @@ export function createEditorTabs(view: EditorViewPort, options: EditorTabsOption
     getText(tabId) {
       const state = tabId === activeTabId ? view.state : states.get(tabId);
       return state?.doc.toString();
+    },
+
+    replace(tabId, text) {
+      if (tabId !== activeTabId && !states.has(tabId)) return;
+      // A new state rather than a change to the old one: undo must not lead back into the text
+      // that is being discarded.
+      const state = options.createState(text, lineWrapping);
+      states.set(tabId, state);
+      // The remembered scroll position was measured on the old text.
+      scrollPositions.delete(tabId);
+      if (tabId !== activeTabId) return;
+      view.setState(state);
+      options.onShow?.();
     },
 
     remove(tabId) {

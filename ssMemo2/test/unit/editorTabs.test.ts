@@ -239,3 +239,79 @@ test('getStats describes the visible tab, and is undefined before any tab is sho
   harness.view.dispatch({ selection: { anchor: 5 } });
   assert.deepEqual(harness.tabs.getStats(), { characters: 7, lines: 2, cursorLine: 2, cursorColumn: 2, selectedCharacters: 0 });
 });
+
+// --- replace ----------------------------------------------------------------
+
+test('replace gives the visible tab new text and forgets its undo history', () => {
+  const harness = createHarness();
+  harness.tabs.show('a', 'decoded wrongly');
+  harness.type('x');
+  harness.tabs.replace('a', 'decoded correctly');
+  assert.equal(harness.view.state.doc.toString(), 'decoded correctly');
+  assert.equal(harness.tabs.getText('a'), 'decoded correctly');
+  assert.equal(harness.tabs.getCursor('a'), 0);
+  // Undoing back into the old text would mix two decodings of the same file.
+  assert.equal(harness.undo(), false);
+  assert.equal(harness.view.state.doc.toString(), 'decoded correctly');
+});
+
+test('replace works on a tab in the background without showing it', () => {
+  const harness = createHarness();
+  harness.tabs.show('a', 'alpha');
+  harness.tabs.show('b', 'beta');
+  harness.tabs.replace('a', 'alpha, read again');
+  assert.equal(harness.view.state.doc.toString(), 'beta');
+  assert.equal(harness.tabs.getText('a'), 'alpha, read again');
+  harness.tabs.show('a', 'ignored');
+  assert.equal(harness.view.state.doc.toString(), 'alpha, read again');
+  // The scroll position belonged to the old text.
+  assert.deepEqual(harness.restoredScrolls, []);
+});
+
+test('replace keeps the line-wrapping setting', () => {
+  const harness = createHarness();
+  const wraps = (): boolean =>
+    harness.view.state.facet(EditorView.contentAttributes).some((entry) => typeof entry === 'object' && entry.class === 'cm-lineWrapping');
+  harness.tabs.show('a', 'text');
+  harness.tabs.setLineWrapping(false);
+  harness.tabs.replace('a', 'new text');
+  assert.equal(wraps(), false);
+});
+
+test('replace ignores a tab that was never shown', () => {
+  const harness = createHarness();
+  harness.tabs.show('a', 'alpha');
+  harness.tabs.replace('unknown', 'text');
+  assert.equal(harness.tabs.getText('unknown'), undefined);
+  assert.equal(harness.view.state.doc.toString(), 'alpha');
+});
+
+test('replace reports that the visible content changed, a background replace does not', () => {
+  let shown = 0;
+  const view = {
+    state: createEditorState(''),
+    setState(state: EditorState) {
+      view.state = state;
+    },
+    dispatch(spec: TransactionSpec) {
+      view.state = view.state.update(spec).state;
+    },
+    scrollSnapshot: () => scrollMarker.of(0),
+    requestMeasure: () => undefined,
+  };
+  const tabs = createEditorTabs(view, {
+    createState: (text, lineWrapping) => createEditorState(text, { lineWrapping }),
+    lineWrappingEffect,
+    lineWrapping: true,
+    onShow: () => {
+      shown += 1;
+    },
+  });
+  tabs.show('a', 'alpha');
+  tabs.show('b', 'beta');
+  const before = shown;
+  tabs.replace('b', 'beta 2');
+  assert.equal(shown, before + 1);
+  tabs.replace('a', 'alpha 2');
+  assert.equal(shown, before + 1);
+});
