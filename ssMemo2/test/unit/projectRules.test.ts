@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { listFiles, rootDir } from '../helpers/projectFiles.ts';
 import {
+  findCodeMirrorImports,
   findGlobalWrites,
   findHangulLines,
   findInlineCoordinateWrites,
@@ -24,6 +25,8 @@ const PIXEL_ALLOWED_FILES: readonly string[] = ['src/styles/tokens.css'];
 // This file holds deliberately broken import fixtures for the checker tests below.
 const IMPORT_SCAN_SKIPPED_FILES: readonly string[] = ['test/unit/projectRules.test.ts'];
 const TEST_FILE_SUFFIX = '.test.ts';
+// The single module allowed to import CodeMirror packages.
+const CODEMIRROR_ENTRY_FILE = 'src/editor/cm6.ts';
 
 /** Runs a line-based checker over files and returns "path:line" for every hit. */
 function scan(files: readonly string[], findLines: (source: string) => number[]): string[] {
@@ -179,6 +182,31 @@ test('stylesheets use dynamic viewport units instead of vh', () => {
 
 test('the page template has no inline event handlers', () => {
   assert.deepEqual(scan(listFiles('src', ['.html']), findInlineEventHandlers), []);
+});
+
+test('findCodeMirrorImports reports imports of editor packages', () => {
+  const source = [
+    "import { EditorState } from '@codemirror/state';",
+    "import type { Tree } from '@lezer/common';",
+    "import { readBuildId } from './app/buildInfo.ts';",
+    "export { EditorView } from '@codemirror/view';",
+  ].join('\n');
+  assert.deepEqual(findCodeMirrorImports(source), ['@codemirror/state', '@lezer/common', '@codemirror/view']);
+});
+
+test('findCodeMirrorImports ignores other packages and relative imports', () => {
+  assert.deepEqual(findCodeMirrorImports("import { build } from 'esbuild';\nimport { a } from './a.ts';"), []);
+});
+
+test('only the editor entry module imports CodeMirror packages', () => {
+  // One import point shows exactly what the bundle takes from CodeMirror and keeps the rest of
+  // the app independent of how those packages are split up.
+  const files = listFiles('src', ['.ts']).filter((file) => file !== CODEMIRROR_ENTRY_FILE);
+  const violations = files.flatMap((file) =>
+    findCodeMirrorImports(readFileSync(join(rootDir, file), 'utf8')).map((specifier) => `${file}: ${specifier}`),
+  );
+  assert.deepEqual(violations, []);
+  assert.equal(findCodeMirrorImports(readFileSync(join(rootDir, CODEMIRROR_ENTRY_FILE), 'utf8')).length > 0, true);
 });
 
 test('every file in the test folders matches the runner glob', () => {

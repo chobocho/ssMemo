@@ -13,6 +13,15 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 04:09] CodeMirror 6 편집기 마운트 (1.2)</h2>
+<ul>
+<li><b>기획:</b> <code>@codemirror/state</code>·<code>view</code>·<code>commands</code>만 번들하고 <code>cm6.ts</code> 한 곳에서만 import. 줄번호·실행 취소·자동 줄바꿈·기본 키맵을 켜고, 크기는 CSS 변수로만 지정.</li>
+<li><b>TC:</b> 정상 — 텍스트 보존, 실행 취소·다시 실행, 줄바꿈 설정, 기본 키 바인딩. 경계 — 빈 문서, CRLF·CR 혼합 입력, 변경 없는 문서의 실행 취소, 다른 모듈의 CodeMirror import 금지, 번들 내 state·view 사본이 1개인지.</li>
+<li><b>개발:</b> <code>src/editor/cm6.ts</code>, <code>src/editor/editorSetup.ts</code>, <code>src/main.ts</code>, <code>src/ui/appShell.ts</code>, <code>src/styles/tokens.css</code>, <code>scripts/selfContained.ts</code>, <code>test/unit/editorSetup.test.ts</code>, <code>test/manual/checklist.md</code> 외 6개 파일</li>
+<li><b>검증:</b> 단위 104 passed, 0 failed · 빌드 16 passed, 0 failed · tsc 오류 없음 · 산출물 285,080바이트</li>
+<li><b>비고:</b> 화면은 jsdom(레이아웃 없음)에서 예외 없이 마운트되는 것만 확인. CodeMirror의 SVG 네임스페이스 문자열을 허용 목록에 추가.</li>
+</ul>
+
 <h2>[2026-11-17 04:05] 디자인 토큰과 반응형 레이아웃 셸 (1.1)</h2>
 <ul>
 <li><b>기획:</b> M0 실측(펼친 폴드 약 580 CSS px, DPR 3.19)에 맞춰 폭 분기를 30em·52.5em으로 확정. 헤더·본문·하단이 <code>100dvh</code>를 채우고 진단 정보는 하단 접이식으로 이동.</li>

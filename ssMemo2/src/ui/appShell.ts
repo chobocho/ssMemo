@@ -3,6 +3,8 @@
 
 export interface AppShell {
   element: HTMLElement;
+  /** Main area; the editor is mounted here and fills it. */
+  editorHost: HTMLElement;
   /** Area below the main area; holds the collapsible diagnostics. */
   footer: HTMLElement;
 }
@@ -25,5 +27,5 @@ export function createAppShell(doc: Document, title: string): AppShell {
   footer.className = 'app-footer';
 
   element.append(header, main, footer);
-  return { element, footer };
+  return { element, editorHost: main, footer };
 }

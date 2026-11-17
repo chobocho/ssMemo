@@ -13,7 +13,10 @@ export interface HtmlParts {
 
 // URL literals that may appear in bundled JS because they are identifiers, not fetch targets.
 // Add an entry only together with the dependency that needs it, and say why.
-export const ALLOWED_URL_LITERALS: readonly string[] = [];
+export const ALLOWED_URL_LITERALS: readonly string[] = [
+  // SVG XML namespace, passed to createElementNS by CodeMirror's view; a name, never fetched.
+  'http://www.w3.org/2000/svg',
+];
 
 // Attributes whose value the browser fetches or navigates to.
 const URL_ATTRIBUTE_PATTERN = /\b(src|href|srcset|poster|action)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/gi;

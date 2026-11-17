@@ -8,6 +8,11 @@
   --font-size-title: 1.125rem;
   --line-height-base: 1.5;
 
+  /* Editor text. Monospace keeps columns aligned, as in ssMemoWeb; generic family only. */
+  --editor-font-family: monospace;
+  --editor-font-size: 0.875rem;
+  --editor-line-height: 1.7;
+
   /* Smallest comfortable touch target (44 CSS px at the default font size). */
   --touch-target: 2.75rem;
   --border-width: 1px;

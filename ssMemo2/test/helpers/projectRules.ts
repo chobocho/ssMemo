@@ -11,6 +11,9 @@ const HANGUL_PATTERN = /[ᄀ-ᇿ㄰-㆏ꥠ-꥿가-퟿]/;
 const RELATIVE_IMPORT_PATTERN = /(?:\bfrom|\bimport)\s*\(?\s*['"](\.{1,2}\/[^'"]*)['"]/g;
 const TS_EXTENSION = '.ts';
 
+// Imports of the editor library and the parser packages it is built on.
+const CODEMIRROR_IMPORT_PATTERN = /(?:\bfrom|\bimport)\s*\(?\s*['"]((?:@codemirror|@lezer)\/[^'"]+)['"]/g;
+
 // Module-level code is written at column 0; anything indented lives inside a function or block.
 const TOP_LEVEL_MUTABLE_PATTERN = /^(?:export\s+)?(?:let|var)\s/;
 
@@ -71,4 +74,9 @@ export function findStaticViewportHeightUnits(source: string): number[] {
 
 export function findInlineEventHandlers(source: string): number[] {
   return matchingLines(source, INLINE_EVENT_HANDLER_PATTERN);
+}
+
+/** Specifiers of CodeMirror packages imported by `source`. */
+export function findCodeMirrorImports(source: string): string[] {
+  return [...source.matchAll(CODEMIRROR_IMPORT_PATTERN)].map((match) => match[1] ?? '');
 }

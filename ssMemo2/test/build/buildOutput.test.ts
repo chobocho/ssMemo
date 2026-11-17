@@ -94,6 +94,19 @@ test('every file under src is part of the build', () => {
   assert.deepEqual(unused, []);
 });
 
+test('the bundle contains exactly one copy of each CodeMirror core package', () => {
+  // Two copies of @codemirror/state or view break the editor at runtime (extensions from one
+  // copy are not recognized by the other), and npm can install nested duplicates silently.
+  for (const name of ['state', 'view']) {
+    const copies = new Set(
+      result.sourceFiles
+        .filter((file) => file.includes(`/@codemirror/${name}/`))
+        .map((file) => file.slice(0, file.indexOf(`/@codemirror/${name}/`))),
+    );
+    assert.deepEqual([...copies], ['node_modules'], `@codemirror/${name} copies`);
+  }
+});
+
 test('output stays within the size budget', () => {
   const bytes = Buffer.byteLength(result.html, 'utf8');
   assert.equal(bytes > 0, true);
