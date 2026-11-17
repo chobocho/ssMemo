@@ -211,3 +211,37 @@ export function looksGarbled(text: string): boolean {
   const sample = text.slice(0, GARBLED_SAMPLE_LENGTH);
   return countReplacementCharacters(sample) > sample.length * GARBLED_RATIO;
 }
+
+/** The encodings encodeText can produce. Browsers have no encoder for the legacy Korean ones. */
+const WRITABLE_ENCODINGS = ['UTF-8', 'UTF-16LE', 'UTF-16BE'] as const;
+export type WritableEncoding = (typeof WRITABLE_ENCODINGS)[number];
+
+const BYTES_PER_UTF16_UNIT = 2;
+
+export function isWritableEncoding(encoding: TextEncoding): encoding is WritableEncoding {
+  return (WRITABLE_ENCODINGS as readonly TextEncoding[]).includes(encoding);
+}
+
+/** O(n) time. `withBom` puts the encoding's byte order mark in front. */
+export function encodeText(text: string, encoding: WritableEncoding, withBom: boolean): Uint8Array {
+  const mark = withBom ? (BYTE_ORDER_MARKS[encoding] ?? []) : [];
+  if (encoding === 'UTF-8') {
+    const encoded = new TextEncoder().encode(text);
+    if (mark.length === 0) return encoded;
+    const result = new Uint8Array(mark.length + encoded.length);
+    result.set(mark);
+    result.set(encoded, mark.length);
+    return result;
+  }
+  // A JavaScript string already is a sequence of UTF-16 code units; only the byte order differs.
+  const result = new Uint8Array(mark.length + text.length * BYTES_PER_UTF16_UNIT);
+  result.set(mark);
+  const lowByteFirst = encoding === 'UTF-16LE';
+  let offset = mark.length;
+  for (let i = 0; i < text.length; i++) {
+    const unit = text.charCodeAt(i);
+    result[offset++] = lowByteFirst ? unit & 0xff : unit >> 8;
+    result[offset++] = lowByteFirst ? unit >> 8 : unit & 0xff;
+  }
+  return result;
+}

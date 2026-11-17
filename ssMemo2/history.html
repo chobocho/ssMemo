@@ -13,6 +13,15 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 12:08] BOM·줄바꿈 감지와 보존 (4.2)</h2>
+<ul>
+<li><b>기획:</b> 파일을 열 때 인코딩·BOM·줄바꿈(LF/CRLF/CR)을 기록하고, 저장할 때 그대로 되살린다. 쓸 수 없는 CP949·조합형은 UTF-8(BOM 없음)로 바꾸되 줄바꿈은 유지.</li>
+<li><b>TC:</b> 정상 — UTF-8·UTF-16LE/BE × BOM 유무 × 줄바꿈 3종을 읽고 다시 쓰면 바이트가 같음. 경계 — 빈 파일, 줄바꿈 혼용(다수결), CR 바로 뒤 CRLF, 이모지, 이진 파일 판별(앞 8KB의 0 바이트).</li>
+<li><b>개발:</b> <code>src/lib/textFile.ts</code>, <code>src/lib/encoding.ts</code>, <code>test/unit/textFile.test.ts</code>, <code>test/build/buildOutput.test.ts</code></li>
+<li><b>검증:</b> 단위 438 passed, 빌드 28 passed, 0 failed</li>
+<li><b>비고:</b> 줄바꿈이 섞인 파일은 저장하면 가장 많은 쪽으로 통일된다.</li>
+</ul>
+
 <h2>[2026-11-17 12:06] 인코딩 디코더 이식 (4.1)</h2>
 <ul>
 <li><b>기획:</b> ssMemoWeb의 <code>encoding.js</code>를 옮기고 BOM(UTF-8, UTF-16LE/BE) 판별을 추가. 조합형 판별은 바이트 범위 추정 대신 CP949로 읽어 깨질 때만 조합형과 비교.</li>
