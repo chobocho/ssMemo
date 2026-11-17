@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { buildHtml } from '../../scripts/buildHtml.ts';
 import type { BuildResult } from '../../scripts/buildHtml.ts';
 import { ALLOWED_URL_LITERALS, findExternalReferences } from '../../scripts/selfContained.ts';
+import { listFiles } from '../helpers/projectFiles.ts';
 
 // Upper bound for the whole page. CodeMirror 6 alone is ~310 KB minified, so this leaves
 // room for the app while still catching an accidental heavy dependency.
@@ -84,6 +85,13 @@ test('building twice yields identical output', async () => {
   const second = await buildHtml();
   assert.equal(second.html, result.html);
   assert.equal(second.buildId, result.buildId);
+});
+
+test('every file under src is part of the build', () => {
+  // A source file the build never reads is dead code; TODO.md requires deleting it at once.
+  const built = new Set(result.sourceFiles);
+  const unused = listFiles('src', ['']).filter((file) => !built.has(file));
+  assert.deepEqual(unused, []);
 });
 
 test('output stays within the size budget', () => {

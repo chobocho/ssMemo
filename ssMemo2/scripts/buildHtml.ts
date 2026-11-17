@@ -32,6 +32,8 @@ const SHARED_BUNDLE_OPTIONS: BuildOptions = {
   sourcemap: false,
   // Problems are raised as exceptions below; esbuild must not print on its own.
   logLevel: 'silent',
+  // Lists the files each bundle actually read, which is how unused sources are detected.
+  metafile: true,
 };
 
 const SCRIPT_BUNDLE_OPTIONS: BuildOptions = {
@@ -52,9 +54,17 @@ export interface BuildResult {
   html: string;
   /** `<package version>+<content hash>`, also embedded in the page as a meta tag. */
   buildId: string;
+  /** Project-relative paths of every file that went into the page, sorted. */
+  sourceFiles: string[];
 }
 
-async function bundle(options: BuildOptions): Promise<string> {
+interface Bundle {
+  text: string;
+  /** Project-relative paths of the files esbuild read for this bundle. */
+  inputs: string[];
+}
+
+async function bundle(options: BuildOptions): Promise<Bundle> {
   const result = await build(options);
   if (result.warnings.length > 0) {
     const details = result.warnings.map((warning) => warning.text).join('\n- ');
@@ -64,7 +74,7 @@ async function bundle(options: BuildOptions): Promise<string> {
   if (!output || result.outputFiles?.length !== 1) {
     throw new Error(`Expected exactly one bundled file for ${String(options.entryPoints)}`);
   }
-  return output.text.trimEnd();
+  return { text: output.text.trimEnd(), inputs: Object.keys(result.metafile?.inputs ?? {}) };
 }
 
 async function readProjectFile(relativePath: string): Promise<Buffer> {
@@ -92,7 +102,7 @@ function computeBuildId(version: string, contents: readonly string[]): string {
 }
 
 export async function buildHtml(): Promise<BuildResult> {
-  const [js, css, template, favicon, version] = await Promise.all([
+  const [script, style, template, favicon, version] = await Promise.all([
     bundle(SCRIPT_BUNDLE_OPTIONS),
     bundle(STYLE_BUNDLE_OPTIONS),
     readProjectFile(TEMPLATE_PATH).then((buffer) => buffer.toString('utf8')),
@@ -101,6 +111,8 @@ export async function buildHtml(): Promise<BuildResult> {
     readVersion(),
   ]);
 
+  const js = script.text;
+  const css = style.text;
   const buildId = computeBuildId(version, [template, css, js, favicon]);
   const pageValues = {
     FAVICON: `data:image/svg+xml;base64,${favicon}`,
@@ -118,5 +130,6 @@ export async function buildHtml(): Promise<BuildResult> {
     STYLE: prepareInlineStyle(css),
     SCRIPT: prepareInlineScript(js),
   });
-  return { html, buildId };
+  const sourceFiles = [...script.inputs, ...style.inputs, TEMPLATE_PATH, FAVICON_PATH].sort();
+  return { html, buildId, sourceFiles };
 }

@@ -74,7 +74,7 @@ test('js: network and code-loading APIs are reported', () => {
     'new EventSource(u)',
     'navigator.sendBeacon(u)',
     'importScripts("x.js")',
-    'import("./x.js")',
+    'import("x.js")',
     'var a=1;\n//# sourceMappingURL=app.js.map',
   ];
   for (const js of snippets) {

@@ -13,6 +13,15 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 03:47] 프로젝트 규칙 가드 테스트 (0.5)</h2>
+<ul>
+<li><b>기획:</b> TODO.md 0·3·5절 규칙(전역 변수·좌표 하드코딩 금지, 미사용 코드 삭제, 한글은 카탈로그에만)을 사람이 기억하는 대신 테스트로 강제.</li>
+<li><b>TC:</b> 정상 — 각 검사기가 위반 예시를 잡는지, 현재 소스에 위반이 없는지. 경계 — 비교 연산(<code>===</code>)·함수 안 <code>let</code>·<code>dvh</code>·CSS 변수는 허용, 여러 줄 import, 빌드에 안 쓰인 소스 파일 감지.</li>
+<li><b>개발:</b> <code>test/helpers/projectRules.ts</code>, <code>test/helpers/projectFiles.ts</code>, <code>test/unit/projectRules.test.ts</code>, <code>test/build/buildOutput.test.ts</code>, <code>test/unit/selfContained.test.ts</code>, <code>scripts/buildHtml.ts</code></li>
+<li><b>검증:</b> 단위 80 passed, 0 failed · 빌드 15 passed, 0 failed · tsc 오류 없음</li>
+<li><b>비고:</b> 검사기는 파서가 아닌 줄 단위 패턴이라 주석도 검사 대상. 최상위 여부는 들여쓰기로 판단.</li>
+</ul>
+
 <h2>[2026-11-17 03:43] 빌드 스크립트: build.sh와 cp949 build.bat (0.4)</h2>
 <ul>
 <li><b>기획:</b> <code>build.bat</code>은 UTF-8 템플릿에서 cp949 + CRLF로 생성해 편집기·git이 인코딩을 바꾸지 못하게 함. 두 스크립트 모두 대상 폴더를 지우지 않고 <code>index.html</code>만 복사.</li>
