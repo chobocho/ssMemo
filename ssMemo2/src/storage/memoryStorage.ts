@@ -61,5 +61,10 @@ export function createMemoryStorage(): StoragePort {
     async setValue(key, value) {
       values.set(key, copyValue(value));
     },
+
+    async updateValue(key, update) {
+      // Nothing can come in between: `update` runs to its end before any other code does.
+      values.set(key, copyValue(update(copyValue(values.get(key)))));
+    },
   };
 }

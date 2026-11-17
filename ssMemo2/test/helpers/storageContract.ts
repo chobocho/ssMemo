@@ -326,6 +326,63 @@ export function defineStorageContract(label: string, createStorage: () => Promis
     assert.deepEqual(await storage.getValue('session'), { tabs: ['a'] });
   });
 
+  test(`${label}: updateValue starts from undefined for a key that was never set`, async () => {
+    const storage = await createStorage();
+    const seen: unknown[] = [];
+    await storage.updateValue('trash', (current) => {
+      seen.push(current);
+      return ['first'];
+    });
+    assert.deepEqual(seen, [undefined]);
+    assert.deepEqual(await storage.getValue('trash'), ['first']);
+  });
+
+  test(`${label}: updateValue replaces the stored value by what the update makes of it`, async () => {
+    const storage = await createStorage();
+    await storage.setValue('trash', ['first']);
+    await storage.setValue('settings', { language: 'ko' });
+    await storage.updateValue('trash', (current) => [...(current as string[]), 'second']);
+    assert.deepEqual(await storage.getValue('trash'), ['first', 'second']);
+    // Other keys are none of its business.
+    assert.deepEqual(await storage.getValue('settings'), { language: 'ko' });
+  });
+
+  test(`${label}: updates started together are applied one after the other, none is lost`, async () => {
+    const storage = await createStorage();
+    const add = (item: number): Promise<void> =>
+      storage.updateValue('trash', (current) => [...(Array.isArray(current) ? (current as number[]) : []), item]);
+    await Promise.all([add(1), add(2), add(3)]);
+    assert.deepEqual(await storage.getValue('trash'), [1, 2, 3]);
+  });
+
+  test(`${label}: an update that throws changes nothing and is reported`, async () => {
+    const storage = await createStorage();
+    await storage.setValue('trash', ['kept']);
+    await assert.rejects(
+      storage.updateValue('trash', () => {
+        throw new Error('the update went wrong');
+      }),
+    );
+    assert.deepEqual(await storage.getValue('trash'), ['kept']);
+    // The storage is still usable afterwards.
+    await storage.updateValue('trash', () => ['replaced']);
+    assert.deepEqual(await storage.getValue('trash'), ['replaced']);
+  });
+
+  test(`${label}: what an update is handed and what it returns are copies`, async () => {
+    const storage = await createStorage();
+    await storage.setValue('trash', { items: ['a'] });
+    let handed: { items: string[] } | undefined;
+    const returned = { items: ['a', 'b'] };
+    await storage.updateValue('trash', (current) => {
+      handed = current as { items: string[] };
+      return returned;
+    });
+    handed?.items.push('changed after the update');
+    returned.items.push('changed after the update');
+    assert.deepEqual(await storage.getValue('trash'), { items: ['a', 'b'] });
+  });
+
   test(`${label}: values and documents do not share a namespace`, async () => {
     const storage = await createStorage();
     await storage.saveDocument(draft('same-name', 'document text'), NEW_DOCUMENT_REV);

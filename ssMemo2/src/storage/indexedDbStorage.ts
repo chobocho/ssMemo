@@ -340,6 +340,23 @@ function createStorage(database: IDBDatabase, onConnectionLost: () => void): Ind
       });
     },
 
+    updateValue(key, update) {
+      return run(VALUE_STORES, 'readwrite', (transaction, abort) => {
+        const store = transaction.objectStore(KEY_VALUE_STORE);
+        const request = store.get(key);
+        // The reading and the writing share this transaction, and a read-write transaction has
+        // the store to itself, so no other tab's write can land between the two.
+        request.onsuccess = () => {
+          try {
+            store.put({ key, value: update(isRecord(request.result) ? request.result.value : undefined) });
+          } catch (error) {
+            abort(error);
+          }
+        };
+        return (): void => undefined;
+      });
+    },
+
     close() {
       disconnect(false);
     },

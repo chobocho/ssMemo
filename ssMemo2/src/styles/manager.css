@@ -87,7 +87,30 @@
   font-size: var(--font-size-small);
 }
 
+/* An entry of the trash: laid out like .memo-open, but it is not a button. */
+.memo-text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-inline-size: 0;
+  padding: var(--space-1) 0;
+}
+
+/* Says above the trash how long deleted memos are kept. */
+.memo-hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+/* The buttons below a list: on to the trash, and emptying it. */
+.memo-trash,
+.trash-empty {
+  margin-block-start: var(--space-3);
+}
+
 .memo-rename,
+.memo-restore,
 .memo-delete {
   flex: none;
   padding-inline: 0;

@@ -321,6 +321,109 @@ test('a memo can be renamed and deleted from the memo list', async () => {
   page.close();
 });
 
+async function deleteFromMemoList(page: Page, title: string): Promise<void> {
+  toolbarButton(page, 'Memo list').click();
+  await wait(50);
+  const index = [...topDialog(page).querySelectorAll('.memo-title')].findIndex((node) => node.textContent === title);
+  topDialog(page).querySelectorAll<HTMLElement>('.memo-delete')[index]?.click();
+  await wait(50);
+  assert.equal(topDialog(page).textContent?.includes('to the trash'), true);
+  dialogButton(page, 'Move to trash').click();
+  await wait(100);
+}
+
+function listedTitles(page: Page): (string | null)[] {
+  return [...topDialog(page).querySelectorAll('.memo-title')].map((node) => node.textContent);
+}
+
+async function storedTrashText(factory: IDBFactory): Promise<string> {
+  const storage = await openIndexedDbStorage(factory);
+  const value = await storage.getValue('trash');
+  storage.close();
+  return JSON.stringify(value ?? null);
+}
+
+test('a deleted memo waits in the trash, also across a reload, and can be restored', async () => {
+  const factory = await seededFactory();
+  const page = await openPage({ factory });
+  await deleteFromMemoList(page, 'Ideas');
+  assert.deepEqual(page.tabTitles(), ['Shopping']);
+  assert.equal(await storedContent(factory, 'b'), undefined);
+  // The memo list is still open; its trash button leads on to the trash.
+  topDialog(page).querySelector<HTMLElement>('.memo-trash')?.click();
+  await wait(100);
+  assert.equal(page.document.querySelectorAll('dialog[open]').length, 1);
+  assert.deepEqual(listedTitles(page), ['Ideas']);
+  assert.equal(topDialog(page).textContent?.includes('30 days'), true);
+  page.close();
+
+  const reloaded = await openPage({ factory });
+  assert.deepEqual(reloaded.tabTitles(), ['Shopping']);
+  await pickFromMenu(reloaded, 'Trash');
+  await wait(50);
+  assert.deepEqual(listedTitles(reloaded), ['Ideas']);
+  topDialog(reloaded).querySelector<HTMLElement>('.memo-restore')?.click();
+  await wait(200);
+  // Back among the memos, shown in a tab, and the trash has closed.
+  assert.equal(reloaded.document.querySelector('dialog[open]'), null);
+  assert.deepEqual(reloaded.tabTitles(), ['Shopping', 'Ideas']);
+  assert.equal(reloaded.editorText(), 'write more tests');
+  assert.equal(await storedContent(factory, 'b'), 'write more tests');
+  await pickFromMenu(reloaded, 'Trash');
+  await wait(50);
+  assert.equal(topDialog(reloaded).textContent?.includes('The trash is empty.'), true);
+  assert.deepEqual(reloaded.errors, []);
+  reloaded.close();
+});
+
+test('a memo can be deleted from the trash for good, and the trash can be emptied', async () => {
+  const factory = await seededFactory();
+  const storage = await openIndexedDbStorage(factory);
+  await storage.saveDocument({ id: 'c', title: 'Archive', content: 'old notes', createdAt: TIMESTAMP, updatedAt: TIMESTAMP }, NEW_DOCUMENT_REV);
+  storage.close();
+
+  const page = await openPage({ factory });
+  for (const title of ['Ideas', 'Archive']) {
+    await deleteFromMemoList(page, title);
+    // The memo list has no button to close it; a click beside it does that.
+    topDialog(page).click();
+    await wait(50);
+    assert.equal(page.document.querySelector('dialog[open]'), null);
+  }
+  await pickFromMenu(page, 'Trash');
+  await wait(50);
+  assert.deepEqual([...listedTitles(page)].sort(), ['Archive', 'Ideas']);
+
+  // One entry: asked first, then gone, and its text with it.
+  const ideasIndex = listedTitles(page).indexOf('Ideas');
+  topDialog(page).querySelectorAll<HTMLElement>('.memo-delete')[ideasIndex]?.click();
+  await wait(50);
+  assert.equal(topDialog(page).textContent?.includes('cannot be undone'), true);
+  dialogButton(page, 'Delete for good').click();
+  await wait(100);
+  assert.deepEqual(listedTitles(page), ['Archive']);
+  assert.equal((await storedTrashText(factory)).includes('write more tests'), false);
+  assert.equal((await storedTrashText(factory)).includes('old notes'), true);
+
+  // Backing out of the question keeps everything.
+  topDialog(page).querySelector<HTMLElement>('.trash-empty')?.click();
+  await wait(50);
+  dialogButton(page, 'Cancel').click();
+  await wait(100);
+  assert.deepEqual(listedTitles(page), ['Archive']);
+
+  topDialog(page).querySelector<HTMLElement>('.trash-empty')?.click();
+  await wait(50);
+  dialogButton(page, 'Empty the trash').click();
+  await wait(100);
+  assert.equal(topDialog(page).textContent?.includes('The trash is empty.'), true);
+  assert.equal((await storedTrashText(factory)).includes('old notes'), false);
+  // The memo that was never deleted is untouched.
+  assert.equal(await storedContent(factory, 'a'), 'milk');
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
 test('the menu lists the commands and runs the one that is picked', async () => {
   const page = await openPage({ factory: await seededFactory() });
   toolbarButton(page, 'Menu').click();

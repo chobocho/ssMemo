@@ -36,6 +36,7 @@ import type { StorageFacts } from './app/storageDurability.ts';
 import { formatShortcut } from './app/shortcut.ts';
 import type { LanguageSetting, Settings, ThemeSetting } from './app/settings.ts';
 import { adjacentTabId, createTabManager } from './app/tabManager.ts';
+import { TRASH_LIMITS, createTrash } from './app/trash.ts';
 import { createWorkspace } from './app/workspace.ts';
 import {
   getCodeToRun,
@@ -74,6 +75,7 @@ import { createStatusBar } from './ui/statusBar.ts';
 import { createStatusIndicator } from './ui/statusIndicator.ts';
 import { createTabBar } from './ui/tabBar.ts';
 import { createToolbar } from './ui/toolbar.ts';
+import { createTrashList } from './ui/trashList.ts';
 import type { ToolbarTier } from './ui/toolbar.ts';
 
 const APP_NAME = 'ssMemo2';
@@ -272,13 +274,23 @@ async function start(win: Window): Promise<void> {
     statusBar.setText(formatEditorStats(editor.getStats(), t, workspace.getActiveDocument()?.source));
   };
 
+  const trash = createTrash({
+    storage: opened.storage,
+    now: () => new Date(),
+    createId: () => createRandomId(win.crypto),
+  });
+
   const workspace = createWorkspace({
-    store: createDocumentStore({
-      storage: opened.storage,
-      now: () => new Date(),
-      createId: () => createRandomId(win.crypto),
-      conflictCopyTitle: (title) => t('memo.conflictCopyTitle', { title }),
-    }),
+    store: {
+      ...createDocumentStore({
+        storage: opened.storage,
+        now: () => new Date(),
+        createId: () => createRandomId(win.crypto),
+        conflictCopyTitle: (title) => t('memo.conflictCopyTitle', { title }),
+      }),
+      // In the app, deleting a memo means moving it to the trash.
+      remove: (id) => trash.discard(id),
+    },
     sessionStore: createSessionStore(opened.storage),
     tabs,
     editor,
@@ -390,8 +402,40 @@ async function start(win: Window): Promise<void> {
     if (title !== undefined) await workspace.renameMemo(meta.id, title);
   };
   const deleteMemo = async (meta: DocumentMeta): Promise<void> => {
-    const confirmed = await modals.confirm(t('manager.deleteConfirm', { title: meta.title }), t('manager.delete'));
-    if (confirmed) await workspace.deleteMemo(meta.id);
+    const question = t('manager.deleteConfirm', { title: meta.title, days: TRASH_LIMITS.maxAgeDays });
+    if (await modals.confirm(question, t('manager.delete'))) await workspace.deleteMemo(meta.id);
+  };
+  const showTrash = (): void => {
+    void modals.open((close) => ({
+      title: t('command.trash'),
+      content: createTrashList(doc, {
+        labels: {
+          hint: t('trash.hint', { days: TRASH_LIMITS.maxAgeDays, count: TRASH_LIMITS.maxEntries }),
+          loading: t('manager.loading'),
+          empty: t('trash.empty'),
+          failed: t('trash.failed'),
+          emptyAll: t('trash.emptyAll'),
+          restoreOf: (title) => t('trash.restoreOf', { title }),
+          removeOf: (title) => t('trash.removeOf', { title }),
+          details: (memo) => t('trash.details', { time: formatTimestamp(memo.deletedAt, locale), count: memo.length }),
+        },
+        listTrash: () => trash.list(),
+        onRestore: async (memo) => {
+          const meta = await trash.restore(memo.entryId);
+          // Gone from the trash in the meantime (another window, or it just became too old).
+          if (!meta) throw new Error(`Trash entry ${memo.entryId} no longer exists`);
+          await workspace.openMemo(meta.id);
+        },
+        onRemove: async (memo) => {
+          const confirmed = await modals.confirm(t('trash.removeConfirm', { title: memo.title }), t('trash.remove'));
+          if (confirmed) await trash.remove(memo.entryId);
+        },
+        onEmpty: async () => {
+          if (await modals.confirm(t('trash.emptyConfirm'), t('trash.emptyAll'))) await trash.empty();
+        },
+        close: () => close(),
+      }),
+    }));
   };
   const showMemoManager = (): void => {
     void modals.open((close) => ({
@@ -399,6 +443,7 @@ async function start(win: Window): Promise<void> {
       content: createMemoManager(doc, {
         labels: {
           newMemo: t('command.newMemo'),
+          trash: t('command.trash'),
           loading: t('manager.loading'),
           empty: t('manager.empty'),
           failed: t('manager.failed'),
@@ -420,6 +465,7 @@ async function start(win: Window): Promise<void> {
         onNew: () => {
           workspace.newMemo();
         },
+        onTrash: showTrash,
         close: () => close(),
       }),
     }));
@@ -602,6 +648,7 @@ async function start(win: Window): Promise<void> {
     bindCommands({
       'memo.manage': showMemoManager,
       'memo.new': () => workspace.newMemo(),
+      'memo.trash': showTrash,
       'tab.close': closeActiveTab,
       'tab.next': () => stepTab(1),
       'tab.previous': () => stepTab(-1),

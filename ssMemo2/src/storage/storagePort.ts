@@ -159,4 +159,12 @@ export interface StoragePort {
 
   /** `value` must be plain data (objects, arrays, strings, numbers, booleans, null). */
   setValue(key: string, value: unknown): Promise<void>;
+
+  /**
+   * Replaces the value under `key` by what `update` returns for the current one (undefined if the
+   * key was never set), as one step: no other write to that key, from this window or another,
+   * can fall between the reading and the writing. `update` must not wait for anything. If it
+   * throws, nothing is changed and the promise rejects.
+   */
+  updateValue(key: string, update: (current: unknown) => unknown): Promise<void>;
 }

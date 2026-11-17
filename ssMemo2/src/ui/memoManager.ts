@@ -1,10 +1,12 @@
-// The list of stored memos, shown inside a dialog: open one, rename, delete, or start a new one.
+// The list of stored memos, shown inside a dialog: open one, rename, delete, start a new one, or
+// go on to the trash.
 // It only displays and reports; what an action does (prompts, confirmations, storage) is decided
 // by the callbacks it is given.
 import type { DocumentListing, DocumentMeta } from '../storage/storagePort.ts';
 
 export interface MemoManagerLabels {
   newMemo: string;
+  trash: string;
   loading: string;
   empty: string;
   /** Shown when the list could not be read or an action failed. */
@@ -23,6 +25,8 @@ export interface MemoManagerOptions {
   onRename(meta: DocumentMeta): Promise<void>;
   onDelete(meta: DocumentMeta): Promise<void>;
   onNew(): void;
+  /** Shows the deleted memos. */
+  onTrash(): void;
   /** Closes the dialog the manager is shown in. */
   close(): void;
 }
@@ -56,7 +60,17 @@ export function createMemoManager(doc: Document, options: MemoManagerOptions): H
   const list = doc.createElement('ul');
   list.className = 'memo-list';
 
-  element.append(newButton, problem, info, list);
+  const trashButton = doc.createElement('button');
+  trashButton.type = 'button';
+  trashButton.className = 'button memo-trash';
+  trashButton.textContent = `${DELETE_SYMBOL} ${labels.trash}`;
+  trashButton.addEventListener('click', () => {
+    // Closed first: a memo restored from the trash would make this list out of date.
+    options.close();
+    options.onTrash();
+  });
+
+  element.append(newButton, problem, info, list, trashButton);
 
   function createIconButton(className: string, symbol: string, label: string, onClick: () => void): HTMLButtonElement {
     const button = doc.createElement('button');

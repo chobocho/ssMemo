@@ -95,3 +95,18 @@ test('IndexedDbStorage: values are still there after closing and reopening', asy
   assert.deepEqual(await second.getValue('settings'), { language: 'ko' });
   second.close();
 });
+
+test('IndexedDbStorage: two connections updating the same value do not lose each other\'s change', async () => {
+  // Two browser tabs each add to a list at the same moment. With a separate read and write, one
+  // of the additions would be overwritten.
+  const factory = new FakeIndexedDbFactory();
+  const tabA = await openIndexedDbStorage(factory);
+  const tabB = await openIndexedDbStorage(factory);
+  const add = (storage: typeof tabA, item: string): Promise<void> =>
+    storage.updateValue('trash', (current) => [...(Array.isArray(current) ? (current as string[]) : []), item]);
+  await Promise.all([add(tabA, 'from A'), add(tabB, 'from B'), add(tabA, 'from A again')]);
+  const stored = (await tabB.getValue('trash')) as string[];
+  assert.deepEqual([...stored].sort(), ['from A', 'from A again', 'from B']);
+  tabA.close();
+  tabB.close();
+});

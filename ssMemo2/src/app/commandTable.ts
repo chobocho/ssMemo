@@ -25,6 +25,7 @@ type GroupId = (typeof COMMAND_GROUPS)[number]['id'];
 export const COMMAND_DEFINITIONS = [
   { id: 'memo.manage', group: 'memo', labelKey: 'command.manageMemos', icon: '📋', shortcuts: ['Alt-o'] },
   { id: 'memo.new', group: 'memo', labelKey: 'command.newMemo', icon: '➕', shortcuts: ['Alt-n'] },
+  { id: 'memo.trash', group: 'memo', labelKey: 'command.trash', icon: '🗑️', shortcuts: [] },
   { id: 'tab.close', group: 'memo', labelKey: 'command.closeTab', icon: '✕', shortcuts: ['Alt-w'] },
   { id: 'tab.next', group: 'memo', labelKey: 'command.nextTab', icon: '▶', shortcuts: ['Alt-PageDown'] },
   { id: 'tab.previous', group: 'memo', labelKey: 'command.previousTab', icon: '◀', shortcuts: ['Alt-PageUp'] },

@@ -30,6 +30,7 @@ async function createHarness(memos: DocumentMeta[], behaviour: Behaviour = {}): 
   const element = createMemoManager(document, {
     labels: {
       newMemo: 'New memo',
+      trash: 'Trash',
       loading: 'Loading…',
       empty: 'No saved memos yet.',
       failed: 'That did not work.',
@@ -53,6 +54,7 @@ async function createHarness(memos: DocumentMeta[], behaviour: Behaviour = {}): 
       calls.push(`delete:${item.id}`);
     },
     onNew: () => calls.push('new'),
+    onTrash: () => calls.push('trash'),
     close: () => calls.push('close'),
   });
   document.body.append(element);
@@ -111,6 +113,20 @@ test('the new-memo button starts a memo and closes the manager', async () => {
   const harness = await createHarness([meta('a', 'Shopping')]);
   await harness.click('.memo-new');
   assert.deepEqual(harness.calls, ['new', 'close']);
+});
+
+test('the trash button closes the manager and then opens the trash', async () => {
+  // Closed first, so the trash does not open on top of a list that would be out of date.
+  const harness = await createHarness([meta('a', 'Shopping')]);
+  assert.equal(harness.element.querySelector('.memo-trash')?.textContent?.includes('Trash'), true);
+  await harness.click('.memo-trash');
+  assert.deepEqual(harness.calls, ['close', 'trash']);
+});
+
+test('the trash can be reached even when no memo is stored', async () => {
+  const harness = await createHarness([]);
+  await harness.click('.memo-trash');
+  assert.deepEqual(harness.calls, ['close', 'trash']);
 });
 
 test('renaming keeps the manager open and reloads the list', async () => {
