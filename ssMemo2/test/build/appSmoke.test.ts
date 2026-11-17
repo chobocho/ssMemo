@@ -8,7 +8,8 @@ import { IDBFactory as FakeIndexedDbFactory } from 'fake-indexeddb';
 import { JSDOM, VirtualConsole } from 'jsdom';
 import { buildHtml } from '../../scripts/buildHtml.ts';
 import { createSessionStore } from '../../src/app/session.ts';
-import { openIndexedDbStorage } from '../../src/storage/indexedDbStorage.ts';
+import { DATABASE_NAME, openIndexedDbStorage } from '../../src/storage/indexedDbStorage.ts';
+import { readLegacyRecords } from '../../src/storage/legacyDatabase.ts';
 import { NEW_DOCUMENT_REV } from '../../src/storage/storagePort.ts';
 import { installBrowserStandIns } from '../helpers/dom.ts';
 
@@ -322,6 +323,82 @@ test('a memo can be renamed and deleted from the memo list', async () => {
   await wait(100);
   assert.deepEqual(page.tabTitles(), ['Groceries']);
   assert.equal(await storedContent(factory, 'b'), undefined);
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
+/** Puts the database of ssMemoWeb next to the app's own, as on an address where both were used. */
+function addOldAppData(factory: IDBFactory, records: unknown[]): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const request = factory.open('ssMemo', 1);
+    request.onupgradeneeded = () => request.result.createObjectStore('notes', { keyPath: 'key' });
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const database = request.result;
+      const transaction = database.transaction('notes', 'readwrite');
+      for (const record of records) transaction.objectStore('notes').put(record);
+      transaction.oncomplete = () => {
+        database.close();
+        resolve();
+      };
+      transaction.onerror = () => reject(transaction.error);
+    };
+  });
+}
+
+// The title ssMemoWeb gave its first memo, in Korean.
+const OLD_DEFAULT_TITLE = String.fromCharCode(0xae30, 0xbcf8, 0x20, 0xba54, 0xbaa8);
+const OLD_TIME = '2025-06-01T10:00:00.000Z';
+
+test('the memos ssMemoWeb left at the same address are imported, and only once', async () => {
+  const factory = await seededFactory();
+  const oldRecords = [
+    { key: `memo:${OLD_DEFAULT_TITLE}`, content: 'from the old app', updatedAt: OLD_TIME },
+    { key: 'memo:Recipes', content: 'pancakes', updatedAt: OLD_TIME },
+    { key: 'memo:Never used', content: '', updatedAt: OLD_TIME },
+    { key: '__CALC_MEMORY__', content: '{}', updatedAt: OLD_TIME },
+  ];
+  await addOldAppData(factory, oldRecords);
+
+  const page = await openPage({ factory });
+  await pickFromMenu(page, 'Import from ssMemoWeb');
+  await wait(150);
+  // Asked first, with the numbers: two memos, neither of them here yet.
+  assert.match(topDialog(page).textContent ?? '', /2 memo\(s\).* 2 of which/);
+  dialogButton(page, 'Import').click();
+  await wait(200);
+  assert.equal(page.noticeTexts().some((text) => text.includes('Imported 2 memo(s) from ssMemoWeb')), true);
+  assert.deepEqual((await storedTitles(factory)).sort(), ['Ideas', 'Recipes', 'Shopping', OLD_DEFAULT_TITLE].sort());
+  // What is on screen stays; the imported memos wait in the memo list.
+  assert.deepEqual(page.tabTitles(), ['Shopping', 'Ideas']);
+  toolbarButton(page, 'Memo list').click();
+  await wait(100);
+  assert.equal(listedTitles(page).includes('Recipes'), true);
+  topDialog(page).click();
+  await wait(50);
+
+  // A second time there is nothing left to do, and nothing is asked.
+  await pickFromMenu(page, 'Import from ssMemoWeb');
+  await wait(150);
+  assert.equal(page.document.querySelector('dialog[open]'), null);
+  assert.equal(page.noticeTexts().some((text) => text.includes('are here already')), true);
+  assert.equal((await storedTitles(factory)).length, 4);
+
+  // The data of the old app is exactly as it was.
+  const left = (await readLegacyRecords(factory)) ?? [];
+  assert.equal(JSON.stringify([...left].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)))), JSON.stringify([...oldRecords].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)))));
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
+test('where ssMemoWeb left nothing, the import says so and creates no database for it', async () => {
+  const factory = await seededFactory();
+  const page = await openPage({ factory });
+  await pickFromMenu(page, 'Import from ssMemoWeb');
+  await wait(150);
+  assert.equal(page.document.querySelector('dialog[open]'), null);
+  assert.equal(page.noticeTexts().some((text) => text.includes('No memos of ssMemoWeb were found')), true);
+  assert.deepEqual((await factory.databases()).map((info) => info.name), [DATABASE_NAME]);
   assert.deepEqual(page.errors, []);
   page.close();
 });

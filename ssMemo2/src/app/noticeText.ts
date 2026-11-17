@@ -11,6 +11,7 @@ import type { CalcNotice } from './calcActions.ts';
 import type { ShareNotice } from './shareActions.ts';
 import type { BackupNotice, BackupSummary } from './backupActions.ts';
 import type { BackupReminderNotice } from './backupReminder.ts';
+import type { LegacyImportNotice } from './legacyImport.ts';
 import { MAX_TITLE_LENGTH } from './documentStore.ts';
 import type { TitleProblem } from './documentStore.ts';
 import type { FileNotice } from './localFiles.ts';
@@ -153,6 +154,19 @@ export function describeBackupReminder(notice: BackupReminderNotice, t: Translat
   // The command is named by its label in the menu, so the two cannot drift apart.
   const command = t('command.exportBackup');
   return notice.kind === 'backup-never' ? t('notice.backupNever', { command }) : t('notice.backupOld', { days: notice.days, command });
+}
+
+export function describeLegacyImportNotice(notice: LegacyImportNotice, t: Translate): string {
+  switch (notice.kind) {
+    case 'legacy-nothing':
+      return t('notice.legacyNothing');
+    case 'legacy-up-to-date':
+      return t('notice.legacyUpToDate', { count: notice.count });
+    case 'legacy-imported':
+      return t('notice.legacyImported', { added: notice.added });
+    case 'legacy-failed':
+      return t('notice.legacyFailed');
+  }
 }
 
 export function describeShareNotice(notice: ShareNotice, t: Translate): string {

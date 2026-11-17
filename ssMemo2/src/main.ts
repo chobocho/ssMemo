@@ -13,6 +13,7 @@ import { describeEnvironment } from './app/diagnostics.ts';
 import { createDocumentStore, findTitleProblem } from './app/documentStore.ts';
 import { buildHelpGroups } from './app/helpContent.ts';
 import { formatThirdPartyNotices } from './app/licenses.ts';
+import { createLegacyImport } from './app/legacyImport.ts';
 import { createLocalFiles } from './app/localFiles.ts';
 import { findInMemos } from './app/memoSearch.ts';
 import { createPreview } from './app/preview.ts';
@@ -24,6 +25,7 @@ import {
   describeCalcError,
   describeCalcNotice,
   describeFileNotice,
+  describeLegacyImportNotice,
   describeNotice,
   describeShareNotice,
   describeStorage,
@@ -60,6 +62,7 @@ import { CHUNK_DELIMITER, CHUNK_LABEL, DEFAULT_CHUNK_LENGTH } from './lib/chunks
 import { TEXT_ENCODINGS } from './lib/encoding.ts';
 import { escapeHtml, renderMarkdown } from './lib/markdown.ts';
 import type { TextEncoding } from './lib/encoding.ts';
+import { readLegacyRecords } from './storage/legacyDatabase.ts';
 import { isSafeModeRequested, openStorage } from './storage/openStorage.ts';
 import type { DocumentMeta, StoredDocument } from './storage/storagePort.ts';
 import { createAppShell } from './ui/appShell.ts';
@@ -397,6 +400,22 @@ async function start(win: Window): Promise<void> {
     copyTitle: (title) => t('backup.importedCopyTitle', { title }),
   });
 
+  const legacyImport = createLegacyImport({
+    storage: opened.storage,
+    // The property is read only now: where storage is blocked, merely touching it throws.
+    readRecords: async () => readLegacyRecords(win.indexedDB),
+    flushAll: () => workspace.flushAll(),
+    confirm: ({ found, missing }) => modals.confirm(t('legacy.confirm', { found, missing }), t('legacy.accept')),
+    onNotice: (notice) => {
+      // Short confirmations leave by themselves; an explanation stays until it was read.
+      const isConfirmation = notice.kind === 'legacy-imported' || notice.kind === 'legacy-up-to-date';
+      notices.show(describeLegacyImportNotice(notice, t), isConfirmation ? 'info' : 'warning');
+    },
+    now: () => new Date(),
+    createId: () => createRandomId(win.crypto),
+    singleMemoTitle: t('legacy.singleMemoTitle'),
+  });
+
   const openLocalFiles = async (): Promise<void> => {
     await localFiles.openFiles(await fileIo.pickFiles({ multiple: true }));
   };
@@ -720,6 +739,7 @@ async function start(win: Window): Promise<void> {
       'view.fontLarger': () => stepFontSize(1),
       'backup.export': () => void backups.exportBackup(),
       'backup.import': () => void backups.importBackup(),
+      'backup.importLegacy': () => void legacyImport.run(),
       'settings.theme': () => void chooseTheme(),
       'settings.language': () => void chooseLanguage(),
       'help.show': showHelp,

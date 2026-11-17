@@ -10,6 +10,7 @@ import {
   describeCalcNotice,
   describeBackupSummary,
   describeFileNotice,
+  describeLegacyImportNotice,
   describeNotice,
   describeShareNotice,
   describeStorage,
@@ -258,4 +259,17 @@ test('describeBackupReminder says how old the backup is, or that there is none, 
   assert.equal(old.includes('45'), true);
   // Both name the command by the label it has in the menu.
   for (const message of [never, old]) assert.equal(message.includes(en['command.exportBackup']), true, message);
+});
+
+test('describeLegacyImportNotice has words for every outcome of importing from ssMemoWeb', () => {
+  const nothing = describeLegacyImportNotice({ kind: 'legacy-nothing' }, t);
+  const upToDate = describeLegacyImportNotice({ kind: 'legacy-up-to-date', count: 7 }, t);
+  const imported = describeLegacyImportNotice({ kind: 'legacy-imported', added: 3 }, t);
+  const failed = describeLegacyImportNotice({ kind: 'legacy-failed' }, t);
+  assert.equal(new Set([nothing, upToDate, imported, failed]).size, 4);
+  for (const message of [nothing, upToDate, imported, failed]) assert.equal(message.includes('ssMemoWeb'), true, message);
+  assert.equal(upToDate.includes('7'), true);
+  assert.equal(imported.includes('3'), true);
+  // Why nothing was found is not obvious: the old app must have run at this very address.
+  assert.match(nothing, /same address/);
 });

@@ -157,7 +157,7 @@
 - [ ] 반쯤 접은 자세에서 위·아래 화면에 편집기와 미리보기 배치(`device-posture`, viewport segments 미디어 기능; 지원 여부 확인 필요)
 - [x] Web Share(모바일 공유)
 - [x] 백업 알림
-- [ ] ssMemoWeb 구 데이터 가져오기(같은 출처일 때)
+- [x] ssMemoWeb 구 데이터 가져오기(같은 출처일 때)
 - 검토 후 제외: 서비스 워커·PWA 설치(별도 파일이 필요해 "산출물은 index.html 하나" 조건과 충돌)
 
 ## 11. ssMemoWeb에서 가져온 아이디어
