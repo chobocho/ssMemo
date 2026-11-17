@@ -162,6 +162,63 @@ test('typing is saved automatically and survives a reload', async () => {
   reloaded.close();
 });
 
+/** The dialog on top, as far as the page is concerned. */
+function topDialog(page: Page): HTMLDialogElement {
+  const dialog = [...page.document.querySelectorAll<HTMLDialogElement>('dialog[open]')].at(-1);
+  assert.ok(dialog, 'expected an open dialog');
+  return dialog;
+}
+
+test('the memo list opens a memo that is not in a tab yet', async () => {
+  const factory = await seededFactory();
+  const storage = await openIndexedDbStorage(factory);
+  await storage.saveDocument({ id: 'c', title: 'Archive', content: 'old notes', createdAt: TIMESTAMP, updatedAt: TIMESTAMP }, NEW_DOCUMENT_REV);
+  storage.close();
+
+  const page = await openPage({ factory });
+  await page.click('.toolbar button');
+  const listed = [...topDialog(page).querySelectorAll('.memo-title')].map((node) => node.textContent).sort();
+  assert.deepEqual(listed, ['Archive', 'Ideas', 'Shopping']);
+
+  const archive = [...topDialog(page).querySelectorAll<HTMLElement>('.memo-open')].find((node) => node.textContent?.includes('Archive'));
+  assert.ok(archive);
+  archive.click();
+  await wait(100);
+  assert.equal(page.document.querySelector('dialog[open]'), null);
+  assert.deepEqual(page.tabTitles(), ['Shopping', 'Ideas', 'Archive']);
+  assert.equal(page.editorText(), 'old notes');
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
+test('a memo can be renamed and deleted from the memo list', async () => {
+  const factory = await seededFactory();
+  const page = await openPage({ factory });
+  await page.click('.toolbar button');
+
+  // Rename "Shopping": the prompt opens on top of the list.
+  const shoppingIndex = [...topDialog(page).querySelectorAll('.memo-title')].findIndex((node) => node.textContent === 'Shopping');
+  topDialog(page).querySelectorAll<HTMLElement>('.memo-rename')[shoppingIndex]?.click();
+  await wait(50);
+  const input = topDialog(page).querySelector('input');
+  assert.ok(input);
+  input.value = 'Groceries';
+  topDialog(page).querySelector('form')?.dispatchEvent(new page.window.Event('submit', { bubbles: true, cancelable: true }));
+  await wait(100);
+  assert.equal(page.tabTitles().includes('Groceries'), true);
+
+  // Delete "Ideas": the confirmation opens on top of the list.
+  const ideasIndex = [...topDialog(page).querySelectorAll('.memo-title')].findIndex((node) => node.textContent === 'Ideas');
+  topDialog(page).querySelectorAll<HTMLElement>('.memo-delete')[ideasIndex]?.click();
+  await wait(50);
+  [...topDialog(page).querySelectorAll('button')].at(-1)?.click();
+  await wait(100);
+  assert.deepEqual(page.tabTitles(), ['Groceries']);
+  assert.equal(await storedContent(factory, 'b'), undefined);
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
 test('?safe starts in temporary mode without loading the stored memos', async () => {
   const page = await openPage({ factory: await seededFactory(), url: `${PAGE_URL}?safe` });
   assert.deepEqual(page.errors, []);

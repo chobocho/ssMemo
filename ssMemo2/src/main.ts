@@ -2,8 +2,15 @@
 import { readBuildId } from './app/buildInfo.ts';
 import { createCommandRegistry } from './app/commands.ts';
 import { describeEnvironment } from './app/diagnostics.ts';
-import { createDocumentStore } from './app/documentStore.ts';
-import { SAVE_STATE_KEYS, describeNotice, describeStorage, temporaryModeKey } from './app/noticeText.ts';
+import { createDocumentStore, findTitleProblem } from './app/documentStore.ts';
+import {
+  SAVE_STATE_KEYS,
+  describeNotice,
+  describeStorage,
+  describeTitleProblem,
+  formatTimestamp,
+  temporaryModeKey,
+} from './app/noticeText.ts';
 import { createRandomId } from './app/randomId.ts';
 import { createSessionStore } from './app/session.ts';
 import { adjacentTabId, createTabManager } from './app/tabManager.ts';
@@ -11,14 +18,17 @@ import { createWorkspace } from './app/workspace.ts';
 import { mountEditorTabs } from './editor/editorTabs.ts';
 import { createTranslator, resolveLocale } from './i18n/i18n.ts';
 import { isSafeModeRequested, openStorage } from './storage/openStorage.ts';
+import type { DocumentMeta } from './storage/storagePort.ts';
 import { createAppShell } from './ui/appShell.ts';
 import { copyToClipboard } from './ui/clipboard.ts';
 import { createDiagnosticsPanel } from './ui/diagnosticsPanel.ts';
 import { isApplePlatform, readEnvironment } from './ui/environment.ts';
+import { createMemoManager } from './ui/memoManager.ts';
 import { createModals } from './ui/modal.ts';
 import { createNoticeBar } from './ui/noticeBar.ts';
 import { createStatusIndicator } from './ui/statusIndicator.ts';
 import { createTabBar } from './ui/tabBar.ts';
+import { createToolbar } from './ui/toolbar.ts';
 
 const APP_NAME = 'ssMemo2';
 const MOUNT_POINT_ID = 'app';
@@ -116,8 +126,55 @@ async function start(win: Window): Promise<void> {
     if (tabId !== undefined) workspace.activateTab(tabId);
   };
 
+  const renameMemo = async (meta: DocumentMeta): Promise<void> => {
+    const title = await modals.prompt(t('manager.renamePrompt'), {
+      initialValue: meta.title,
+      validate: (value) => {
+        const problem = findTitleProblem(value);
+        return problem ? describeTitleProblem(problem, t) : undefined;
+      },
+    });
+    if (title !== undefined) await workspace.renameMemo(meta.id, title);
+  };
+  const deleteMemo = async (meta: DocumentMeta): Promise<void> => {
+    const confirmed = await modals.confirm(t('manager.deleteConfirm', { title: meta.title }), t('manager.delete'));
+    if (confirmed) await workspace.deleteMemo(meta.id);
+  };
+  const showMemoManager = (): void => {
+    void modals.open((close) => ({
+      title: t('manager.title'),
+      content: createMemoManager(doc, {
+        labels: {
+          newMemo: t('command.newMemo'),
+          loading: t('manager.loading'),
+          empty: t('manager.empty'),
+          failed: t('manager.failed'),
+          renameOf: (title) => t('manager.renameOf', { title }),
+          deleteOf: (title) => t('manager.deleteOf', { title }),
+          details: (meta) => t('manager.details', { time: formatTimestamp(meta.updatedAt, locale), count: meta.length }),
+          corrupt: (count) => t('notice.corruptRecords', { count }),
+        },
+        // Pending edits are written first, so the list shows current sizes and times.
+        listMemos: async () => {
+          await workspace.flushAll();
+          return workspace.listMemos();
+        },
+        onOpen: async (meta) => {
+          await workspace.openMemo(meta.id);
+        },
+        onRename: renameMemo,
+        onDelete: deleteMemo,
+        onNew: () => {
+          workspace.newMemo();
+        },
+        close: () => close(),
+      }),
+    }));
+  };
+
   // Browsers keep Ctrl+T/W/N/Tab for themselves, so tab shortcuts use Alt.
   const commands = createCommandRegistry([
+    { id: 'memo.manage', labelKey: 'command.manageMemos', icon: '📋', shortcuts: ['Alt-o'], run: showMemoManager },
     { id: 'memo.new', labelKey: 'command.newMemo', icon: '➕', shortcuts: ['Alt-n'], run: () => workspace.newMemo() },
     { id: 'tab.close', labelKey: 'command.closeTab', icon: '✕', shortcuts: ['Alt-w'], run: closeActiveTab },
     { id: 'tab.next', labelKey: 'command.nextTab', icon: '▶', shortcuts: ['Alt-PageDown'], run: () => stepTab(1) },
@@ -134,6 +191,10 @@ async function start(win: Window): Promise<void> {
     event.preventDefault();
     command.run();
   });
+
+  // The memo list is the one command with a toolbar button so far; tabs have their own controls.
+  const toolbarCommands = commands.list().filter((command) => command.id === 'memo.manage');
+  shell.header.insertBefore(createToolbar(doc, toolbarCommands, t), status.element);
 
   shell.tabBarHost.append(
     createTabBar(doc, {

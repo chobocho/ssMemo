@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { AutosaveState } from '../../src/app/autosave.ts';
-import { SAVE_STATE_KEYS, describeNotice, describeStorage, temporaryModeKey } from '../../src/app/noticeText.ts';
+import { MAX_TITLE_LENGTH } from '../../src/app/documentStore.ts';
+import { SAVE_STATE_KEYS, describeNotice, describeStorage, describeTitleProblem, formatTimestamp, temporaryModeKey } from '../../src/app/noticeText.ts';
 import { en } from '../../src/i18n/en.ts';
 import { createTranslator } from '../../src/i18n/i18n.ts';
 
@@ -55,4 +56,26 @@ test('describeNotice states the tab limit', () => {
 
 test('describeNotice explains that a memo is gone', () => {
   assert.equal(describeNotice({ kind: 'memo-missing' }, t), en['notice.memoMissing']);
+});
+
+test('describeTitleProblem explains each reason a title is refused', () => {
+  const empty = describeTitleProblem('empty', t);
+  const tooLong = describeTitleProblem('too-long', t);
+  const lineBreak = describeTitleProblem('line-break', t);
+  assert.equal(new Set([empty, tooLong, lineBreak]).size, 3);
+  assert.equal(tooLong.includes(String(MAX_TITLE_LENGTH)), true);
+});
+
+test('formatTimestamp renders a stored time for the given language and time zone', () => {
+  const english = formatTimestamp('2026-03-04T05:06:00.000Z', 'en', 'UTC');
+  const korean = formatTimestamp('2026-03-04T05:06:00.000Z', 'ko', 'UTC');
+  assert.match(english, /2026/);
+  assert.match(english, /5:06/);
+  assert.match(korean, /2026/);
+  assert.notEqual(english, korean);
+});
+
+test('formatTimestamp returns text it cannot parse unchanged', () => {
+  assert.equal(formatTimestamp('not a date', 'en', 'UTC'), 'not a date');
+  assert.equal(formatTimestamp('', 'en', 'UTC'), '');
 });

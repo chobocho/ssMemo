@@ -4,6 +4,8 @@ import type { MessageKey } from '../i18n/en.ts';
 import type { Translate } from '../i18n/i18n.ts';
 import type { StorageMode, TemporaryReason } from '../storage/openStorage.ts';
 import type { AutosaveState } from './autosave.ts';
+import { MAX_TITLE_LENGTH } from './documentStore.ts';
+import type { TitleProblem } from './documentStore.ts';
 import { MAX_TABS } from './tabManager.ts';
 import type { SaveFailureReason, WorkspaceNotice } from './workspace.ts';
 
@@ -50,4 +52,28 @@ export function temporaryModeKey(reason: TemporaryReason | undefined): MessageKe
 /** Storage mode for the diagnostics list; an untranslated identifier, like the other entries. */
 export function describeStorage(opened: { mode: StorageMode; reason?: TemporaryReason }): string {
   return opened.reason ? `${opened.mode} (${opened.reason})` : opened.mode;
+}
+
+/** Why a title the user typed is refused. */
+export function describeTitleProblem(problem: TitleProblem, t: Translate): string {
+  switch (problem) {
+    case 'empty':
+      return t('title.empty');
+    case 'too-long':
+      return t('title.tooLong', { max: MAX_TITLE_LENGTH });
+    case 'line-break':
+      return t('title.lineBreak');
+  }
+}
+
+/**
+ * A stored ISO timestamp in the reader's language and time zone. Text that is not a timestamp
+ * is returned unchanged rather than shown as "Invalid Date".
+ *
+ * @param timeZone defaults to the device's time zone; tests pass a fixed one.
+ */
+export function formatTimestamp(iso: string, locale: string, timeZone?: string): string {
+  const time = Date.parse(iso);
+  if (Number.isNaN(time)) return iso;
+  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short', timeZone }).format(time);
 }

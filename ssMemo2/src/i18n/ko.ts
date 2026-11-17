@@ -14,6 +14,7 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'storage.temporary': '⚠️ 임시 모드',
 
   'command.newMemo': '새 메모',
+  'command.manageMemos': '메모 목록',
   'command.closeTab': '탭 닫기',
   'command.nextTab': '다음 탭',
   'command.previousTab': '이전 탭',
@@ -21,6 +22,21 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'tab.close': '{title} 닫기',
   'tab.closeUnsaved': '이 메모를 저장하지 못했습니다. 그래도 닫을까요? 저장되지 않은 변경 내용은 사라집니다.',
   'tab.closeDiscard': '저장하지 않고 닫기',
+
+  'manager.title': '메모 목록',
+  'manager.loading': '불러오는 중…',
+  'manager.empty': '저장된 메모가 없습니다.',
+  'manager.failed': '작업을 완료하지 못했습니다. 다른 창에서 메모가 바뀌었을 수 있어 목록을 다시 불러왔습니다.',
+  'manager.details': '{time} · {count}자',
+  'manager.renameOf': '{title} 이름 변경',
+  'manager.renamePrompt': '새 제목',
+  'manager.deleteOf': '{title} 삭제',
+  'manager.deleteConfirm': '"{title}" 메모를 삭제할까요? 되돌릴 수 없습니다.',
+  'manager.delete': '삭제',
+
+  'title.empty': '제목을 입력하세요.',
+  'title.tooLong': '제목은 {max}자 이하로 입력하세요.',
+  'title.lineBreak': '제목에는 줄바꿈을 넣을 수 없습니다.',
 
   'modal.confirm': '확인',
   'modal.cancel': '취소',

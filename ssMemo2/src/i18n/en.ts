@@ -13,6 +13,7 @@ export const en = {
   'storage.temporary': '⚠️ Temporary mode',
 
   'command.newMemo': 'New memo',
+  'command.manageMemos': 'Memo list',
   'command.closeTab': 'Close tab',
   'command.nextTab': 'Next tab',
   'command.previousTab': 'Previous tab',
@@ -20,6 +21,21 @@ export const en = {
   'tab.close': 'Close {title}',
   'tab.closeUnsaved': 'This memo could not be saved. Close it anyway? The unsaved changes will be lost.',
   'tab.closeDiscard': 'Close without saving',
+
+  'manager.title': 'Memos',
+  'manager.loading': 'Loading…',
+  'manager.empty': 'No saved memos yet.',
+  'manager.failed': 'That did not work. The memo may have been changed in another window, so the list was reloaded.',
+  'manager.details': '{time} · {count} characters',
+  'manager.renameOf': 'Rename {title}',
+  'manager.renamePrompt': 'New title',
+  'manager.deleteOf': 'Delete {title}',
+  'manager.deleteConfirm': 'Delete "{title}"? This cannot be undone.',
+  'manager.delete': 'Delete',
+
+  'title.empty': 'Enter a title.',
+  'title.tooLong': 'Use at most {max} characters.',
+  'title.lineBreak': 'A title cannot contain a line break.',
 
   'modal.confirm': 'OK',
   'modal.cancel': 'Cancel',

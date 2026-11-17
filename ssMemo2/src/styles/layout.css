@@ -18,7 +18,6 @@
   /* On the cover screen the status moves under the title instead of being cut off. */
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
   column-gap: var(--space-3);
   min-block-size: var(--touch-target);
   padding-inline: var(--page-gutter);

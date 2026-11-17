@@ -1,6 +1,8 @@
 /* Save state and storage badge in the header, and the stack of notices below it. */
 .app-status {
   display: flex;
+  /* Pushed to the far end of the header, away from the title and the toolbar. */
+  margin-inline-start: auto;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-1) var(--space-2);

@@ -43,6 +43,9 @@
   --tab-close-width: 2.25rem;
   --tab-indicator-width: 0.125rem;
 
+  /* Memo list: how tall the list may grow before it scrolls inside the dialog. */
+  --memo-list-max-height: 60dvh;
+
   /* Dialogs: preferred width (never wider than the screen) and how tall they may grow. */
   --modal-width: 28rem;
   --modal-max-height: 85dvh;
