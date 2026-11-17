@@ -212,9 +212,13 @@ async function start(win: Window): Promise<void> {
     showLoading: (fileName) => modals.busy(t('file.loading', { name: fileName })),
     yieldToUi: () => nextPaint(win),
   });
-  installFileDrop(shell.element, {
+  // The whole page takes drops, dialogs included: a file dropped anywhere else makes the browser
+  // leave the app to show that file. While a dialog is open the drop is swallowed, not opened.
+  installFileDrop(doc.body, {
     activeClass: DROP_TARGET_CLASS,
-    onDrop: (files) => void localFiles.openFiles(files),
+    onDrop: (files) => {
+      if (!doc.querySelector('dialog[open]')) void localFiles.openFiles(files);
+    },
   });
 
   // --- what the commands do ---------------------------------------------------

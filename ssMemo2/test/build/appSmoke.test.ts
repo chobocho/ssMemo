@@ -352,6 +352,21 @@ test('a file dropped on the page opens too, and a file that is not text is refus
   page.close();
 });
 
+test('a file dropped while a dialog is open is neither opened nor allowed to replace the page', async () => {
+  const page = await openPage({ factory: await seededFactory() });
+  toolbarButton(page, 'Menu').click();
+  await wait(50);
+  const drop = new page.window.Event('drop', { bubbles: true, cancelable: true });
+  Object.defineProperty(drop, 'dataTransfer', { value: { types: ['Files'], files: [new page.window.File(['dropped text'], 'dropped.md')] } });
+  topDialog(page).dispatchEvent(drop);
+  await wait(200);
+  // Without this the browser would leave the app and show the file instead.
+  assert.equal(drop.defaultPrevented, true);
+  assert.deepEqual(page.tabTitles(), ['Shopping', 'Ideas']);
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
 test('an opened file is stored once it is edited and comes back after a reload', async () => {
   const factory = new FakeIndexedDbFactory();
   const page = await openPage({ factory });
