@@ -14,6 +14,7 @@ const CHARSET_SNIFF_BYTES = 1024;
 // Modules written test-first ahead of the roadmap item that wires them into the app (2.8).
 // The list must be empty again at every milestone.
 const NOT_YET_WIRED: readonly string[] = [
+  'src/app/autosave.ts',
   'src/app/documentStore.ts',
   'src/app/randomId.ts',
   'src/storage/indexedDbStorage.ts',
