@@ -16,6 +16,8 @@ export interface MemoOrder {
   sort: MemoSort;
   /** Compares two titles as the language of the app does (an Intl.Collator in the app). */
   compareTitles(left: string, right: string): number;
+  /** Memos that come before all others, in the same order among themselves. */
+  pinnedIds?: ReadonlySet<string>;
 }
 
 export function isMemoSort(value: unknown): value is MemoSort {
@@ -42,16 +44,18 @@ function compareText(left: string, right: string): number {
 }
 
 /**
- * `items` in the given order, as a new list. `getMeta` says which memo an item belongs to, so
- * search results can be ordered like the memos themselves. Whatever the order is, memos that are
- * equal in it are told apart by their other properties and finally by their id, so the list
- * never changes between two visits without a reason.
+ * `items` in the given order, pinned memos first, as a new list. `getMeta` says which memo an item
+ * belongs to, so search results can be ordered like the memos themselves. Whatever the order is,
+ * memos that are equal in it are told apart by their other properties and finally by their id,
+ * so the list never changes between two visits without a reason.
  * O(n log n) time.
  */
 export function orderMemos<T>(items: readonly T[], getMeta: (item: T) => DocumentMeta, order: MemoOrder): T[] {
+  const isPinned = (meta: DocumentMeta): boolean => order.pinnedIds?.has(meta.id) ?? false;
   const compare = (leftItem: T, rightItem: T): number => {
     const left = getMeta(leftItem);
     const right = getMeta(rightItem);
+    if (isPinned(left) !== isPinned(right)) return isPinned(left) ? -1 : 1;
     const byTitle = order.compareTitles(left.title, right.title);
     const byChange = laterFirst(left.updatedAt, right.updatedAt);
     let result: number;

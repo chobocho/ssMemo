@@ -16,6 +16,7 @@ import { formatThirdPartyNotices } from './app/licenses.ts';
 import { createLegacyImport } from './app/legacyImport.ts';
 import { createLocalFiles } from './app/localFiles.ts';
 import { MEMO_SORTS, orderMemos } from './app/memoOrder.ts';
+import { createMemoPins } from './app/memoPins.ts';
 import type { MemoOrder, MemoSort } from './app/memoOrder.ts';
 import { findInMemos } from './app/memoSearch.ts';
 import { createPreview } from './app/preview.ts';
@@ -293,6 +294,10 @@ async function start(win: Window): Promise<void> {
 
   const backupReminder = createBackupReminder({ storage: opened.storage, now: () => new Date() });
 
+  const pins = createMemoPins(opened.storage);
+  // Read once at the start, so the menu can say at once whether the memo on screen is pinned.
+  void pins.refresh();
+
   const trash = createTrash({
     storage: opened.storage,
     now: () => new Date(),
@@ -439,7 +444,9 @@ async function start(win: Window): Promise<void> {
   };
   const deleteMemo = async (meta: DocumentMeta): Promise<void> => {
     const question = t('manager.deleteConfirm', { title: meta.title, days: TRASH_LIMITS.maxAgeDays });
-    if (await modals.confirm(question, t('manager.delete'))) await workspace.deleteMemo(meta.id);
+    if (!(await modals.confirm(question, t('manager.delete')))) return;
+    // The pin goes with the memo: one that is restored from the trash comes back unpinned.
+    if (await workspace.deleteMemo(meta.id)) await pins.forget(meta.id);
   };
   const showTrash = (): void => {
     void modals.open((close) => ({
@@ -475,7 +482,25 @@ async function start(win: Window): Promise<void> {
   };
   // Titles in the alphabet of the app's language, with "Memo 2" before "Memo 10".
   const compareTitles = new Intl.Collator(locale, { numeric: true, sensitivity: 'base' }).compare;
-  const memoOrder = (): MemoOrder => ({ sort: settings.memoSort, compareTitles });
+  const memoOrder = (): MemoOrder => ({ sort: settings.memoSort, compareTitles, pinnedIds: pins.ids() });
+  const isActiveMemoPinned = (): boolean => {
+    const id = workspace.getActiveDocumentId();
+    return id !== undefined && pins.has(id);
+  };
+  const togglePin = async (): Promise<void> => {
+    // What was typed a moment ago is written first: only a stored memo has an id to pin.
+    await workspace.flushAll();
+    const id = workspace.getActiveDocumentId();
+    if (id === undefined) {
+      notices.show(t('notice.pinNothing'), 'info');
+      return;
+    }
+    try {
+      notices.show(t((await pins.toggle(id)) ? 'notice.memoPinned' : 'notice.memoUnpinned'), 'info');
+    } catch {
+      notices.show(t('notice.pinFailed'));
+    }
+  };
   const chooseMemoSort = async (): Promise<void> => {
     const memoSort = await modals.choose<MemoSort>(
       t('manager.sortTitle'),
@@ -510,13 +535,18 @@ async function start(win: Window): Promise<void> {
           failed: t('manager.failed'),
           renameOf: (title) => t('manager.renameOf', { title }),
           deleteOf: (title) => t('manager.deleteOf', { title }),
-          details: (meta) => t('manager.details', { time: formatTimestamp(meta.updatedAt, locale), count: meta.length }),
+          details: (meta) =>
+            t(pins.has(meta.id) ? 'manager.detailsPinned' : 'manager.details', {
+              time: formatTimestamp(meta.updatedAt, locale),
+              count: meta.length,
+            }),
           corrupt: (count) => t('notice.corruptRecords', { count }),
         },
         // Pending edits are written first, so the list shows current sizes and times.
         listMemos: async () => {
           await workspace.flushAll();
-          const listing = await workspace.listMemos();
+          // The pins are read again as well: another window may have changed them.
+          const [listing] = await Promise.all([workspace.listMemos(), pins.refresh()]);
           return { ...listing, documents: orderMemos(listing.documents, (meta) => meta, memoOrder()) };
         },
         searchMemos: async (query) => {
@@ -734,6 +764,7 @@ async function start(win: Window): Promise<void> {
     bindCommands({
       'memo.manage': showMemoManager,
       'memo.new': () => workspace.newMemo(),
+      'memo.pin': { run: () => void togglePin(), isOn: isActiveMemoPinned },
       'memo.trash': showTrash,
       'tab.close': closeActiveTab,
       'tab.next': () => stepTab(1),

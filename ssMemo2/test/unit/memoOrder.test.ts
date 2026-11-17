@@ -88,3 +88,33 @@ test('anything that belongs to a memo can be ordered, such as search results', (
 test('an empty list stays empty', () => {
   for (const sort of MEMO_SORTS) assert.deepEqual(ordered([], sort), []);
 });
+
+// --- pinned memos -----------------------------------------------------------
+
+function orderedWithPins(metas: DocumentMeta[], sort: MemoSort, pinned: string[]): string[] {
+  return orderMemos(metas, (item) => item, { sort, compareTitles, pinnedIds: new Set(pinned) }).map((item) => item.id);
+}
+
+test('pinned memos come first, whatever the order', () => {
+  const metas = [meta('new', 'B', MARCH, JANUARY), meta('old', 'C', JANUARY, FEBRUARY), meta('middle', 'A', FEBRUARY, MARCH)];
+  assert.deepEqual(orderedWithPins(metas, 'updated', ['old']), ['old', 'new', 'middle']);
+  assert.deepEqual(orderedWithPins(metas, 'created', ['new']), ['new', 'middle', 'old']);
+  assert.deepEqual(orderedWithPins(metas, 'title', ['old']), ['old', 'middle', 'new']);
+});
+
+test('among themselves pinned memos keep the chosen order, and so do the others', () => {
+  const metas = [meta('a', 'A', JANUARY), meta('b', 'B', FEBRUARY), meta('c', 'C', MARCH), meta('d', 'D', '2026-04-01T00:00:00.000Z')];
+  assert.deepEqual(orderedWithPins(metas, 'updated', ['a', 'c']), ['c', 'a', 'd', 'b']);
+  assert.deepEqual(orderedWithPins(metas, 'title', ['d', 'b']), ['b', 'd', 'a', 'c']);
+});
+
+test('a pin for a memo that is not in the list changes nothing, and neither does having no pins', () => {
+  const metas = [meta('old', 'A', JANUARY), meta('new', 'B', MARCH)];
+  assert.deepEqual(orderedWithPins(metas, 'updated', ['gone']), ['new', 'old']);
+  assert.deepEqual(orderedWithPins(metas, 'updated', []), ['new', 'old']);
+});
+
+test('with every memo pinned the list is in the chosen order again', () => {
+  const metas = [meta('old', 'A', JANUARY), meta('new', 'B', MARCH)];
+  assert.deepEqual(orderedWithPins(metas, 'updated', ['old', 'new']), ['new', 'old']);
+});

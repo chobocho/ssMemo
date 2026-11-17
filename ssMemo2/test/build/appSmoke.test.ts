@@ -503,6 +503,82 @@ test('the share command says so where the browser cannot share, or the user back
   cancelled.close();
 });
 
+function menuItemIsOn(page: Page, label: string): boolean {
+  const item = [...topDialog(page).querySelectorAll<HTMLElement>('.command-item')].find(
+    (candidate) => candidate.querySelector('.command-label')?.textContent === label,
+  );
+  assert.ok(item, `the menu has no command labelled ${label}`);
+  return item.getAttribute('aria-pressed') === 'true';
+}
+
+test('a pinned memo stays on top of the memo list in every order, until it is unpinned', async () => {
+  const factory = await factoryWithLaterMemo();
+  const page = await openPage({ factory });
+  // "Shopping" is on screen. By time and by title alike it is the last of the three.
+  await pickFromMenu(page, 'Pin memo');
+  await wait(100);
+  assert.equal(page.noticeTexts().some((text) => text.includes('Pinned')), true);
+
+  toolbarButton(page, 'Memo list').click();
+  await wait(100);
+  assert.deepEqual(listedTitles(page), ['Shopping', 'Zebra', 'Ideas']);
+  // The list says which memos are pinned.
+  const details = [...topDialog(page).querySelectorAll('.memo-details')].map((node) => node.textContent ?? '');
+  assert.deepEqual(details.map((text) => text.includes('Pinned')), [true, false, false]);
+  topDialog(page).querySelector<HTMLElement>('.memo-sort')?.click();
+  await wait(50);
+  await pickChoice(page, 'Title');
+  await wait(100);
+  assert.deepEqual(listedTitles(page), ['Shopping', 'Ideas', 'Zebra']);
+  page.close();
+
+  // Kept for the next visit, shown in the menu as switched on, and switched off the same way.
+  const reloaded = await openPage({ factory });
+  toolbarButton(reloaded, 'Menu').click();
+  await wait(50);
+  assert.equal(menuItemIsOn(reloaded, 'Pin memo'), true);
+  topDialog(reloaded).click();
+  await wait(50);
+  await pickFromMenu(reloaded, 'Pin memo');
+  await wait(100);
+  toolbarButton(reloaded, 'Memo list').click();
+  await wait(100);
+  assert.deepEqual(listedTitles(reloaded), ['Ideas', 'Shopping', 'Zebra']);
+  assert.deepEqual(reloaded.errors, []);
+  reloaded.close();
+});
+
+test('a memo that was just written can be pinned, an empty new one cannot', async () => {
+  const factory = new FakeIndexedDbFactory();
+  const page = await openPage({ factory });
+  await pickFromMenu(page, 'Pin memo');
+  await wait(100);
+  assert.equal(page.noticeTexts().some((text) => text.includes('nothing to pin')), true);
+
+  // Typed a moment ago and not saved yet: pinning writes it first.
+  await typeLine(page, 'remember this');
+  await pickFromMenu(page, 'Pin memo');
+  await wait(150);
+  toolbarButton(page, 'Menu').click();
+  await wait(50);
+  assert.equal(menuItemIsOn(page, 'Pin memo'), true);
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
+test('deleting a pinned memo drops its pin, so restoring it brings back an ordinary memo', async () => {
+  const factory = await factoryWithLaterMemo();
+  const page = await openPage({ factory });
+  await pickFromMenu(page, 'Pin memo');
+  await wait(100);
+  await deleteFromMemoList(page, 'Shopping');
+  const storage = await openIndexedDbStorage(factory);
+  assert.deepEqual(await storage.getValue('pinnedMemos'), []);
+  storage.close();
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
 /** Seeded memos plus one that was changed later than both. */
 async function factoryWithLaterMemo(): Promise<IDBFactory> {
   const factory = await seededFactory();

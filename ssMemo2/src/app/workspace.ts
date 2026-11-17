@@ -101,6 +101,8 @@ export interface Workspace {
    */
   openFile(file: OpenedFile): boolean;
   getActiveDocument(): ActiveDocument | undefined;
+  /** Id under which the memo on screen is stored; undefined while it has never been stored. */
+  getActiveDocumentId(): string | undefined;
   /** Current text of a tab; undefined for an unknown tab. */
   getText(tabId: string): string | undefined;
   /**
@@ -386,6 +388,10 @@ export function createWorkspace(options: WorkspaceOptions): Workspace {
       showActiveTab();
       persistSession();
       return true;
+    },
+
+    getActiveDocumentId() {
+      return activeMemo()?.meta?.id;
     },
 
     getActiveDocument() {

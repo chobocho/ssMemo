@@ -934,3 +934,26 @@ test('markSavedToFile ignores an unknown tab and survives a storage failure', as
   await harness.workspace.markSavedToFile(harness.visibleTab() ?? '', { source: UTF8_SOURCE, localFile: WRITABLE });
   assert.equal(harness.workspace.getActiveDocument()?.localFile, WRITABLE);
 });
+
+// --- the id of the memo on screen ---------------------------------------------
+
+test('getActiveDocumentId gives the id of a stored memo and follows the tabs', async () => {
+  const harness = createHarness(await storageWithTwoMemos());
+  await harness.workspace.start();
+  assert.equal(harness.workspace.getActiveDocumentId(), 'newer');
+  await harness.workspace.openMemo('older');
+  assert.equal(harness.workspace.getActiveDocumentId(), 'older');
+});
+
+test('a memo that was never stored has no id, and gets one with its first save', async () => {
+  const harness = createHarness();
+  await harness.workspace.start();
+  assert.equal(harness.workspace.getActiveDocumentId(), undefined);
+  harness.type('first words');
+  // Typed, but not yet written.
+  assert.equal(harness.workspace.getActiveDocumentId(), undefined);
+  await harness.workspace.flushAll();
+  const [stored] = (await harness.storage.listDocuments()).documents;
+  assert.ok(stored);
+  assert.equal(harness.workspace.getActiveDocumentId(), stored.id);
+});

@@ -16,6 +16,7 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'storage.temporary': '⚠️ 임시 모드',
 
   'command.newMemo': '새 메모',
+  'command.pin': '메모 고정',
   'command.trash': '휴지통',
   'command.manageMemos': '메모 목록',
   'command.openFile': '파일 열기',
@@ -112,6 +113,7 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'manager.noMatches': '그 내용이 들어 있는 메모가 없습니다.',
   'manager.failed': '작업을 완료하지 못했습니다. 다른 창에서 메모가 바뀌었을 수 있어 목록을 다시 불러왔습니다.',
   'manager.details': '{time} · {count}자',
+  'manager.detailsPinned': '📌 고정 · {time} · {count}자',
   'manager.renameOf': '{title} 이름 변경',
   'manager.renamePrompt': '새 제목',
   'manager.deleteOf': '{title} 삭제',
@@ -205,6 +207,10 @@ export const ko: Readonly<Record<MessageKey, string>> = {
 
   'notice.chunksNotNeeded': '메모가 {count}자 이하라 나눌 필요가 없습니다.',
   'notice.noUrl': '웹 주소를 선택하거나 주소 안에 커서를 두세요.',
+  'notice.memoPinned': '고정했습니다. 메모 목록 맨 위에 보입니다.',
+  'notice.memoUnpinned': '고정을 해제했습니다.',
+  'notice.pinNothing': '아직 고정할 수 없습니다. 내용을 쓰기 전에는 메모 목록에 없는 메모입니다.',
+  'notice.pinFailed': '고정 상태를 저장하지 못했습니다.',
   'notice.calcNothingToRun': '계산할 내용을 선택하거나, 계산식이 있는 줄에 커서를 두세요.',
   'notice.calcMemoryNotSaved': '변수를 저장하지 못했습니다. 이 페이지를 닫을 때까지만 유지됩니다.',
   'notice.backupExported': '메모 {count}개를 백업 파일로 저장했습니다.',

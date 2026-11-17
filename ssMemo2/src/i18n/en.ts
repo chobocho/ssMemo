@@ -16,6 +16,7 @@ export const en = {
   'storage.temporary': '⚠️ Temporary mode',
 
   'command.newMemo': 'New memo',
+  'command.pin': 'Pin memo',
   'command.trash': 'Trash',
   'command.manageMemos': 'Memo list',
   'command.openFile': 'Open file',
@@ -116,6 +117,7 @@ export const en = {
   'manager.noMatches': 'No memo contains that text.',
   'manager.failed': 'That did not work. The memo may have been changed in another window, so the list was reloaded.',
   'manager.details': '{time} · {count} characters',
+  'manager.detailsPinned': '📌 Pinned · {time} · {count} characters',
   'manager.renameOf': 'Rename {title}',
   'manager.renamePrompt': 'New title',
   'manager.deleteOf': 'Delete {title}',
@@ -210,6 +212,10 @@ export const en = {
 
   'notice.chunksNotNeeded': 'The memo has {count} characters or fewer, so there is nothing to split.',
   'notice.noUrl': 'Select a web address, or put the cursor inside one.',
+  'notice.memoPinned': 'Pinned. The memo stays on top of the memo list.',
+  'notice.memoUnpinned': 'No longer pinned.',
+  'notice.pinNothing': 'There is nothing to pin yet: this memo is not in the memo list until something is written.',
+  'notice.pinFailed': 'The pin could not be stored.',
   'notice.calcNothingToRun': 'Select what to calculate, or put the cursor on a line with a calculation.',
   'notice.calcMemoryNotSaved': 'The variables could not be stored. They apply until this page is closed.',
   'notice.backupExported': 'Backup saved with {count} memo(s).',
