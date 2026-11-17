@@ -1,6 +1,6 @@
 // In-memory StoragePort. The app falls back to it when IndexedDB cannot be opened (everything
 // keeps working, but nothing survives a reload), and it is the reference implementation in tests.
-import { copyMeta, createNextMeta } from './storagePort.ts';
+import { NEW_DOCUMENT_REV, copyMeta, createNextMeta } from './storagePort.ts';
 import type { StoragePort, StoredDocument } from './storagePort.ts';
 
 export function createMemoryStorage(): StoragePort {
@@ -27,6 +27,17 @@ export function createMemoryStorage(): StoragePort {
       const meta = createNextMeta(draft, documents.get(draft.id)?.meta.rev, expectedRev);
       documents.set(draft.id, { meta, content: draft.content });
       return copyMeta(meta);
+    },
+
+    async writeDocuments(drafts, { replaceAll }) {
+      // Every new record is prepared before anything is changed, so a failure changes nothing.
+      const written = new Map<string, StoredDocument>();
+      for (const draft of drafts) {
+        const storedRev = documents.get(draft.id)?.meta.rev;
+        written.set(draft.id, { meta: createNextMeta(draft, storedRev, storedRev ?? NEW_DOCUMENT_REV), content: draft.content });
+      }
+      if (replaceAll) documents.clear();
+      for (const [id, document] of written) documents.set(id, document);
     },
 
     async deleteDocument(id) {

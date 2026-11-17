@@ -18,7 +18,7 @@
 //   quota            same, because storage is full
 //   conflict         another tab saved first            -> see storagePort.ts
 //   connection-lost  the connection is gone             -> the page has to be reloaded
-import { StorageError, copyMeta, createNextMeta, parseDocumentSource } from './storagePort.ts';
+import { NEW_DOCUMENT_REV, StorageError, copyMeta, createNextMeta, parseDocumentSource } from './storagePort.ts';
 import type { DocumentListing, DocumentMeta, DocumentSnapshot, StoragePort, StoredDocument } from './storagePort.ts';
 
 export const DATABASE_NAME = 'ssMemo2';
@@ -276,6 +276,37 @@ function createStorage(database: IDBDatabase, onConnectionLost: () => void): Ind
           if (!meta) throw new StorageError('write-failed', `Document ${draft.id} was not written`);
           return copyMeta(meta);
         };
+      });
+    },
+
+    writeDocuments(drafts, { replaceAll }) {
+      return run(DOCUMENT_STORES, 'readwrite', (transaction, abort) => {
+        const metaStore = transaction.objectStore(META_STORE);
+        const bodyStore = transaction.objectStore(BODY_STORE);
+        // The revisions are read, the old records removed and the new ones written inside one
+        // transaction: a failure at any point rolls all of it back, also the removal.
+        const existing = metaStore.getAll();
+        existing.onsuccess = () => {
+          try {
+            const revisions = new Map<string, number>();
+            for (const record of existing.result) {
+              const meta = parseMeta(record);
+              if (meta) revisions.set(meta.id, meta.rev);
+            }
+            if (replaceAll) {
+              metaStore.clear();
+              bodyStore.clear();
+            }
+            for (const draft of drafts) {
+              const storedRev = revisions.get(draft.id);
+              metaStore.put(createNextMeta(draft, storedRev, storedRev ?? NEW_DOCUMENT_REV));
+              bodyStore.put({ id: draft.id, content: draft.content });
+            }
+          } catch (error) {
+            abort(error);
+          }
+        };
+        return (): void => undefined;
       });
     },
 

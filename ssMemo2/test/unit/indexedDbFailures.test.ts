@@ -285,6 +285,15 @@ test('damaged: a malformed record can be replaced by creating the document anew'
   assert.deepEqual(await storage.listDocuments(), { documents: [meta], corruptCount: 0 });
 });
 
+test('write: writeDocuments stores all or nothing, even when it was to replace everything', async () => {
+  const storage = await openIndexedDbStorage(new FakeIndexedDbFactory());
+  const before = await storage.saveDocument(draft('old', 'precious'), NEW_DOCUMENT_REV);
+  // The second draft cannot be stored because a function is not data.
+  const unstorable = { ...draft('bad', 'x'), content: (() => undefined) as unknown as string };
+  await assert.rejects(storage.writeDocuments([draft('new', 'fine'), unstorable], { replaceAll: true }), rejectsWith('write-failed'));
+  assert.deepEqual(await storage.getAllDocuments(), { documents: [{ meta: before, content: 'precious' }], corruptCount: 0 });
+});
+
 test('write: a value that cannot be stored is reported as a failed write', async () => {
   const storage = await openIndexedDbStorage(new FakeIndexedDbFactory());
   await assert.rejects(storage.setValue('settings', { callback: () => undefined }), rejectsWith('write-failed'));

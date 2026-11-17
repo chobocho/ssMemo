@@ -201,6 +201,90 @@ export function defineStorageContract(label: string, createStorage: () => Promis
     assert.equal(again?.source?.fileName, 'notes.txt');
   });
 
+  const idsOf = async (storage: StoragePort): Promise<string[]> =>
+    (await storage.listDocuments()).documents.map((meta) => meta.id).sort();
+
+  test(`${label}: writeDocuments adds several documents at once and leaves the others alone`, async () => {
+    const storage = await createStorage();
+    const kept = await storage.saveDocument(draft('kept', 'stays'), NEW_DOCUMENT_REV);
+    await storage.writeDocuments([draft('a', 'first'), draft('b', 'second', { source: SOURCE })], { replaceAll: false });
+    assert.deepEqual(await idsOf(storage), ['a', 'b', 'kept']);
+    assert.deepEqual(await storage.getDocument('kept'), { meta: kept, content: 'stays' });
+    const added = await storage.getDocument('b');
+    assert.equal(added?.content, 'second');
+    assert.equal(added?.meta.rev, 1);
+    assert.equal(added?.meta.length, 6);
+    assert.deepEqual(added?.meta.source, SOURCE);
+  });
+
+  test(`${label}: writeDocuments over an existing id continues its revisions, so a stale window conflicts`, async () => {
+    const storage = await createStorage();
+    const first = await storage.saveDocument(draft('a', 'one'), NEW_DOCUMENT_REV);
+    const second = await storage.saveDocument(draft('a', 'two'), first.rev);
+    await storage.writeDocuments([draft('a', 'from the backup')], { replaceAll: false });
+    const stored = await storage.getDocument('a');
+    assert.equal(stored?.content, 'from the backup');
+    assert.equal(stored?.meta.rev, second.rev + 1);
+    // A window that last saw revision 2 must not silently overwrite the imported text.
+    await assert.rejects(storage.saveDocument(draft('a', 'typed in the other window'), second.rev), isConflict);
+  });
+
+  test(`${label}: writeDocuments with replaceAll removes every document that is not written`, async () => {
+    const storage = await createStorage();
+    const survivor = await storage.saveDocument(draft('survivor', 'old text'), NEW_DOCUMENT_REV);
+    await storage.saveDocument(draft('removed-1', 'x'), NEW_DOCUMENT_REV);
+    await storage.saveDocument(draft('removed-2', 'y'), NEW_DOCUMENT_REV);
+    await storage.writeDocuments([draft('survivor', 'new text'), draft('new', 'z')], { replaceAll: true });
+    assert.deepEqual(await idsOf(storage), ['new', 'survivor']);
+    assert.equal(await storage.getDocument('removed-1'), undefined);
+    const stored = await storage.getDocument('survivor');
+    assert.equal(stored?.content, 'new text');
+    assert.equal(stored?.meta.rev, survivor.rev + 1);
+    assert.deepEqual((await storage.getAllDocuments()).documents.length, 2);
+  });
+
+  test(`${label}: writeDocuments with replaceAll and nothing to write empties the storage`, async () => {
+    const storage = await createStorage();
+    await storage.saveDocument(draft('a', 'x'), NEW_DOCUMENT_REV);
+    await storage.writeDocuments([], { replaceAll: true });
+    assert.deepEqual(await storage.getAllDocuments(), { documents: [], corruptCount: 0 });
+    // The id is free again.
+    assert.equal((await storage.saveDocument(draft('a', 'again'), NEW_DOCUMENT_REV)).rev, 1);
+  });
+
+  test(`${label}: writeDocuments with nothing to write and no replaceAll changes nothing`, async () => {
+    const storage = await createStorage();
+    const meta = await storage.saveDocument(draft('a', 'x'), NEW_DOCUMENT_REV);
+    await storage.writeDocuments([], { replaceAll: false });
+    assert.deepEqual(await storage.getDocument('a'), { meta, content: 'x' });
+  });
+
+  test(`${label}: writeDocuments does not touch the stored values`, async () => {
+    const storage = await createStorage();
+    await storage.setValue('settings', { language: 'ko' });
+    await storage.writeDocuments([draft('a', 'x')], { replaceAll: true });
+    assert.deepEqual(await storage.getValue('settings'), { language: 'ko' });
+  });
+
+  test(`${label}: writeDocuments keeps no reference to the drafts`, async () => {
+    const storage = await createStorage();
+    const input = draft('a', 'x', { source: { ...SOURCE } });
+    await storage.writeDocuments([input], { replaceAll: false });
+    input.title = 'changed after writing';
+    if (input.source) input.source.fileName = 'changed after writing';
+    const stored = (await storage.getDocument('a'))?.meta;
+    assert.equal(stored?.title, 'title of a');
+    assert.equal(stored?.source?.fileName, 'notes.txt');
+  });
+
+  test(`${label}: when a draft appears twice, the last one is stored`, async () => {
+    const storage = await createStorage();
+    await storage.writeDocuments([draft('a', 'first'), draft('a', 'second')], { replaceAll: false });
+    const stored = await storage.getDocument('a');
+    assert.equal(stored?.content, 'second');
+    assert.equal(stored?.meta.rev, 1);
+  });
+
   test(`${label}: a value that was never set is undefined`, async () => {
     const storage = await createStorage();
     assert.equal(await storage.getValue('settings'), undefined);

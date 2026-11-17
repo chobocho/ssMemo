@@ -13,6 +13,14 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 12:46] 백업 가져오기 — 검증과 병합·교체 (4.7)</h2>
+<ul>
+<li><b>기획:</b> 백업을 관대하게 읽는다(앱 이름과 문서 목록만 필수, 나머지는 없으면 채움). 병합은 덮어쓰지 않고 같은 id의 다른 문서를 사본으로, 교체는 전부 지우고 백업으로 바꾼다. 저장소에 전부 쓰거나 아무것도 안 쓰는 <code>writeDocuments</code> 추가.</li>
+<li><b>TC:</b> 정상 — 내보낸 백업 재읽기, 병합(추가·동일 건너뜀·사본), 교체. 경계 — JSON 아님, 다른 앱, 더 새 형식, 손으로 쓴 최소 백업, 본문 없는 항목 집계, BOM, 중복 id, 긴 제목, 쓰기 실패 시 삭제까지 롤백, 덮어쓴 문서의 rev 이어가기.</li>
+<li><b>개발:</b> <code>src/app/backup.ts</code>, <code>src/storage/storagePort.ts</code>, <code>memoryStorage.ts</code>, <code>indexedDbStorage.ts</code>, 테스트 3개 파일</li>
+<li><b>검증:</b> 단위 628 passed, 빌드 37 passed, 0 failed</li>
+</ul>
+
 <h2>[2026-11-17 12:42] 백업 내보내기 형식 (4.6)</h2>
 <ul>
 <li><b>기획:</b> 모든 문서와 설정을 JSON 하나로 만든다. 사람이 읽고 고칠 수 있게 들여쓰고, 저장소가 계산하는 값(rev, 길이)은 빼며, 문서는 만든 순서로 정렬. 저장소에는 한 트랜잭션으로 전부 읽는 <code>getAllDocuments</code>를 추가.</li>

@@ -140,6 +140,14 @@ export interface StoragePort {
    */
   saveDocument(draft: DocumentDraft, expectedRev: number): Promise<DocumentMeta>;
 
+  /**
+   * Stores several documents in one step: either all of them are stored or nothing changes.
+   * With `replaceAll`, every stored document that is not among them is deleted in the same step.
+   * A draft whose id already exists replaces that document and continues its revision count, so
+   * another window that still has the old version open notices the change when it saves.
+   */
+  writeDocuments(drafts: readonly DocumentDraft[], options: { replaceAll: boolean }): Promise<void>;
+
   /** Resolves to whether a document was actually removed. */
   deleteDocument(id: string): Promise<boolean>;
 
