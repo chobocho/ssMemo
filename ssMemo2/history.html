@@ -13,6 +13,14 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 09:44] 탭 상태 관리자 (3.2)</h2>
+<ul>
+<li><b>기획:</b> 열린 탭의 순서·활성 탭·미저장 표시만 다루는 순수 상태 모듈. 문서·편집기·DOM을 모르므로 탭 바와 작업 공간이 함께 쓰고 단독으로 테스트 가능. "메인 탭" 특례 없이 모든 탭이 동일.</li>
+<li><b>TC:</b> 정상 — 열기·활성화·닫기·제목과 미저장 표시 변경. 경계 — 이미 열린 탭 다시 열기, 탭 수 한도, 활성 탭이 가운데·맨 끝·유일할 때 닫기, 없는 id, 변경당 알림 정확히 1회(변화 없으면 0회), 구독 해제, 반환값이 사본인지.</li>
+<li><b>개발:</b> <code>src/app/tabManager.ts</code>, <code>test/unit/tabManager.test.ts</code>, <code>test/build/buildOutput.test.ts</code></li>
+<li><b>검증:</b> 단위 252 passed, 0 failed · 빌드 16 passed, 0 failed · tsc 오류 없음</li>
+</ul>
+
 <h2>[2026-11-17 09:43] 명령 레지스트리와 단축키 판정 (3.1)</h2>
 <ul>
 <li><b>기획:</b> 사용자가 할 수 있는 동작을 표 하나로 정의해 툴바·메뉴·단축키·도움말이 같은 표에서 나오게 함. 단축키는 <code>Mod-Alt-n</code> 같은 문자열로 적고 한 곳에서 판정.</li>
