@@ -29,6 +29,12 @@ export const en = {
   'command.language': 'Language',
   'command.menu': 'Menu',
 
+  'group.memo': 'Memos and tabs',
+  'group.file': 'Files',
+  'group.view': 'View',
+  'group.backup': 'Backup',
+  'group.app': 'App',
+
   'language.auto': 'Automatic (browser language)',
   // The language's own name, shown the same in every locale. Escaped because Korean text may only
   // appear literally in ko.ts.

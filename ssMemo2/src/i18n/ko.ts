@@ -30,6 +30,12 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'command.language': '언어',
   'command.menu': '메뉴',
 
+  'group.memo': '메모와 탭',
+  'group.file': '파일',
+  'group.view': '보기',
+  'group.backup': '백업',
+  'group.app': '앱',
+
   'language.auto': '자동 (브라우저 언어)',
   'language.ko': '한국어',
   'language.en': 'English',

@@ -2,6 +2,8 @@
 import type { ImportMode } from './app/backup.ts';
 import { createBackupActions } from './app/backupActions.ts';
 import { readBuildId } from './app/buildInfo.ts';
+import { COMMAND_GROUPS, bindCommands } from './app/commandTable.ts';
+import type { CommandId } from './app/commandTable.ts';
 import { createCommandRegistry } from './app/commands.ts';
 import type { Command } from './app/commands.ts';
 import { describeEnvironment } from './app/diagnostics.ts';
@@ -27,6 +29,7 @@ import type { LanguageSetting, Settings } from './app/settings.ts';
 import { adjacentTabId, createTabManager } from './app/tabManager.ts';
 import { createWorkspace } from './app/workspace.ts';
 import { mountEditorTabs } from './editor/editorTabs.ts';
+import type { MessageKey } from './i18n/en.ts';
 import { createTranslator, resolveLocale } from './i18n/i18n.ts';
 import { TEXT_ENCODINGS } from './lib/encoding.ts';
 import type { TextEncoding } from './lib/encoding.ts';
@@ -61,9 +64,9 @@ const DROP_TARGET_CLASS = 'is-drop-target';
 const INFO_NOTICE_DURATION_MS = 4000;
 // What the file dialog for importing a backup is limited to.
 const BACKUP_FILE_TYPES = '.json,application/json';
-const MENU_COMMAND_ID = 'app.menu';
+const MENU_COMMAND_ID: CommandId = 'app.menu';
 // Commands that get a button in the header, in display order. Tabs have their own controls.
-const TOOLBAR_COMMAND_IDS: readonly string[] = [
+const TOOLBAR_COMMAND_IDS: readonly CommandId[] = [
   'memo.manage',
   'file.open',
   'file.save',
@@ -74,7 +77,7 @@ const TOOLBAR_COMMAND_IDS: readonly string[] = [
   MENU_COMMAND_ID,
 ];
 // Of those, the ones that leave the header on narrow screens. The menu still lists them.
-const SECONDARY_TOOLBAR_COMMAND_IDS: ReadonlySet<string> = new Set([
+const SECONDARY_TOOLBAR_COMMAND_IDS: ReadonlySet<string> = new Set<CommandId>([
   'view.toggleWrap',
   'view.fontSmaller',
   'view.fontLarger',
@@ -350,6 +353,7 @@ async function start(win: Window): Promise<void> {
     win.location.reload();
   };
 
+  const groupLabelKeys = new Map<string, MessageKey>(COMMAND_GROUPS.map((group) => [group.id, group.labelKey]));
   // Every command except the menu itself, for narrow screens where the toolbar shows only a few.
   const showMenu = (): void => {
     void modals.open((close) => ({
@@ -357,6 +361,7 @@ async function start(win: Window): Promise<void> {
       content: createCommandMenu(doc, {
         commands: commands.list().filter((command) => command.id !== MENU_COMMAND_ID),
         t,
+        groupLabel: (group) => t(groupLabelKeys.get(group) ?? 'group.app'),
         formatShortcut: describeShortcut,
         // The menu is closed first: the command may open a dialog of its own.
         onPick: (command: Command) => {
@@ -367,38 +372,26 @@ async function start(win: Window): Promise<void> {
     }));
   };
 
-  // Browsers keep Ctrl+T/W/N/Tab for themselves, so those shortcuts use Alt. Ctrl+O can be taken over.
-  const commands = createCommandRegistry([
-    { id: 'memo.manage', labelKey: 'command.manageMemos', icon: '📋', shortcuts: ['Alt-o'], run: showMemoManager },
-    { id: 'file.open', labelKey: 'command.openFile', icon: '📂', shortcuts: ['Mod-o'], run: () => void openLocalFiles() },
-    { id: 'file.save', labelKey: 'command.saveFile', icon: '💾', shortcuts: ['Mod-s'], run: () => void localFiles.saveToFile(false) },
-    {
-      id: 'file.saveAs',
-      labelKey: 'command.saveFileAs',
-      icon: '📑',
-      shortcuts: ['Mod-Shift-s'],
-      run: () => void localFiles.saveToFile(true),
-    },
-    { id: 'file.encoding', labelKey: 'command.encoding', icon: '🔤', shortcuts: [], run: () => void localFiles.changeEncoding() },
-    { id: 'memo.new', labelKey: 'command.newMemo', icon: '➕', shortcuts: ['Alt-n'], run: () => workspace.newMemo() },
-    { id: 'tab.close', labelKey: 'command.closeTab', icon: '✕', shortcuts: ['Alt-w'], run: closeActiveTab },
-    { id: 'tab.next', labelKey: 'command.nextTab', icon: '▶', shortcuts: ['Alt-PageDown'], run: () => stepTab(1) },
-    { id: 'tab.previous', labelKey: 'command.previousTab', icon: '◀', shortcuts: ['Alt-PageUp'], run: () => stepTab(-1) },
-    {
-      id: 'view.toggleWrap',
-      labelKey: 'command.toggleWrap',
-      icon: '↩️',
-      shortcuts: ['Alt-z'],
-      run: toggleLineWrapping,
-      isOn: () => settings.lineWrapping,
-    },
-    { id: 'view.fontSmaller', labelKey: 'command.fontSmaller', icon: 'A−', shortcuts: [], run: () => stepFontSize(-1) },
-    { id: 'view.fontLarger', labelKey: 'command.fontLarger', icon: 'A+', shortcuts: [], run: () => stepFontSize(1) },
-    { id: 'backup.export', labelKey: 'command.exportBackup', icon: '📤', shortcuts: [], run: () => void backups.exportBackup() },
-    { id: 'backup.import', labelKey: 'command.importBackup', icon: '📥', shortcuts: [], run: () => void backups.importBackup() },
-    { id: 'settings.language', labelKey: 'command.language', icon: '🌐', shortcuts: [], run: () => void chooseLanguage() },
-    { id: MENU_COMMAND_ID, labelKey: 'command.menu', icon: '☰', shortcuts: ['Alt-m'], run: showMenu },
-  ]);
+  const commands = createCommandRegistry(
+    bindCommands({
+      'memo.manage': showMemoManager,
+      'memo.new': () => workspace.newMemo(),
+      'tab.close': closeActiveTab,
+      'tab.next': () => stepTab(1),
+      'tab.previous': () => stepTab(-1),
+      'file.open': () => void openLocalFiles(),
+      'file.save': () => void localFiles.saveToFile(false),
+      'file.saveAs': () => void localFiles.saveToFile(true),
+      'file.encoding': () => void localFiles.changeEncoding(),
+      'view.toggleWrap': { run: toggleLineWrapping, isOn: () => settings.lineWrapping },
+      'view.fontSmaller': () => stepFontSize(-1),
+      'view.fontLarger': () => stepFontSize(1),
+      'backup.export': () => void backups.exportBackup(),
+      'backup.import': () => void backups.importBackup(),
+      'settings.language': () => void chooseLanguage(),
+      'app.menu': showMenu,
+    }),
+  );
 
   const toolbar = createToolbar(
     doc,

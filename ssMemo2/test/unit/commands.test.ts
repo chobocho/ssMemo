@@ -11,7 +11,7 @@ function keyEvent(overrides: Partial<ShortcutEvent>): ShortcutEvent {
 }
 
 function command(id: string, shortcuts: readonly string[] = []): Command {
-  return { id, labelKey: 'memo.defaultTitle', icon: '➕', shortcuts, run: () => undefined };
+  return { id, group: 'memo', labelKey: 'memo.defaultTitle', icon: '➕', shortcuts, run: () => undefined };
 }
 
 // --- formatShortcut ---------------------------------------------------------

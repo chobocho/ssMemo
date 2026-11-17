@@ -15,8 +15,9 @@ function createHarness(wrapOn = true): Harness {
   const { document } = createTestDom();
   const picked: string[] = [];
   const ran: string[] = [];
-  const command = (id: string, icon: string, shortcuts: string[]): Command => ({
+  const command = (id: string, icon: string, shortcuts: string[], group = 'file'): Command => ({
     id,
+    group,
     labelKey: 'command.newMemo',
     icon,
     shortcuts,
@@ -25,10 +26,11 @@ function createHarness(wrapOn = true): Harness {
   const menu = createCommandMenu(document, {
     commands: [
       command('file.open', '📂', ['Mod-o', 'Alt-x']),
-      command('view.larger', 'A+', []),
-      { ...command('view.wrap', '↩️', ['Alt-z']), isOn: () => wrapOn },
+      command('view.larger', 'A+', [], 'view'),
+      { ...command('view.wrap', '↩️', ['Alt-z'], 'view'), isOn: () => wrapOn },
     ],
     t: (key) => `label of ${key}`,
+    groupLabel: (group) => `group ${group}`,
     formatShortcut: (shortcut) => `<${shortcut}>`,
     onPick: (picked_) => picked.push(picked_.id),
   });
@@ -72,6 +74,27 @@ test('a toggle command shows whether it is on', () => {
 
 test('an empty command list gives an empty menu', () => {
   const { document } = createTestDom();
-  const menu = createCommandMenu(document, { commands: [], t: (key) => key, formatShortcut: (shortcut) => shortcut, onPick: () => undefined });
+  const menu = createCommandMenu(document, {
+    commands: [],
+    t: (key) => key,
+    groupLabel: (group) => group,
+    formatShortcut: (shortcut) => shortcut,
+    onPick: () => undefined,
+  });
+  assert.equal(menu.querySelectorAll('.command-group').length, 0);
   assert.equal(menu.querySelectorAll('button').length, 0);
+});
+
+test('commands are listed under a heading for their group, in the order the groups first appear', () => {
+  const { menu } = createHarness();
+  const headings = [...menu.querySelectorAll('.command-group-title')].map((heading) => heading.textContent);
+  assert.deepEqual(headings, ['group file', 'group view']);
+  const groups = [...menu.querySelectorAll('.command-group')];
+  assert.deepEqual(groups.map((group) => group.querySelectorAll('button').length), [1, 2]);
+  // Each list is named by its heading for screen readers.
+  for (const group of groups) {
+    const headingId = group.querySelector('.command-group-title')?.id;
+    assert.ok(headingId);
+    assert.equal(group.getAttribute('aria-labelledby'), headingId);
+  }
 });

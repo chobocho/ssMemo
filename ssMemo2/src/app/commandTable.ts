@@ -1,0 +1,58 @@
+// Every command of the app as plain data: what it is called, how it looks and which keys run it.
+// What a command does is attached separately (bindCommands), so this table can be read without
+// starting the app: the help text is generated from it, and a test compares its shortcuts with
+// the editor's own key bindings.
+import type { MessageKey } from '../i18n/en.ts';
+import type { Command, CommandDefinition } from './commands.ts';
+
+/** Sections of the menu and of the help text, in display order. */
+export const COMMAND_GROUPS = [
+  { id: 'memo', labelKey: 'group.memo' },
+  { id: 'file', labelKey: 'group.file' },
+  { id: 'view', labelKey: 'group.view' },
+  { id: 'backup', labelKey: 'group.backup' },
+  { id: 'app', labelKey: 'group.app' },
+] as const satisfies readonly { id: string; labelKey: MessageKey }[];
+
+type GroupId = (typeof COMMAND_GROUPS)[number]['id'];
+
+// Browsers keep Ctrl+T/W/N/Tab for themselves, so the shortcuts for tabs use Alt. Ctrl+O and
+// Ctrl+S can be taken over by a page.
+export const COMMAND_DEFINITIONS = [
+  { id: 'memo.manage', group: 'memo', labelKey: 'command.manageMemos', icon: '📋', shortcuts: ['Alt-o'] },
+  { id: 'memo.new', group: 'memo', labelKey: 'command.newMemo', icon: '➕', shortcuts: ['Alt-n'] },
+  { id: 'tab.close', group: 'memo', labelKey: 'command.closeTab', icon: '✕', shortcuts: ['Alt-w'] },
+  { id: 'tab.next', group: 'memo', labelKey: 'command.nextTab', icon: '▶', shortcuts: ['Alt-PageDown'] },
+  { id: 'tab.previous', group: 'memo', labelKey: 'command.previousTab', icon: '◀', shortcuts: ['Alt-PageUp'] },
+
+  { id: 'file.open', group: 'file', labelKey: 'command.openFile', icon: '📂', shortcuts: ['Mod-o'] },
+  { id: 'file.save', group: 'file', labelKey: 'command.saveFile', icon: '💾', shortcuts: ['Mod-s'] },
+  { id: 'file.saveAs', group: 'file', labelKey: 'command.saveFileAs', icon: '📑', shortcuts: ['Mod-Shift-s'] },
+  { id: 'file.encoding', group: 'file', labelKey: 'command.encoding', icon: '🔤', shortcuts: [] },
+
+  { id: 'view.toggleWrap', group: 'view', labelKey: 'command.toggleWrap', icon: '↩️', shortcuts: ['Alt-z'] },
+  { id: 'view.fontSmaller', group: 'view', labelKey: 'command.fontSmaller', icon: 'A−', shortcuts: [] },
+  { id: 'view.fontLarger', group: 'view', labelKey: 'command.fontLarger', icon: 'A+', shortcuts: [] },
+
+  { id: 'backup.export', group: 'backup', labelKey: 'command.exportBackup', icon: '📤', shortcuts: [] },
+  { id: 'backup.import', group: 'backup', labelKey: 'command.importBackup', icon: '📥', shortcuts: [] },
+
+  { id: 'settings.language', group: 'app', labelKey: 'command.language', icon: '🌐', shortcuts: [] },
+  { id: 'app.menu', group: 'app', labelKey: 'command.menu', icon: '☰', shortcuts: ['Alt-m'] },
+] as const satisfies readonly (CommandDefinition & { group: GroupId })[];
+
+export type CommandId = (typeof COMMAND_DEFINITIONS)[number]['id'];
+
+/** What a command does. Commands that switch something on and off also report their state. */
+export type CommandBehavior = (() => void) | { run(): void; isOn(): boolean };
+
+/** One behavior per command; leaving one out is a compile error. */
+export type CommandBehaviors = Readonly<Record<CommandId, CommandBehavior>>;
+
+/** The commands of the table with their behaviors attached, in table order. */
+export function bindCommands(behaviors: CommandBehaviors): Command[] {
+  return COMMAND_DEFINITIONS.map((definition): Command => {
+    const behavior = behaviors[definition.id];
+    return typeof behavior === 'function' ? { ...definition, run: behavior } : { ...definition, run: behavior.run, isOn: behavior.isOn };
+  });
+}

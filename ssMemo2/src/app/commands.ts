@@ -5,15 +5,21 @@ import type { MessageKey } from '../i18n/en.ts';
 import { matchesShortcut, parseShortcut, shortcutIdentity } from './shortcut.ts';
 import type { Shortcut, ShortcutEvent } from './shortcut.ts';
 
-export interface Command {
+/** What a command is, apart from what it does: enough to draw a button, a menu entry or a help line. */
+export interface CommandDefinition {
   /** Stable identifier such as "memo.new". */
   id: string;
+  /** Section of the menu and of the help text the command is listed under. */
+  group: string;
   /** Message shown as the button's accessible name and in the help text. */
   labelKey: MessageKey;
   /** Emoji shown on the button. */
   icon: string;
   /** Shortcuts such as "Alt-n" (see shortcut.ts); empty if the command has none. */
   shortcuts: readonly string[];
+}
+
+export interface Command extends CommandDefinition {
   run(): void;
   /** Present on commands that switch something on and off; tells whether it is on right now. */
   isOn?: () => boolean;

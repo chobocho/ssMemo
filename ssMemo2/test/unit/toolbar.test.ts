@@ -10,6 +10,7 @@ function createHarness(): { toolbar: HTMLElement; ran: string[]; refresh: () => 
   let wrapOn = true;
   const command = (id: string, icon: string, shortcuts: string[]): Command => ({
     id,
+    group: 'memo',
     labelKey: 'command.newMemo',
     icon,
     shortcuts,
@@ -69,7 +70,7 @@ test('a toggle command shows whether it is on, and follows the setting after ref
 
 test('buttons of secondary commands are marked, so the stylesheet can hide them on narrow screens', () => {
   const { document } = createTestDom();
-  const command = (id: string): Command => ({ id, labelKey: 'command.newMemo', icon: id, shortcuts: [], run: () => undefined });
+  const command = (id: string): Command => ({ id, group: 'memo', labelKey: 'command.newMemo', icon: id, shortcuts: [], run: () => undefined });
   const toolbar = createToolbar(document, [command('a'), command('b'), command('c')], (key) => key, {
     secondaryIds: new Set(['b']),
   });
@@ -79,7 +80,7 @@ test('buttons of secondary commands are marked, so the stylesheet can hide them 
 
 test('the tooltip shows the shortcut as the given formatter writes it', () => {
   const { document } = createTestDom();
-  const command: Command = { id: 'a', labelKey: 'command.newMemo', icon: 'a', shortcuts: ['Mod-o'], run: () => undefined };
+  const command: Command = { id: 'a', group: 'memo', labelKey: 'command.newMemo', icon: 'a', shortcuts: ['Mod-o'], run: () => undefined };
   const toolbar = createToolbar(document, [command], () => 'Open', { formatShortcut: (shortcut) => `<${shortcut}>` });
   assert.equal(toolbar.element.querySelector('button')?.title, 'Open (<Mod-o>)');
 });
