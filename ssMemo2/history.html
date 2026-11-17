@@ -13,6 +13,15 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 03:43] 빌드 스크립트: build.sh와 cp949 build.bat (0.4)</h2>
+<ul>
+<li><b>기획:</b> <code>build.bat</code>은 UTF-8 템플릿에서 cp949 + CRLF로 생성해 편집기·git이 인코딩을 바꾸지 못하게 함. 두 스크립트 모두 대상 폴더를 지우지 않고 <code>index.html</code>만 복사.</li>
+<li><b>TC:</b> 정상 — 한글 2바이트 인코딩, 템플릿과 바이트 일치, <code>build.sh</code> 실제 실행 후 폴더에 <code>index.html</code>만 존재. 경계 — 인코딩 불가 글자 거부, 빈 문자열, CRLF 중복 방지, 상대 경로, 기존 파일 보존, 단계마다 errorlevel 검사.</li>
+<li><b>개발:</b> <code>build.sh</code>, <code>build.bat</code>, <code>.gitattributes</code>, <code>scripts/buildBat.ts</code>, <code>scripts/makeBuildBat.ts</code>, <code>scripts/build.bat.template</code>, <code>test/unit/buildBat.test.ts</code>, <code>test/build/buildScript.test.ts</code> 외 1개 파일</li>
+<li><b>검증:</b> 단위 56 passed, 0 failed · 빌드 14 passed, 0 failed · tsc 오류 없음</li>
+<li><b>비고:</b> <code>build.bat</code>은 이 환경(Windows 아님)에서 실행해 보지 못함. 바이트와 구조만 검증했으므로 Windows에서 한 번 확인 필요.</li>
+</ul>
+
 <h2>[2026-11-17 03:40] 단일 파일 빌드 파이프라인과 산출물 가드 (0.3)</h2>
 <ul>
 <li><b>기획:</b> esbuild로 TS·CSS를 묶어 템플릿에 인라인하고, 외부 참조가 하나라도 있으면 빌드가 실패하도록 설계. 빌드 ID는 버전 + 내용 해시.</li>

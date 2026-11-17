@@ -1,0 +1,4 @@
+# build.bat is cp949 + CRLF on purpose; git must not normalize line endings or treat it as text.
+build.bat -text
+# Shell scripts must keep LF even when the repository is checked out on Windows.
+*.sh text eol=lf

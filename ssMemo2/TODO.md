@@ -85,7 +85,7 @@
 - [x] 0.1 로드맵 기록, `.gitignore`, `history.html` 뼈대
 - [x] 0.2 `package.json`·lockfile·tsconfig 2종·툴체인 테스트
 - [x] 0.3 빌드 파이프라인(`fillTemplate`, `buildHtml`) + 산출물 가드 테스트
-- [ ] 0.4 `build.sh` + `build.bat` 생성기(cp949 + CRLF) + 검증 테스트
+- [x] 0.4 `build.sh` + `build.bat` 생성기(cp949 + CRLF) + 검증 테스트
 - [ ] 0.5 규칙 가드 테스트(전역 변수·좌표·한글 리터럴·`.ts` 확장자)
 - [ ] 0.6 진단 페이지 + 수동 점검표 + readme 뼈대
 
