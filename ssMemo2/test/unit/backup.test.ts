@@ -15,7 +15,13 @@ function stored(id: string, content: string, createdAt: string, source?: Documen
 }
 
 function input(documents: StoredDocument[]): BackupInput {
-  return { documents, settings: { ...DEFAULT_SETTINGS, language: 'ko' }, exportedAt: EXPORTED_AT, buildId: '0.1.0+abc' };
+  return {
+    documents,
+    settings: { ...DEFAULT_SETTINGS, language: 'ko' },
+    calcMemory: { rate: { big: '1250' }, ratio: { num: 0.5 } },
+    exportedAt: EXPORTED_AT,
+    buildId: '0.1.0+abc',
+  };
 }
 
 test('a backup says what it is, when it was made and by which build', () => {
@@ -148,6 +154,7 @@ test('the smallest backup a person could write by hand is accepted', () => {
   assert.deepEqual(content, {
     exportedAt: undefined,
     settings: undefined,
+    calcMemory: undefined,
     skippedDocuments: 0,
     documents: [{ id: undefined, title: undefined, createdAt: undefined, updatedAt: undefined, content: 'typed by hand', source: undefined }],
   });
@@ -293,4 +300,29 @@ test('a generated id never collides with a stored one or one from the backup', (
 test('an empty backup plans nothing', () => {
   assert.deepEqual(planImport([], context('merge', [stored('a', 'x', '2026-01-01T00:00:00.000Z')])), { drafts: [], added: 0, copied: 0, unchanged: 0 });
   assert.deepEqual(planImport([], context('replace')), { drafts: [], added: 0, copied: 0, unchanged: 0 });
+});
+
+// --- calculator variables ---------------------------------------------------
+
+test('a backup carries the stored calculator variables and gives them back', () => {
+  const backup = createBackup(input([]));
+  assert.deepEqual(backup.calcMemory, { rate: { big: '1250' }, ratio: { num: 0.5 } });
+  assert.deepEqual(parsed(serializeBackup(backup)).calcMemory, { rate: { big: '1250' }, ratio: { num: 0.5 } });
+});
+
+test('a backup without calculator variables says nothing about them, which is not the same as having none', () => {
+  // Restoring such a backup must leave the current variables alone rather than erase them.
+  assert.equal(parsed({ app: 'ssMemo2', documents: [] }).calcMemory, undefined);
+  assert.deepEqual(parsed({ app: 'ssMemo2', documents: [], calcMemory: {} }).calcMemory, {});
+});
+
+test('damaged calculator variables in a backup are dropped one by one', () => {
+  const content = parsed({
+    app: 'ssMemo2',
+    documents: [],
+    calcMemory: { good: { big: '7' }, bad: { big: 'seven' }, 'not a name': { num: 1 }, alsoGood: { num: 2.5 }, extra: { num: 1, future: true } },
+  });
+  assert.deepEqual(content.calcMemory, { good: { big: '7' }, alsoGood: { num: 2.5 }, extra: { num: 1 } });
+  assert.equal(parsed({ app: 'ssMemo2', documents: [], calcMemory: 'x = 1' }).calcMemory, undefined);
+  assert.equal(parsed({ app: 'ssMemo2', documents: [], calcMemory: [1, 2] }).calcMemory, undefined);
 });

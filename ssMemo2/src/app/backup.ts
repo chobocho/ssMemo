@@ -3,6 +3,8 @@
 // TODO.md asks for a format that is easy to change and extend, also by hand. So the file is
 // indented, has one field per line and names its sections; what the storage derives itself
 // (revision, length) is left out, and reading is lenient about anything that is missing.
+import { parseStoredEnvironment, toStoredEnvironment } from '../lib/calc.ts';
+import type { StoredCalcValue } from '../lib/calc.ts';
 import { parseDocumentSource } from '../storage/storagePort.ts';
 import type { DocumentDraft, DocumentSource, StoredDocument } from '../storage/storagePort.ts';
 import { toValidTitle } from './documentStore.ts';
@@ -36,12 +38,15 @@ export interface Backup {
   /** Build of the app that wrote the file; informational. */
   appBuild: string;
   settings: Settings;
+  /** The variables kept by the calculator. */
+  calcMemory: Record<string, StoredCalcValue>;
   documents: BackupDocument[];
 }
 
 export interface BackupInput {
   documents: readonly StoredDocument[];
   settings: Settings;
+  calcMemory: Record<string, StoredCalcValue>;
   exportedAt: Date;
   buildId: string;
 }
@@ -65,6 +70,7 @@ export function createBackup(input: BackupInput): Backup {
     exportedAt: input.exportedAt.toISOString(),
     appBuild: input.buildId,
     settings: { ...input.settings },
+    calcMemory: { ...input.calcMemory },
     // Oldest first, ids breaking ties: two backups of the same data then compare line by line.
     documents: input.documents
       .map(toBackupDocument)
@@ -99,6 +105,8 @@ export interface BackupContent {
   exportedAt: string | undefined;
   documents: ImportedDocument[];
   settings: Settings | undefined;
+  /** undefined if the file says nothing about calculator variables, which differs from "none". */
+  calcMemory: Record<string, StoredCalcValue> | undefined;
   /** Entries of the document list that could not be used. */
   skippedDocuments: number;
 }
@@ -172,6 +180,8 @@ export function parseBackup(text: string): ParsedBackup {
       exportedAt: timestampOrUndefined(root.exportedAt),
       documents,
       settings: isRecord(root.settings) ? parseSettings(root.settings) : undefined,
+      // Read and written again, which drops whatever is not a usable variable.
+      calcMemory: isRecord(root.calcMemory) ? toStoredEnvironment(parseStoredEnvironment(root.calcMemory)) : undefined,
       skippedDocuments,
     },
   };

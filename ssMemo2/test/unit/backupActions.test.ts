@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { parseBackup } from '../../src/app/backup.ts';
 import type { ImportMode } from '../../src/app/backup.ts';
 import { createBackupActions } from '../../src/app/backupActions.ts';
+import { CALC_MEMORY_KEY } from '../../src/app/calcActions.ts';
 import type { BackupActions, BackupNotice, BackupSummary } from '../../src/app/backupActions.ts';
 import type { PickedFile, SaveTarget } from '../../src/app/localFiles.ts';
 import { DEFAULT_SETTINGS } from '../../src/app/settings.ts';
@@ -373,4 +374,71 @@ test('when the import cannot be written, nothing changes and the user is told', 
     assert.equal(harness.restarts.count, 0);
     assert.deepEqual(harness.savedSettings, []);
   }
+});
+
+// --- calculator variables ---------------------------------------------------
+
+const STORED_VARIABLES = { rate: { big: '1250' } };
+const BACKUP_VARIABLES = { rate: { big: '900' }, ratio: { num: 0.5 } };
+
+test('exporting includes the stored calculator variables', async () => {
+  const harness = await createHarness();
+  await harness.storage.setValue(CALC_MEMORY_KEY, STORED_VARIABLES);
+  await harness.actions.exportBackup();
+  const parsed = parseBackup(harness.saved[0]?.text ?? '');
+  assert.ok(parsed.ok);
+  assert.deepEqual(parsed.content.calcMemory, STORED_VARIABLES);
+});
+
+test('exporting works when no variables were ever stored, or what is stored is damaged', async () => {
+  for (const stored of [undefined, 'garbage', { broken: { big: 'x' } }]) {
+    const harness = await createHarness();
+    if (stored !== undefined) await harness.storage.setValue(CALC_MEMORY_KEY, stored);
+    await harness.actions.exportBackup();
+    const parsed = parseBackup(harness.saved[0]?.text ?? '');
+    assert.ok(parsed.ok);
+    assert.deepEqual(parsed.content.calcMemory, {});
+    assert.equal(harness.notices[0]?.kind, 'backup-exported');
+  }
+});
+
+test('replacing takes over the calculator variables of the backup, adding leaves them as they are', async () => {
+  const replacing = await createHarness();
+  await replacing.storage.setValue(CALC_MEMORY_KEY, STORED_VARIABLES);
+  replacing.picked.file = replacing.backupFile([{ id: 'c', content: 'x' }], { calcMemory: BACKUP_VARIABLES });
+  replacing.mode.value = 'replace';
+  await replacing.actions.importBackup();
+  assert.deepEqual(await replacing.storage.getValue(CALC_MEMORY_KEY), BACKUP_VARIABLES);
+
+  const adding = await createHarness();
+  await adding.storage.setValue(CALC_MEMORY_KEY, STORED_VARIABLES);
+  adding.picked.file = adding.backupFile([{ id: 'c', content: 'x' }], { calcMemory: BACKUP_VARIABLES });
+  await adding.actions.importBackup();
+  assert.deepEqual(await adding.storage.getValue(CALC_MEMORY_KEY), STORED_VARIABLES);
+});
+
+test('replacing with a backup that has no calculator variables keeps the current ones', async () => {
+  const harness = await createHarness();
+  await harness.storage.setValue(CALC_MEMORY_KEY, STORED_VARIABLES);
+  harness.picked.file = harness.backupFile([{ id: 'c', content: 'x' }]);
+  harness.mode.value = 'replace';
+  await harness.actions.importBackup();
+  assert.deepEqual(await harness.storage.getValue(CALC_MEMORY_KEY), STORED_VARIABLES);
+  assert.equal(harness.restarts.count, 1);
+});
+
+test('a failure to store the variables does not undo a replace that already happened', async () => {
+  const storage = createMemoryStorage();
+  const harness = await createHarness({
+    ...storage,
+    setValue: async (key, value) => {
+      if (key === CALC_MEMORY_KEY) throw new StorageError('quota', 'full');
+      return storage.setValue(key, value);
+    },
+  });
+  harness.picked.file = harness.backupFile([{ id: 'c', title: 'C', content: 'x' }], { calcMemory: BACKUP_VARIABLES });
+  harness.mode.value = 'replace';
+  await harness.actions.importBackup();
+  assert.deepEqual(await harness.stored(), [['c', 'C', 'x']]);
+  assert.equal(harness.restarts.count, 1);
 });

@@ -1,10 +1,12 @@
 // Exporting everything to a backup file and importing such a file again. Like the other
 // procedures it knows nothing about the DOM: dialogs, the file picker and the reload are passed
 // in, so every path (including the ones that must not lose data) is tested without a browser.
+import { parseStoredEnvironment, toStoredEnvironment } from '../lib/calc.ts';
 import { decodeText } from '../lib/encoding.ts';
 import type { StoragePort } from '../storage/storagePort.ts';
 import { backupFileName, createBackup, parseBackup, planImport, serializeBackup } from './backup.ts';
 import type { BackupContent, BackupProblem, ImportMode } from './backup.ts';
+import { CALC_MEMORY_KEY } from './calcActions.ts';
 import type { PickedFile, SaveTarget } from './localFiles.ts';
 import type { Settings } from './settings.ts';
 
@@ -105,6 +107,8 @@ export function createBackupActions(options: BackupActionsOptions): BackupAction
         const backup = createBackup({
           documents: snapshot.documents,
           settings: options.getSettings(),
+          // Cleaned on the way, so damaged entries do not travel into the backup.
+          calcMemory: toStoredEnvironment(parseStoredEnvironment(await storage.getValue(CALC_MEMORY_KEY))),
           exportedAt,
           buildId: options.buildId,
         });
@@ -148,6 +152,10 @@ export function createBackupActions(options: BackupActionsOptions): BackupAction
 
         if (mode === 'replace') {
           if (content.settings) await options.saveSettings(content.settings);
+          if (content.calcMemory) {
+            // The memos are already replaced; a failure here must not be reported as a failed import.
+            await storage.setValue(CALC_MEMORY_KEY, content.calcMemory).catch(() => undefined);
+          }
           options.restart();
           return;
         }

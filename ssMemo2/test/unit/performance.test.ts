@@ -92,7 +92,7 @@ test('a 5 MB memo goes into a backup and comes out again quickly', () => {
   const stored: StoredDocument[] = [{ meta: { id: 'a', title: 'big', createdAt: timestamp, updatedAt: timestamp, length: text.length, rev: 1 }, content: text }];
 
   const exported = timed(() =>
-    new TextEncoder().encode(serializeBackup(createBackup({ documents: stored, settings: DEFAULT_SETTINGS, exportedAt: new Date(0), buildId: 'test' }))),
+    new TextEncoder().encode(serializeBackup(createBackup({ documents: stored, settings: DEFAULT_SETTINGS, calcMemory: {}, exportedAt: new Date(0), buildId: 'test' }))),
   );
   assertFast('exporting', exported.elapsedMs);
 
