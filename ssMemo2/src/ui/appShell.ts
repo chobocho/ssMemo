@@ -1,4 +1,4 @@
-// Builds the page skeleton: header, tab bar, notices, the main area and a footer. Sizes and positions come
+// Builds the page skeleton: header, tab bar, notices, the main area (editor and preview) and a footer. Sizes and positions come
 // entirely from src/styles/layout.css; this module only creates the elements.
 
 export interface AppShell {
@@ -9,8 +9,12 @@ export interface AppShell {
   tabBarHost: HTMLElement;
   /** Between header and main area; holds messages for the user. */
   noticeHost: HTMLElement;
-  /** Main area; the editor is mounted here and fills it. */
+  /** Main area; holds the editor and, while it is switched on, the preview next to or instead of it. */
+  main: HTMLElement;
+  /** The editor is mounted here and fills it. */
   editorHost: HTMLElement;
+  /** Holds the preview pane. */
+  previewHost: HTMLElement;
   /** Area below the main area; holds the collapsible diagnostics. */
   footer: HTMLElement;
 }
@@ -34,10 +38,15 @@ export function createAppShell(doc: Document, title: string): AppShell {
 
   const main = doc.createElement('main');
   main.className = 'app-main';
+  const editorHost = doc.createElement('div');
+  editorHost.className = 'editor-pane';
+  const previewHost = doc.createElement('div');
+  previewHost.className = 'preview-host';
+  main.append(editorHost, previewHost);
 
   const footer = doc.createElement('footer');
   footer.className = 'app-footer';
 
   element.append(header, tabBarHost, noticeHost, main, footer);
-  return { element, header, tabBarHost, noticeHost, editorHost: main, footer };
+  return { element, header, tabBarHost, noticeHost, main, editorHost, previewHost, footer };
 }

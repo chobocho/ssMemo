@@ -397,3 +397,40 @@ test('apply does nothing while no tab is shown', () => {
   assert.equal(called, false);
   assert.equal(harness.view.state.doc.toString(), '');
 });
+
+// --- getContentKey ----------------------------------------------------------
+
+test('the content key changes with every edit and tab switch, and with nothing else', () => {
+  const harness = createHarness();
+  assert.equal(harness.tabs.getContentKey(), undefined);
+  harness.tabs.show('a', 'alpha');
+  const opened = harness.tabs.getContentKey();
+  assert.notEqual(opened, undefined);
+
+  // Moving the cursor is not a change of content.
+  harness.view.dispatch({ selection: { anchor: 3 } });
+  assert.equal(harness.tabs.getContentKey(), opened);
+
+  harness.type('x');
+  const edited = harness.tabs.getContentKey();
+  assert.notEqual(edited, opened);
+
+  harness.tabs.show('b', 'beta');
+  const other = harness.tabs.getContentKey();
+  assert.notEqual(other, edited);
+  // Back on the first tab it is the same content as when it was left.
+  harness.tabs.show('a', 'ignored');
+  assert.equal(harness.tabs.getContentKey(), edited);
+
+  harness.tabs.replace('a', 'alpha, read again');
+  assert.notEqual(harness.tabs.getContentKey(), edited);
+});
+
+test('two tabs with the same text still have different content keys', () => {
+  // Otherwise switching between them would look like nothing happened.
+  const harness = createHarness();
+  harness.tabs.show('a', 'same');
+  const first = harness.tabs.getContentKey();
+  harness.tabs.show('b', 'same');
+  assert.notEqual(harness.tabs.getContentKey(), first);
+});

@@ -770,6 +770,54 @@ test('a long memo is split with cut lines and joined again, a short one is left 
   page.close();
 });
 
+test('the preview shows the memo as rendered Markdown and follows typing and tab switches', async () => {
+  const page = await openPage({ factory: await seededFactory() });
+  const main = page.document.querySelector('.app-main');
+  const pane = page.document.querySelector('.preview-pane');
+  assert.ok(main && pane);
+  assert.equal(main.classList.contains('is-previewing'), false);
+  assert.equal(pane.innerHTML, '');
+
+  toolbarButton(page, 'Markdown preview').click();
+  await wait(50);
+  assert.equal(main.classList.contains('is-previewing'), true);
+  assert.equal(toolbarButton(page, 'Markdown preview').getAttribute('aria-pressed'), 'true');
+  assert.equal(pane.innerHTML, '<p>milk</p>');
+
+  const line = page.document.querySelector('.cm-line');
+  assert.ok(line);
+  line.textContent = '# Shopping **today**';
+  await wait(600);
+  assert.equal(pane.innerHTML, '<h1>Shopping <strong>today</strong></h1>');
+
+  await page.click('.tab [role="tab"]', 1);
+  await wait(600);
+  assert.equal(pane.innerHTML, '<p>write more tests</p>');
+
+  toolbarButton(page, 'Markdown preview').click();
+  await wait(50);
+  assert.equal(main.classList.contains('is-previewing'), false);
+  assert.equal(pane.innerHTML, '');
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
+test('markup typed into a memo is shown as text in the preview, never run', async () => {
+  const page = await openPage({ factory: await seededFactory() });
+  toolbarButton(page, 'Markdown preview').click();
+  const line = page.document.querySelector('.cm-line');
+  assert.ok(line);
+  line.textContent = '<img src=x onerror="document.title=1"> [x](javascript:document.title=2)';
+  await wait(600);
+  const pane = page.document.querySelector('.preview-pane');
+  assert.ok(pane);
+  assert.equal(pane.querySelectorAll('img, a, script').length, 0);
+  assert.match(pane.textContent ?? '', /<img src=x/);
+  assert.equal(page.document.title, 'ssMemo2');
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
 test('the search panel speaks the language of the app', async () => {
   const factory = await seededFactory();
   const storage = await openIndexedDbStorage(factory);

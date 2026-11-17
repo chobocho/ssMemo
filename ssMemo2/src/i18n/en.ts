@@ -36,6 +36,7 @@ export const en = {
   'command.closeTab': 'Close tab',
   'command.nextTab': 'Next tab',
   'command.previousTab': 'Previous tab',
+  'command.preview': 'Markdown preview',
   'command.toggleWrap': 'Line wrapping',
   'command.fontSmaller': 'Smaller text',
   'command.fontLarger': 'Larger text',
@@ -125,6 +126,9 @@ export const en = {
 
   'notice.fileSaved': 'Saved to {name}.',
   'notice.fileSaveFailed': 'Could not save to {name}. "Save to file as…" lets you choose another place.',
+
+  'preview.label': 'Preview',
+  'preview.tooLong': 'This memo is too long to preview (at most {max} characters).',
 
   'file.loading': 'Opening {name}…',
   'file.convertConfirm': '{name} is a {from} file. This app can only save it as {to}, and programs that expect {from} may then show it garbled. Save as {to}?',

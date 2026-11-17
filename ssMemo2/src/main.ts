@@ -9,6 +9,7 @@ import type { Command } from './app/commands.ts';
 import { describeEnvironment } from './app/diagnostics.ts';
 import { createDocumentStore, findTitleProblem } from './app/documentStore.ts';
 import { createLocalFiles } from './app/localFiles.ts';
+import { createPreview } from './app/preview.ts';
 import {
   SAVE_STATE_KEYS,
   describeBackupNotice,
@@ -35,6 +36,7 @@ import type { MessageKey } from './i18n/en.ts';
 import { createTranslator, resolveLocale } from './i18n/i18n.ts';
 import { CHUNK_DELIMITER, CHUNK_LABEL, DEFAULT_CHUNK_LENGTH } from './lib/chunks.ts';
 import { TEXT_ENCODINGS } from './lib/encoding.ts';
+import { escapeHtml, renderMarkdown } from './lib/markdown.ts';
 import type { TextEncoding } from './lib/encoding.ts';
 import { isSafeModeRequested, openStorage } from './storage/openStorage.ts';
 import type { DocumentMeta } from './storage/storagePort.ts';
@@ -48,6 +50,7 @@ import { createFileIo } from './ui/fileIo.ts';
 import { createMemoManager } from './ui/memoManager.ts';
 import { createModals } from './ui/modal.ts';
 import { nextPaint } from './ui/nextPaint.ts';
+import { createPreviewPane } from './ui/previewPane.ts';
 import { createNoticeBar } from './ui/noticeBar.ts';
 import { createStatusBar } from './ui/statusBar.ts';
 import { createStatusIndicator } from './ui/statusIndicator.ts';
@@ -67,6 +70,12 @@ const DROP_TARGET_CLASS = 'is-drop-target';
 const INFO_NOTICE_DURATION_MS = 4000;
 // What the file dialog for importing a backup is limited to.
 const BACKUP_FILE_TYPES = '.json,application/json';
+// Set on the main area while the Markdown preview is on (see styles/layout.css).
+const PREVIEWING_CLASS = 'is-previewing';
+// The preview follows typing after this pause, and gives up on memos longer than this: rendering
+// them would stall a phone at every pause.
+const PREVIEW_DELAY_MS = 300;
+const PREVIEW_MAX_CHARACTERS = 500_000;
 const MENU_COMMAND_ID: CommandId = 'app.menu';
 // Commands that get a button in the header, in display order. Tabs have their own controls.
 const TOOLBAR_COMMAND_IDS: readonly CommandId[] = [
@@ -74,6 +83,7 @@ const TOOLBAR_COMMAND_IDS: readonly CommandId[] = [
   'file.open',
   'file.save',
   'search.open',
+  'view.preview',
   'view.toggleWrap',
   'view.fontSmaller',
   'view.fontLarger',
@@ -83,6 +93,7 @@ const TOOLBAR_COMMAND_IDS: readonly CommandId[] = [
 // Of those, the ones that leave the header on narrow screens. The menu still lists them.
 const SECONDARY_TOOLBAR_COMMAND_IDS: ReadonlySet<string> = new Set<CommandId>([
   'search.open',
+  'view.preview',
   'view.toggleWrap',
   'view.fontSmaller',
   'view.fontLarger',
@@ -165,10 +176,35 @@ async function start(win: Window): Promise<void> {
         editedSinceStart = true;
         workspace.handleEdit(tabId);
       },
-      onViewUpdate: () => refreshStatusBar(),
+      onViewUpdate: () => {
+        refreshStatusBar();
+        // Also called for cursor movements; the preview itself checks whether the text changed.
+        preview.contentMayHaveChanged();
+      },
     },
     { lineWrapping: settings.lineWrapping, phrases: createSearchPhrases(t) },
   );
+
+  const timers = {
+    setTimeout: (callback: () => void, delayMs: number): number => win.setTimeout(callback, delayMs),
+    clearTimeout: (handle: unknown): void => win.clearTimeout(handle as number),
+  };
+
+  const previewPane = createPreviewPane(doc, t('preview.label'));
+  shell.previewHost.append(previewPane.element);
+  const preview = createPreview({
+    getContentKey: () => editor.getContentKey(),
+    getText: () => {
+      const tabId = editor.getActiveTabId();
+      return tabId === undefined ? undefined : editor.getText(tabId);
+    },
+    render: renderMarkdown,
+    show: (html) => previewPane.setHtml(html),
+    tooLongHtml: (max) => `<p>${escapeHtml(t('preview.tooLong', { max }))}</p>`,
+    maxLength: PREVIEW_MAX_CHARACTERS,
+    delayMs: PREVIEW_DELAY_MS,
+    timers,
+  });
 
   const refreshStatusBar = (): void => {
     statusBar.setText(formatEditorStats(editor.getStats(), t, workspace.getActiveDocument()?.source));
@@ -188,10 +224,7 @@ async function start(win: Window): Promise<void> {
     defaultTitle: t('memo.defaultTitle'),
     idleDelayMs: AUTOSAVE_IDLE_DELAY_MS,
     maxWaitMs: AUTOSAVE_MAX_WAIT_MS,
-    timers: {
-      setTimeout: (callback, delayMs) => win.setTimeout(callback, delayMs),
-      clearTimeout: (handle) => win.clearTimeout(handle as number),
-    },
+    timers,
     onNotice: (notice) => notices.show(describeNotice(notice, t)),
     onSaveStateChange: (state) => status.setSaveState(state === undefined ? '' : t(SAVE_STATE_KEYS[state])),
   });
@@ -332,6 +365,14 @@ async function start(win: Window): Promise<void> {
     editor.setLineWrapping(settings.lineWrapping);
     toolbar.refresh();
   };
+  const togglePreview = (): void => {
+    const previewing = !preview.isEnabled();
+    shell.main.classList.toggle(PREVIEWING_CLASS, previewing);
+    preview.setEnabled(previewing);
+    // The editor was hidden or changed its width; what it measured before no longer holds.
+    editor.remeasure();
+    toolbar.refresh();
+  };
   const stepFontSize = (direction: 1 | -1): void => {
     const sizeRem = stepEditorFontSize(settings.editorFontSizeRem, direction);
     if (sizeRem === settings.editorFontSizeRem) return;
@@ -423,6 +464,7 @@ async function start(win: Window): Promise<void> {
       'insert.divider': () => editInPlace(insertDivider),
       ...symbolCommands,
       'tools.chunks': { run: toggleCutLines, isOn: hasCutLines },
+      'view.preview': { run: togglePreview, isOn: () => preview.isEnabled() },
       'view.toggleWrap': { run: toggleLineWrapping, isOn: () => settings.lineWrapping },
       'view.fontSmaller': () => stepFontSize(-1),
       'view.fontLarger': () => stepFontSize(1),

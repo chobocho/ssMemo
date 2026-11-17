@@ -71,6 +71,11 @@ export interface EditorTabs {
   /** Facts about the visible tab; undefined while no tab is shown. */
   getStats(): EditorStats | undefined;
   /**
+   * A value that stays the same exactly as long as the visible tab and its text stay the same.
+   * Lets a caller find out cheaply whether there is anything new to look at.
+   */
+  getContentKey(): unknown;
+  /**
    * Edits the visible document: `build` gets its current state and returns the change to make.
    * The change goes through the editor like typing does, so it can be undone and is saved.
    * Does nothing while no tab is shown.
@@ -160,6 +165,10 @@ export function createEditorTabs(view: EditorViewPort, options: EditorTabsOption
     },
 
     getStats: () => (activeTabId === undefined ? undefined : getEditorStats(view.state)),
+
+    // The document object is replaced by every edit and never shared between tabs (except that
+    // all empty documents are one object, which makes no difference to anyone looking at them).
+    getContentKey: () => (activeTabId === undefined ? undefined : view.state.doc),
 
     apply(build) {
       if (activeTabId !== undefined) view.dispatch(build(view.state));

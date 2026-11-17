@@ -1,0 +1,121 @@
+/* A memo rendered as Markdown. The class names starting with md- are set by lib/markdown.ts. */
+.preview-pane {
+  block-size: 100%;
+  padding: var(--space-3) var(--page-gutter);
+  overflow: auto;
+  overflow-wrap: anywhere;
+}
+
+.preview-pane h1,
+.preview-pane h2,
+.preview-pane h3,
+.preview-pane h4,
+.preview-pane h5,
+.preview-pane h6 {
+  margin: var(--space-4) 0 var(--space-2);
+  line-height: var(--line-height-heading);
+}
+
+.preview-pane h1 {
+  font-size: var(--preview-h1-size);
+}
+
+.preview-pane h2 {
+  font-size: var(--preview-h2-size);
+}
+
+.preview-pane h3 {
+  font-size: var(--preview-h3-size);
+}
+
+.preview-pane h4,
+.preview-pane h5,
+.preview-pane h6 {
+  font-size: var(--font-size-base);
+}
+
+.preview-pane > :first-child {
+  margin-block-start: 0;
+}
+
+.preview-pane p,
+.preview-pane ul,
+.preview-pane ol,
+.preview-pane blockquote,
+.preview-pane pre,
+.preview-pane table,
+.preview-pane details {
+  margin: 0 0 var(--space-3);
+}
+
+.preview-pane a {
+  color: var(--color-accent);
+}
+
+.preview-pane code {
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-small);
+  background: var(--color-surface-muted);
+  font-family: var(--editor-font-family);
+  font-size: var(--font-size-small);
+}
+
+/* Long code lines scroll inside their block instead of widening the pane. */
+.preview-pane pre {
+  padding: var(--space-3);
+  border-radius: var(--radius-small);
+  background: var(--color-surface-muted);
+  overflow-x: auto;
+  overflow-wrap: normal;
+}
+
+.preview-pane pre code {
+  padding: 0;
+  background: none;
+}
+
+.preview-pane blockquote {
+  padding-inline-start: var(--space-3);
+  border-inline-start: var(--quote-bar-width) solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.preview-pane hr {
+  border: 0;
+  border-block-start: var(--border-width) solid var(--color-border);
+}
+
+/* A wide table scrolls sideways on its own. */
+.preview-pane table {
+  display: block;
+  max-inline-size: 100%;
+  border-collapse: collapse;
+  overflow-x: auto;
+}
+
+.preview-pane th,
+.preview-pane td {
+  padding: var(--space-1) var(--space-2);
+  border: var(--border-width) solid var(--color-border);
+}
+
+.preview-pane th {
+  background: var(--color-surface-muted);
+}
+
+.preview-pane summary {
+  min-block-size: var(--touch-target);
+  cursor: pointer;
+}
+
+.md-left {
+  text-align: start;
+}
+
+.md-center {
+  text-align: center;
+}
+
+.md-right {
+  text-align: end;
+}

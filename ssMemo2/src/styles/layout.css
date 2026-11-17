@@ -29,10 +29,39 @@
   font-size: var(--font-size-title);
 }
 
-/* The editor scrolls inside this area; the page itself never scrolls. */
+/* The editor scrolls inside this area; the page itself never scrolls. While the preview is on,
+   the area is split in two where there is room, and shows the preview alone where there is not. */
 .app-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   min-block-size: 0;
   overflow: hidden;
+}
+
+.app-main.is-previewing {
+  grid-template-columns: var(--preview-columns);
+}
+
+.editor-pane {
+  min-inline-size: 0;
+  min-block-size: 0;
+  overflow: hidden;
+}
+
+.app-main.is-previewing .editor-pane {
+  display: var(--preview-editor-display);
+}
+
+.preview-host {
+  display: none;
+  min-inline-size: 0;
+  min-block-size: 0;
+}
+
+.app-main.is-previewing .preview-host {
+  display: block;
+  border-inline-start: var(--border-width) solid var(--color-border);
 }
 
 /* Shows where dragged files will land. Drawn inside the area so it is not clipped. */

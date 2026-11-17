@@ -37,6 +37,7 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'command.closeTab': '탭 닫기',
   'command.nextTab': '다음 탭',
   'command.previousTab': '이전 탭',
+  'command.preview': '마크다운 미리보기',
   'command.toggleWrap': '자동 줄바꿈',
   'command.fontSmaller': '글자 작게',
   'command.fontLarger': '글자 크게',
@@ -121,6 +122,9 @@ export const ko: Readonly<Record<MessageKey, string>> = {
 
   'notice.fileSaved': '{name} 파일로 저장했습니다.',
   'notice.fileSaveFailed': '{name} 파일로 저장하지 못했습니다. "다른 이름으로 저장…"으로 다른 위치를 골라 보세요.',
+
+  'preview.label': '미리보기',
+  'preview.tooLong': '메모가 너무 길어 미리보기를 표시하지 않습니다(최대 {max}자).',
 
   'file.loading': '{name} 여는 중…',
   'file.convertConfirm': '{name} 파일은 {from} 인코딩입니다. 이 앱은 {to}로만 저장할 수 있고, {from}을 기대하는 프로그램에서는 글자가 깨져 보일 수 있습니다. {to}로 저장할까요?',

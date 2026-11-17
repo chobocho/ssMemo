@@ -56,6 +56,7 @@ export const COMMAND_DEFINITIONS = [
 
   { id: 'tools.chunks', group: 'tools', labelKey: 'command.chunks', icon: '➗', shortcuts: [] },
 
+  { id: 'view.preview', group: 'view', labelKey: 'command.preview', icon: '📖', shortcuts: ['Alt-p'] },
   { id: 'view.toggleWrap', group: 'view', labelKey: 'command.toggleWrap', icon: '↩️', shortcuts: ['Alt-z'] },
   { id: 'view.fontSmaller', group: 'view', labelKey: 'command.fontSmaller', icon: 'A−', shortcuts: [] },
   { id: 'view.fontLarger', group: 'view', labelKey: 'command.fontLarger', icon: 'A+', shortcuts: [] },
