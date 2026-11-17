@@ -5,7 +5,15 @@ export { Compartment, EditorState } from '@codemirror/state';
 export type { Extension, StateEffect, TransactionSpec } from '@codemirror/state';
 export { EditorView, keymap, lineNumbers } from '@codemirror/view';
 export type { KeyBinding } from '@codemirror/view';
-export { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
+export {
+  cursorDocEnd,
+  cursorDocStart,
+  cursorPageDown,
+  cursorPageUp,
+  defaultKeymap,
+  history,
+  historyKeymap,
+} from '@codemirror/commands';
 export {
   closeSearchPanel,
   findNext,

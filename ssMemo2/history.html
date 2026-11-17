@@ -13,6 +13,15 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 15:16] 앱 단축키와 충돌 검사 (5.2)</h2>
+<ul>
+<li><b>기획:</b> ssMemoWeb의 이동 키(Ctrl+6/H 맨 위, Ctrl+4/E 맨 아래, Alt+B/F 한 화면)를 명령으로 옮긴다. 앱 단축키와 편집기 키 바인딩이 겹치면 한 번 눌러 두 가지가 실행되므로, 명령 표와 편집기 키맵을 플랫폼별로 대조하는 테스트를 둔다.</li>
+<li><b>TC:</b> 정상 — 이동 키로 커서가 처음·끝으로 이동(빌드된 페이지). 경계 — Mac·Windows·Linux 각각의 키 표기 해석, 구두점의 Shift 차이 무시, 브라우저가 가로채는 키(Ctrl+N/T/W 등) 미사용, ssMemoWeb 키 목록 유지.</li>
+<li><b>개발:</b> <code>test/unit/keymapCollisions.test.ts</code>, <code>src/app/commandTable.ts</code>, <code>src/editor/editorTabs.ts</code>, <code>cm6.ts</code>, <code>src/main.ts</code>, <code>src/i18n/en.ts</code>, <code>ko.ts</code>, <code>test/build/appSmoke.test.ts</code></li>
+<li><b>검증:</b> 단위 681 passed, 빌드 47 passed, 0 failed</li>
+<li><b>비고:</b> 일부러 충돌(Ctrl+I)을 되살려 테스트가 잡는지 확인함.</li>
+</ul>
+
 <h2>[2026-11-17 15:12] 검색 (5.1)</h2>
 <ul>
 <li><b>기획:</b> CodeMirror 검색 패널(찾기·바꾸기)을 편집기 위쪽에 두고 문구를 한·영으로 번역. 여는 키(Ctrl+F, Ctrl+I)와 다음·이전(F3, Ctrl+. , Ctrl+,)은 앱 명령이라 포커스가 어디 있든 동작. 검색어와 패널 열림 상태는 탭을 바꿔도 따라간다.</li>

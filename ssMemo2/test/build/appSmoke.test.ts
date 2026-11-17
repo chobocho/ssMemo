@@ -684,6 +684,24 @@ test('Ctrl+I opens the search as well, and the search follows to the next tab', 
   page.close();
 });
 
+test('the keys for the start and the end of the document move the cursor there', async () => {
+  const page = await openPage({ factory: await seededFactory() });
+  const statusBar = (): string => page.document.querySelector('.status-bar')?.textContent ?? '';
+  assert.match(statusBar(), /^Ln 1, Col 1 /);
+  // "milk" has four characters, so its end is column 5.
+  const toEnd = await pressKey(page, { key: 'e', code: 'KeyE', ctrlKey: true });
+  assert.equal(toEnd.defaultPrevented, true);
+  assert.match(statusBar(), /^Ln 1, Col 5 /);
+  await pressKey(page, { key: '6', code: 'Digit6', ctrlKey: true });
+  assert.match(statusBar(), /^Ln 1, Col 1 /);
+  await pressKey(page, { key: '4', code: 'Digit4', ctrlKey: true });
+  assert.match(statusBar(), /^Ln 1, Col 5 /);
+  await pressKey(page, { key: 'h', code: 'KeyH', ctrlKey: true });
+  assert.match(statusBar(), /^Ln 1, Col 1 /);
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
 test('the search panel speaks the language of the app', async () => {
   const factory = await seededFactory();
   const storage = await openIndexedDbStorage(factory);

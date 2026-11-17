@@ -4,6 +4,10 @@
 import {
   EditorView,
   closeSearchPanel,
+  cursorDocEnd,
+  cursorDocStart,
+  cursorPageDown,
+  cursorPageUp,
   findNext,
   findPrevious,
   getSearchQuery,
@@ -174,6 +178,12 @@ export interface EditorActions {
   /** Selects the next or previous match; opens the search panel if nothing is being searched for. */
   findNext(): void;
   findPrevious(): void;
+  /** Moves the cursor, and with it the view, to the start or the end of the document. */
+  goToStart(): void;
+  goToEnd(): void;
+  /** Moves the cursor one screenful up or down. */
+  pageUp(): void;
+  pageDown(): void;
 }
 
 export type MountedEditor = EditorTabs & EditorActions;
@@ -214,5 +224,9 @@ export function mountEditorTabs(parent: HTMLElement, callbacks: EditorCallbacks,
     openSearch: () => void openSearchPanel(view),
     findNext: () => void findNext(view),
     findPrevious: () => void findPrevious(view),
+    goToStart: () => void cursorDocStart(view),
+    goToEnd: () => void cursorDocEnd(view),
+    pageUp: () => void cursorPageUp(view),
+    pageDown: () => void cursorPageDown(view),
   };
 }

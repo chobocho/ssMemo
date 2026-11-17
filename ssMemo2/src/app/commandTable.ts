@@ -10,6 +10,7 @@ export const COMMAND_GROUPS = [
   { id: 'memo', labelKey: 'group.memo' },
   { id: 'file', labelKey: 'group.file' },
   { id: 'search', labelKey: 'group.search' },
+  { id: 'move', labelKey: 'group.move' },
   { id: 'view', labelKey: 'group.view' },
   { id: 'backup', labelKey: 'group.backup' },
   { id: 'app', labelKey: 'group.app' },
@@ -35,6 +36,12 @@ export const COMMAND_DEFINITIONS = [
   { id: 'search.open', group: 'search', labelKey: 'command.search', icon: '🔍', shortcuts: ['Mod-f', 'Mod-i'] },
   { id: 'search.next', group: 'search', labelKey: 'command.findNext', icon: '🔽', shortcuts: ['F3', 'Mod-.', 'Mod->'] },
   { id: 'search.previous', group: 'search', labelKey: 'command.findPrevious', icon: '🔼', shortcuts: ['Shift-F3', 'Mod-,', 'Mod-<'] },
+
+  // The keys of ssMemoWeb. Home, End and the page keys work as in any editor besides these.
+  { id: 'move.start', group: 'move', labelKey: 'command.goToStart', icon: '⏫', shortcuts: ['Mod-6', 'Mod-h'] },
+  { id: 'move.end', group: 'move', labelKey: 'command.goToEnd', icon: '⏬', shortcuts: ['Mod-4', 'Mod-e'] },
+  { id: 'move.pageUp', group: 'move', labelKey: 'command.pageUp', icon: '⬆️', shortcuts: ['Alt-b'] },
+  { id: 'move.pageDown', group: 'move', labelKey: 'command.pageDown', icon: '⬇️', shortcuts: ['Alt-f'] },
 
   { id: 'view.toggleWrap', group: 'view', labelKey: 'command.toggleWrap', icon: '↩️', shortcuts: ['Alt-z'] },
   { id: 'view.fontSmaller', group: 'view', labelKey: 'command.fontSmaller', icon: 'A−', shortcuts: [] },
