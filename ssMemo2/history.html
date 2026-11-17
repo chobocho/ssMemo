@@ -13,6 +13,15 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 03:52] M0 릴리스 빌드</h2>
+<ul>
+<li><b>기획:</b> 로드맵 결정대로 마일스톤 완료 시점에만 <code>release/index.html</code>을 커밋.</li>
+<li><b>TC:</b> 정상 — <code>./build.sh</code> 기본 경로 실행 후 <code>release/</code>에 <code>index.html</code>만 존재. 경계 — <code>python -m http.server 8001</code>로 받은 내용이 파일과 바이트 단위로 같은지 비교.</li>
+<li><b>개발:</b> <code>release/index.html</code></li>
+<li><b>검증:</b> 5600바이트, build 0.1.0+355094ec, HTTP 200</li>
+<li><b>비고:</b> 브라우저 화면 확인은 <code>test/manual/checklist.md</code>의 M0 항목으로 남아 있음.</li>
+</ul>
+
 <h2>[2026-11-17 03:51] 진단 페이지, 수동 점검표, readme (0.6)</h2>
 <ul>
 <li><b>기획:</b> 화면 자동 검증 수단이 없으므로 기기 정보(뷰포트·DPR·폴드 상태·저장소 지원)를 화면에 보여 주고 복사해 전달받는 구조로 설계. 값 정리는 DOM 없는 순수 함수로 분리.</li>
