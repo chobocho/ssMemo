@@ -141,17 +141,23 @@
 ### Phase 6 — 마감 (M6: 릴리스)
 - [x] 6.1 모바일·폴더블 다듬기(M0에서 측정한 뷰포트 기준)
 - [x] 6.2 접근성(aria, 포커스)
-- [ ] 6.3 readme 완성
+- [x] 6.3 readme 완성
 - [ ] 6.4 릴리스 빌드 커밋
 
 ### Phase 7 — 추가 아이디어 (9절의 웹 검색 포함, 채택 여부는 M6에서 결정)
-- [ ] 저장소 영속 요청(`navigator.storage.persist`)
+- [ ] 저장소 영속 요청(`navigator.storage.persist`) + 사용량 표시(`estimate`)
+  - 브라우저 기본 저장은 "최선 노력"이라 공간이 부족하면 통째로 지워질 수 있음. 첫 저장 때 사용자 동작 안에서 요청하고, 결과를 진단 정보에 표시 (web.dev "Persistent storage")
+- [ ] CSP 메타로 외부 참조 차단
+  - `default-src 'none'; script-src 'sha256-…'`: 빌드가 인라인 스크립트의 해시를 넣음. 미리보기에 대한 2차 방어. 해시는 `default-src`가 아니라 `script-src`에 둘 것. CodeMirror가 스타일을 동적으로 넣으므로 `style-src`는 nonce나 `'unsafe-inline'` 필요 (WebKit "A Refined Content Security Policy")
 - [ ] 다크/라이트 테마
 - [ ] 휴지통(삭제 복구)
+- [ ] 모든 메모에서 찾기, 메모 목록 정렬·고정
+- [ ] 파일 연결을 새로고침 뒤에도 유지(파일 핸들을 IndexedDB에 보관하고 권한을 다시 요청)
+- [ ] 반쯤 접은 자세에서 위·아래 화면에 편집기와 미리보기 배치(`device-posture`, viewport segments 미디어 기능; 지원 여부 확인 필요)
 - [ ] Web Share(모바일 공유)
 - [ ] 백업 알림
 - [ ] ssMemoWeb 구 데이터 가져오기(같은 출처일 때)
-- [ ] CSP 메타로 외부 참조 차단
+- 검토 후 제외: 서비스 워커·PWA 설치(별도 파일이 필요해 "산출물은 index.html 하나" 조건과 충돌)
 
 ## 11. ssMemoWeb에서 가져온 아이디어
 - **그대로 가져옴**
