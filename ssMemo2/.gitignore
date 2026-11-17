@@ -1,0 +1,6 @@
+# npm dependencies (restored by `npm ci`)
+node_modules/
+# intermediate build output; only release/index.html is committed
+dist/
+# deployment script may hold credentials; never commit it
+upload.sh
