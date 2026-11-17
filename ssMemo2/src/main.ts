@@ -29,6 +29,7 @@ import type { LanguageSetting, Settings } from './app/settings.ts';
 import { adjacentTabId, createTabManager } from './app/tabManager.ts';
 import { createWorkspace } from './app/workspace.ts';
 import { mountEditorTabs } from './editor/editorTabs.ts';
+import { createSearchPhrases } from './editor/searchPhrases.ts';
 import type { MessageKey } from './i18n/en.ts';
 import { createTranslator, resolveLocale } from './i18n/i18n.ts';
 import { TEXT_ENCODINGS } from './lib/encoding.ts';
@@ -70,6 +71,7 @@ const TOOLBAR_COMMAND_IDS: readonly CommandId[] = [
   'memo.manage',
   'file.open',
   'file.save',
+  'search.open',
   'view.toggleWrap',
   'view.fontSmaller',
   'view.fontLarger',
@@ -78,6 +80,7 @@ const TOOLBAR_COMMAND_IDS: readonly CommandId[] = [
 ];
 // Of those, the ones that leave the header on narrow screens. The menu still lists them.
 const SECONDARY_TOOLBAR_COMMAND_IDS: ReadonlySet<string> = new Set<CommandId>([
+  'search.open',
   'view.toggleWrap',
   'view.fontSmaller',
   'view.fontLarger',
@@ -162,7 +165,7 @@ async function start(win: Window): Promise<void> {
       },
       onViewUpdate: () => refreshStatusBar(),
     },
-    settings.lineWrapping,
+    { lineWrapping: settings.lineWrapping, phrases: createSearchPhrases(t) },
   );
 
   const refreshStatusBar = (): void => {
@@ -383,6 +386,9 @@ async function start(win: Window): Promise<void> {
       'file.save': () => void localFiles.saveToFile(false),
       'file.saveAs': () => void localFiles.saveToFile(true),
       'file.encoding': () => void localFiles.changeEncoding(),
+      'search.open': () => editor.openSearch(),
+      'search.next': () => editor.findNext(),
+      'search.previous': () => editor.findPrevious(),
       'view.toggleWrap': { run: toggleLineWrapping, isOn: () => settings.lineWrapping },
       'view.fontSmaller': () => stepFontSize(-1),
       'view.fontLarger': () => stepFontSize(1),

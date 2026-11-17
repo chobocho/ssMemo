@@ -315,3 +315,50 @@ test('replace reports that the visible content changed, a background replace doe
   tabs.replace('a', 'alpha 2');
   assert.equal(shown, before + 1);
 });
+
+// --- transfer ---------------------------------------------------------------
+
+function createTransferHarness(): { tabs: EditorTabs; transfers: string[]; type(text: string): void } {
+  const transfers: string[] = [];
+  const view = {
+    state: createEditorState(''),
+    setState(state: EditorState) {
+      view.state = state;
+    },
+    dispatch(spec: TransactionSpec) {
+      view.state = view.state.update(spec).state;
+    },
+    scrollSnapshot: () => scrollMarker.of(0),
+    requestMeasure: () => undefined,
+  };
+  const tabs = createEditorTabs(view, {
+    createState: (text, lineWrapping) => createEditorState(text, { lineWrapping }),
+    lineWrappingEffect,
+    lineWrapping: true,
+    // Records the text of the tab that was left and of the tab that is showing by then.
+    transfer: (from) => transfers.push(`${from.doc.toString()} -> ${view.state.doc.toString()}`),
+  });
+  return { tabs, transfers, type: (text) => view.dispatch({ changes: { from: 0, insert: text } }) };
+}
+
+test('switching tabs hands the state of the tab that was left to the transfer hook', () => {
+  const harness = createTransferHarness();
+  harness.tabs.show('a', 'alpha');
+  harness.type('edited ');
+  harness.tabs.show('b', 'beta');
+  harness.tabs.show('a', 'ignored');
+  // The first tab had no predecessor; afterwards each switch reports the live state it left.
+  assert.deepEqual(harness.transfers, ['edited alpha -> beta', 'beta -> edited alpha']);
+});
+
+test('nothing is transferred when the visible tab is shown again, replaced or was removed', () => {
+  const harness = createTransferHarness();
+  harness.tabs.show('a', 'alpha');
+  harness.tabs.show('a', 'alpha');
+  harness.tabs.replace('a', 'alpha 2');
+  assert.deepEqual(harness.transfers, []);
+  // After the visible tab was closed there is no tab to carry anything over from.
+  harness.tabs.remove('a');
+  harness.tabs.show('b', 'beta');
+  assert.deepEqual(harness.transfers, []);
+});

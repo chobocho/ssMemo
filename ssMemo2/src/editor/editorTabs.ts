@@ -1,7 +1,16 @@
 // One editor view shared by all tabs. Each tab has its own EditorState, which carries its text,
 // selection and undo history, so switching tabs loses none of them. States are created when a
 // tab is first shown, not when it is opened, so many restored tabs cost nothing until visited.
-import { EditorView } from './cm6.ts';
+import {
+  EditorView,
+  closeSearchPanel,
+  findNext,
+  findPrevious,
+  getSearchQuery,
+  openSearchPanel,
+  searchPanelOpen,
+  setSearchQuery,
+} from './cm6.ts';
 import type { EditorState, StateEffect, TransactionSpec } from './cm6.ts';
 import { createEditorState, getEditorStats, lineWrappingEffect } from './editorSetup.ts';
 import type { EditorStats } from './editorSetup.ts';
@@ -25,6 +34,11 @@ export interface EditorTabsOptions {
   lineWrapping: boolean;
   /** Called after the visible document was exchanged: another tab is shown, or its text was replaced. */
   onShow?: () => void;
+  /**
+   * Called after another tab took the place of the visible one, with the state that was showing
+   * before. Lets things that belong to the editor rather than to a tab move along (the search).
+   */
+  transfer?: (from: EditorState) => void;
 }
 
 export interface EditorTabs {
@@ -71,6 +85,8 @@ export function createEditorTabs(view: EditorViewPort, options: EditorTabsOption
   return {
     show(tabId, initialText, initialCursor = 0) {
       if (tabId === activeTabId) return;
+      // undefined when no tab is showing (at start, or after the visible tab was closed).
+      const previousState = activeTabId === undefined ? undefined : view.state;
       storeActiveTab();
       const knownState = states.get(tabId);
       const state = knownState ?? options.createState(initialText, lineWrapping);
@@ -86,6 +102,7 @@ export function createEditorTabs(view: EditorViewPort, options: EditorTabsOption
         const cursor = Math.min(Math.max(initialCursor, 0), state.doc.length);
         view.dispatch({ selection: { anchor: cursor }, scrollIntoView: true });
       }
+      if (previousState) options.transfer?.(previousState);
       options.onShow?.();
     },
 
@@ -144,12 +161,31 @@ export interface EditorCallbacks {
   onViewUpdate(): void;
 }
 
+export interface MountOptions {
+  lineWrapping: boolean;
+  /** Translations of the editor's own texts, keyed by the English original. */
+  phrases: Readonly<Record<string, string>>;
+}
+
+/** What can be done to the visible document from outside the editor. */
+export interface EditorActions {
+  /** Opens the search panel, or moves the focus to it if it is open. */
+  openSearch(): void;
+  /** Selects the next or previous match; opens the search panel if nothing is being searched for. */
+  findNext(): void;
+  findPrevious(): void;
+}
+
+export type MountedEditor = EditorTabs & EditorActions;
+
 /** Creates the editor inside `parent`. */
-export function mountEditorTabs(parent: HTMLElement, callbacks: EditorCallbacks, lineWrapping: boolean): EditorTabs {
+export function mountEditorTabs(parent: HTMLElement, callbacks: EditorCallbacks, options: MountOptions): MountedEditor {
+  const { lineWrapping, phrases } = options;
   const tabsRef: { current?: EditorTabs } = {};
   const createState = (text: string, wrap: boolean): EditorState =>
     createEditorState(text, {
       lineWrapping: wrap,
+      phrases,
       onDocChange: () => {
         const tabId = tabsRef.current?.getActiveTabId();
         if (tabId !== undefined) callbacks.onDocChange(tabId);
@@ -158,11 +194,25 @@ export function mountEditorTabs(parent: HTMLElement, callbacks: EditorCallbacks,
     });
   // Until the first tab is shown the view holds an empty placeholder state.
   const view = new EditorView({ state: createState('', lineWrapping), parent });
-  tabsRef.current = createEditorTabs(view, {
+  const tabs = createEditorTabs(view, {
     createState,
     lineWrappingEffect,
     lineWrapping,
     onShow: callbacks.onViewUpdate,
+    // Searching is something the user does in the editor, not in one tab: what is being searched
+    // for, and whether the panel is open, follow along to the next tab.
+    transfer: (from) => {
+      const wasOpen = searchPanelOpen(from);
+      if (wasOpen !== searchPanelOpen(view.state)) (wasOpen ? openSearchPanel : closeSearchPanel)(view);
+      // After opening, which may put selected text into the search field.
+      view.dispatch({ effects: setSearchQuery.of(getSearchQuery(from)) });
+    },
   });
-  return tabsRef.current;
+  tabsRef.current = tabs;
+  return {
+    ...tabs,
+    openSearch: () => void openSearchPanel(view),
+    findNext: () => void findNext(view),
+    findPrevious: () => void findPrevious(view),
+  };
 }

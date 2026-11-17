@@ -13,7 +13,12 @@ import { NEW_DOCUMENT_REV } from '../../src/storage/storagePort.ts';
 import { installBrowserStandIns } from '../helpers/dom.ts';
 
 const PAGE_URL = 'http://localhost:8001/';
-const BOOT_WAIT_MS = 300;
+// Booting takes a few hundred milliseconds, and several times that while other test files
+// compete for the processor, so the page is polled until it is ready instead of waiting a fixed time.
+const BOOT_POLL_MS = 20;
+const BOOT_TIMEOUT_MS = 15_000;
+// What start-up still does after the first tab is on screen (event listeners, the status bar).
+const BOOT_SETTLE_MS = 100;
 // Longer than the app's autosave idle delay (1.5 s).
 const AUTOSAVE_WAIT_MS = 2000;
 const TIMESTAMP = '2026-01-01T00:00:00.000Z';
@@ -70,8 +75,11 @@ async function openPage(options: { factory?: IDBFactory; url?: string } = {}): P
       }
     },
   });
-  await wait(BOOT_WAIT_MS);
   const { document } = dom.window;
+  // The first tab appears when the stored memos were read and the editor shows one of them.
+  const deadline = Date.now() + BOOT_TIMEOUT_MS;
+  while (!document.querySelector('.tab-title') && Date.now() < deadline) await wait(BOOT_POLL_MS);
+  await wait(BOOT_SETTLE_MS);
   const text = (element: Element | null | undefined): string => element?.textContent ?? '';
   return {
     window: dom.window,
@@ -616,6 +624,74 @@ test('in temporary mode a backup can be exported, and importing only offers to a
   assert.deepEqual([...topDialog(page).querySelectorAll('.choice')].map((choice) => choice.textContent), [
     'Add: keep the stored memos and add those of the backup',
   ]);
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
+async function pressKey(page: Page, init: KeyboardEventInit): Promise<KeyboardEvent> {
+  const event = new page.window.KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init });
+  page.document.querySelector('.cm-content')?.dispatchEvent(event);
+  await wait(100);
+  return event;
+}
+
+function searchField(page: Page): HTMLInputElement {
+  const field = page.document.querySelector<HTMLInputElement>('.cm-search input[name="search"]');
+  assert.ok(field, 'the search panel is not open');
+  return field;
+}
+
+/** Types into the search field the way the panel expects: it reads the field on "keyup". */
+async function searchFor(page: Page, query: string): Promise<void> {
+  const field = searchField(page);
+  field.value = query;
+  field.dispatchEvent(new page.window.Event('keyup', { bubbles: true }));
+  await wait(50);
+}
+
+test('Ctrl+F opens the search panel and stepping through matches selects them', async () => {
+  const page = await openPage({ factory: await seededFactory() });
+  const statusBar = (): string => page.document.querySelector('.status-bar')?.textContent ?? '';
+  await page.click('.tab [role="tab"]', 1);
+
+  const press = await pressKey(page, { key: 'f', code: 'KeyF', ctrlKey: true });
+  assert.equal(press.defaultPrevented, true);
+  assert.equal(searchField(page).placeholder, 'Find');
+
+  await searchFor(page, 'more');
+  page.document.querySelector<HTMLElement>('.cm-search button[name="next"]')?.click();
+  await wait(100);
+  assert.match(statusBar(), /4 selected/);
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
+test('Ctrl+I opens the search as well, and the search follows to the next tab', async () => {
+  const page = await openPage({ factory: await seededFactory() });
+  await pressKey(page, { key: 'i', code: 'KeyI', ctrlKey: true });
+  await searchFor(page, 'milk');
+
+  await page.click('.tab [role="tab"]', 1);
+  assert.equal(page.activeTabTitle(), 'Ideas');
+  assert.equal(searchField(page).value, 'milk');
+
+  // And a closed panel stays closed on the way back.
+  page.document.querySelector<HTMLElement>('.cm-search button[name="close"]')?.click();
+  await wait(50);
+  await page.click('.tab [role="tab"]', 0);
+  assert.equal(page.document.querySelector('.cm-search'), null);
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
+test('the search panel speaks the language of the app', async () => {
+  const factory = await seededFactory();
+  const storage = await openIndexedDbStorage(factory);
+  await storage.setValue('settings', { language: 'ko', lineWrapping: true, editorFontSizeRem: 0.875 });
+  storage.close();
+  const page = await openPage({ factory });
+  await pressKey(page, { key: 'f', code: 'KeyF', ctrlKey: true });
+  assert.equal(searchField(page).placeholder, String.fromCharCode(0xcc3e, 0xae30));
   assert.deepEqual(page.errors, []);
   page.close();
 });

@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { redo, undo } from '@codemirror/commands';
 import type { EditorState, StateCommand } from '@codemirror/state';
+import { SearchQuery, getSearchQuery, searchPanelOpen, setSearchQuery } from '@codemirror/search';
 import { EditorView, keymap } from '@codemirror/view';
 import { createEditorState, getEditorStats, lineWrappingEffect } from '../../src/editor/editorSetup.ts';
 
@@ -120,4 +121,39 @@ test('getEditorStats reports the size of the selection, whichever way it was dra
   assert.equal(getEditorStats(backward).selectedCharacters, 3);
   // The cursor is where the selection ends, not where it started.
   assert.equal(getEditorStats(backward).cursorColumn, 2);
+});
+
+// --- search -----------------------------------------------------------------
+
+function boundKeys(state: EditorState): Set<string | undefined> {
+  return new Set(state.facet(keymap).flat().flatMap((binding) => [binding.key, binding.mac, binding.linux, binding.win]));
+}
+
+test('a document can be searched: the query is part of its state and the panel starts closed', () => {
+  const state = createEditorState('one two one');
+  assert.equal(searchPanelOpen(state), false);
+  const searching = state.update({ effects: setSearchQuery.of(new SearchQuery({ search: 'one' })) }).state;
+  assert.equal(getSearchQuery(searching).search, 'one');
+  // Setting a query is not an edit.
+  assert.equal(searching.doc.toString(), 'one two one');
+});
+
+test('Escape closes the search panel, while the keys that open and step through it are left to the app', () => {
+  const keys = boundKeys(createEditorState(''));
+  assert.equal(keys.has('Escape'), true);
+  // The app binds these itself (see commandTable.ts) so they also work outside the editor.
+  for (const key of ['Mod-f', 'Mod-i', 'F3', 'Mod-g']) assert.equal(keys.has(key), false, key);
+});
+
+test('editing keys are still bound after the search keys were taken out', () => {
+  const keys = boundKeys(createEditorState(''));
+  for (const key of ['Enter', 'Backspace', 'Mod-a', 'Mod-z', 'Mod-y', 'Mod-[']) assert.equal(keys.has(key), true, key);
+});
+
+test('the texts of the editor itself are translated with the given phrases', () => {
+  const translated = createEditorState('', { phrases: { Find: 'Suchen', next: 'weiter' } });
+  assert.equal(translated.phrase('Find'), 'Suchen');
+  assert.equal(translated.phrase('next'), 'weiter');
+  // Without phrases the editor falls back to its English originals.
+  assert.equal(createEditorState('').phrase('Find'), 'Find');
 });

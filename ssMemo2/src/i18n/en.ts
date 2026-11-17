@@ -18,6 +18,9 @@ export const en = {
   'command.saveFile': 'Save to file',
   'command.saveFileAs': 'Save to file as…',
   'command.encoding': 'Encoding',
+  'command.search': 'Find',
+  'command.findNext': 'Find next',
+  'command.findPrevious': 'Find previous',
   'command.closeTab': 'Close tab',
   'command.nextTab': 'Next tab',
   'command.previousTab': 'Previous tab',
@@ -31,6 +34,7 @@ export const en = {
 
   'group.memo': 'Memos and tabs',
   'group.file': 'Files',
+  'group.search': 'Search',
   'group.view': 'View',
   'group.backup': 'Backup',
   'group.app': 'App',
@@ -40,6 +44,24 @@ export const en = {
   // appear literally in ko.ts.
   'language.ko': '\uD55C\uAD6D\uC5B4',
   'language.en': 'English',
+
+  // Texts of the editor's search panel. These are the editor's own English texts; "$" is where
+  // it puts a number.
+  'search.find': 'Find',
+  'search.replaceField': 'Replace',
+  'search.next': 'next',
+  'search.previous': 'previous',
+  'search.all': 'all',
+  'search.matchCase': 'match case',
+  'search.regexp': 'regexp',
+  'search.byWord': 'by word',
+  'search.replace': 'replace',
+  'search.replaceAll': 'replace all',
+  'search.close': 'close',
+  'search.currentMatch': 'current match',
+  'search.onLine': 'on line',
+  'search.replacedMatches': 'replaced $ matches',
+  'search.replacedOnLine': 'replaced match on line $',
 
   'statusbar.position': 'Ln {line}, Col {column}',
   'statusbar.selection': '{count} selected',

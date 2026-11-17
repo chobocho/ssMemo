@@ -9,6 +9,7 @@ import type { Command, CommandDefinition } from './commands.ts';
 export const COMMAND_GROUPS = [
   { id: 'memo', labelKey: 'group.memo' },
   { id: 'file', labelKey: 'group.file' },
+  { id: 'search', labelKey: 'group.search' },
   { id: 'view', labelKey: 'group.view' },
   { id: 'backup', labelKey: 'group.backup' },
   { id: 'app', labelKey: 'group.app' },
@@ -29,6 +30,11 @@ export const COMMAND_DEFINITIONS = [
   { id: 'file.save', group: 'file', labelKey: 'command.saveFile', icon: '💾', shortcuts: ['Mod-s'] },
   { id: 'file.saveAs', group: 'file', labelKey: 'command.saveFileAs', icon: '📑', shortcuts: ['Mod-Shift-s'] },
   { id: 'file.encoding', group: 'file', labelKey: 'command.encoding', icon: '🔤', shortcuts: [] },
+
+  // Ctrl+I, Ctrl+< and Ctrl+> are the search keys of ssMemoWeb; the others are what editors use.
+  { id: 'search.open', group: 'search', labelKey: 'command.search', icon: '🔍', shortcuts: ['Mod-f', 'Mod-i'] },
+  { id: 'search.next', group: 'search', labelKey: 'command.findNext', icon: '🔽', shortcuts: ['F3', 'Mod-.', 'Mod->'] },
+  { id: 'search.previous', group: 'search', labelKey: 'command.findPrevious', icon: '🔼', shortcuts: ['Shift-F3', 'Mod-,', 'Mod-<'] },
 
   { id: 'view.toggleWrap', group: 'view', labelKey: 'command.toggleWrap', icon: '↩️', shortcuts: ['Alt-z'] },
   { id: 'view.fontSmaller', group: 'view', labelKey: 'command.fontSmaller', icon: 'A−', shortcuts: [] },

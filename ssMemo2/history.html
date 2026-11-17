@@ -13,6 +13,15 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 15:12] 검색 (5.1)</h2>
+<ul>
+<li><b>기획:</b> CodeMirror 검색 패널(찾기·바꾸기)을 편집기 위쪽에 두고 문구를 한·영으로 번역. 여는 키(Ctrl+F, Ctrl+I)와 다음·이전(F3, Ctrl+. , Ctrl+,)은 앱 명령이라 포커스가 어디 있든 동작. 검색어와 패널 열림 상태는 탭을 바꿔도 따라간다.</li>
+<li><b>TC:</b> 정상 — 패널 열기, 다음 찾기로 선택, 탭 전환 시 검색어 유지, 한글 문구. 경계 — 패키지가 쓰는 문구를 설치본에서 직접 대조, 숫자 자리($) 보존, 첫 탭·같은 탭·교체 때는 전달 없음.</li>
+<li><b>개발:</b> <code>src/editor/editorSetup.ts</code>, <code>editorTabs.ts</code>, <code>searchPhrases.ts</code>, <code>cm6.ts</code>, <code>src/app/commandTable.ts</code>, <code>src/main.ts</code>, <code>package.json</code>, <code>src/i18n/ko.ts</code> 외 7개 파일</li>
+<li><b>검증:</b> 단위 677 passed, 빌드 46 passed, 0 failed</li>
+<li><b>비고:</b> <code>@codemirror/search</code> 추가로 28KB 증가. 통합 테스트의 고정 300ms 부팅 대기를 준비 확인으로 바꿈(부하 때 1회 실패).</li>
+</ul>
+
 <h2>[2026-11-17 15:03] 명령 정의를 데이터 표로 분리 (5.2 준비)</h2>
 <ul>
 <li><b>기획:</b> 명령의 이름·아이콘·단축키·그룹을 <code>commandTable.ts</code>의 데이터로 두고 동작은 따로 붙인다. 앱을 띄우지 않고 표를 읽을 수 있어야 도움말 생성과 단축키 충돌 검사가 가능하다. 메뉴는 그룹 제목 아래에 나열.</li>
