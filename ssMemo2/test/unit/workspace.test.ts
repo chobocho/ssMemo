@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { AutosaveState } from '../../src/app/autosave.ts';
-import { createDocumentStore } from '../../src/app/documentStore.ts';
+import { MAX_TITLE_LENGTH, createDocumentStore } from '../../src/app/documentStore.ts';
 import { createSessionStore } from '../../src/app/session.ts';
 import type { SessionState } from '../../src/app/session.ts';
 import { createTabManager } from '../../src/app/tabManager.ts';
@@ -10,7 +10,7 @@ import { createWorkspace } from '../../src/app/workspace.ts';
 import type { Workspace, WorkspaceNotice } from '../../src/app/workspace.ts';
 import { createMemoryStorage } from '../../src/storage/memoryStorage.ts';
 import { NEW_DOCUMENT_REV, StorageError } from '../../src/storage/storagePort.ts';
-import type { DocumentDraft, StoragePort } from '../../src/storage/storagePort.ts';
+import type { DocumentDraft, DocumentSource, StoragePort } from '../../src/storage/storagePort.ts';
 
 const IDLE_DELAY_MS = 1000;
 const MAX_WAIT_MS = 5000;
@@ -602,4 +602,96 @@ test('a blank tab that was never saved is not part of the session', async () => 
   const session = await harness.session();
   assert.deepEqual(session.tabs.map((tab) => tab.documentId), ['newer']);
   assert.equal(session.activeDocumentId, undefined);
+});
+
+// --- local files ------------------------------------------------------------
+
+const FILE_SOURCE: DocumentSource = { fileName: 'notes.txt', encoding: 'CP949', eol: 'crlf', hasBom: false };
+
+test('openFile shows the file in a new tab named after it', async () => {
+  const harness = createHarness(await storageWithTwoMemos());
+  await harness.workspace.start();
+  assert.equal(harness.workspace.openFile({ text: 'file text', source: FILE_SOURCE }), true);
+  assert.deepEqual(harness.titles(), ['newer memo', 'notes.txt']);
+  assert.equal(harness.visibleText(), 'file text');
+  assert.equal(harness.tabs.getActiveId(), harness.visibleTab());
+  assert.equal(harness.tabs.getTabs()[1]?.dirty, false);
+  assert.equal(harness.workspace.hasUnsavedChanges(), false);
+});
+
+test('a file that is only looked at is not stored and not part of the session', async () => {
+  const harness = createHarness();
+  await harness.workspace.start();
+  harness.workspace.openFile({ text: 'file text', source: FILE_SOURCE });
+  await harness.advance(ONE_HOUR_MS);
+  await harness.workspace.flushAll();
+  assert.deepEqual((await harness.storage.listDocuments()).documents, []);
+  assert.deepEqual((await harness.session()).tabs, []);
+});
+
+test('editing an opened file stores it as a document that remembers the file', async () => {
+  const harness = createHarness();
+  await harness.workspace.start();
+  harness.workspace.openFile({ text: 'file text', source: FILE_SOURCE });
+  harness.type('file text, edited');
+  await harness.advance(IDLE_DELAY_MS);
+
+  const { documents } = await harness.storage.listDocuments();
+  assert.equal(documents.length, 1);
+  assert.equal(documents[0]?.title, 'notes.txt');
+  assert.deepEqual(documents[0]?.source, FILE_SOURCE);
+  assert.deepEqual(await stored(harness.storage), [['notes.txt', 'file text, edited']]);
+  assert.deepEqual((await harness.session()).tabs.map((tab) => tab.documentId), [documents[0]?.id]);
+});
+
+test('a stored file document keeps its source through later visits and edits', async () => {
+  const storage = createMemoryStorage();
+  const first = createHarness(storage);
+  await first.workspace.start();
+  first.workspace.openFile({ text: 'v1', source: FILE_SOURCE });
+  first.type('v2');
+  await first.workspace.flushAll();
+
+  const second = createHarness(storage);
+  await second.workspace.start();
+  assert.deepEqual(second.titles(), ['notes.txt']);
+  assert.equal(second.visibleText(), 'v2');
+  second.type('v3');
+  await second.workspace.flushAll();
+  const { documents } = await storage.listDocuments();
+  assert.equal(documents.length, 1);
+  assert.deepEqual(documents[0]?.source, FILE_SOURCE);
+});
+
+test('openFile saves the tab that was showing before', async () => {
+  const harness = createHarness();
+  await harness.workspace.start();
+  harness.type('typed into the memo');
+  harness.workspace.openFile({ text: 'file text', source: FILE_SOURCE });
+  await harness.advance(0);
+  assert.deepEqual(await stored(harness.storage), [[DEFAULT_TITLE, 'typed into the memo']]);
+});
+
+test('openFile at the tab limit opens nothing and the user is told', async () => {
+  const harness = createHarness(createMemoryStorage(), 1);
+  await harness.workspace.start();
+  assert.equal(harness.workspace.openFile({ text: 'file text', source: FILE_SOURCE }), false);
+  assert.deepEqual(harness.titles(), [DEFAULT_TITLE]);
+  assert.deepEqual(harness.notices, [{ kind: 'tab-limit' }]);
+});
+
+test('a file name that cannot be a title is fitted, and the source keeps the real name', async () => {
+  const harness = createHarness();
+  await harness.workspace.start();
+  const longName = `${'n'.repeat(300)}.txt`;
+  harness.workspace.openFile({ text: 'a', source: { ...FILE_SOURCE, fileName: longName } });
+  harness.workspace.openFile({ text: 'b', source: { ...FILE_SOURCE, fileName: '   ' } });
+  assert.deepEqual(harness.titles().slice(1), ['n'.repeat(MAX_TITLE_LENGTH), DEFAULT_TITLE]);
+
+  harness.type('b, edited');
+  harness.workspace.activateTab(harness.tabs.getTabs()[1]?.id ?? '');
+  harness.type('a, edited');
+  await harness.workspace.flushAll();
+  const sources = (await harness.storage.listDocuments()).documents.map((meta) => meta.source?.fileName).sort();
+  assert.deepEqual(sources, ['   ', longName]);
 });

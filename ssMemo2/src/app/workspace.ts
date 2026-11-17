@@ -2,9 +2,10 @@
 // storage, and what is remembered for the next visit. It knows nothing about the DOM; the editor,
 // the tab list and the user-facing messages are passed in, so the whole flow is tested headlessly.
 import { StorageError } from '../storage/storagePort.ts';
-import type { DocumentListing, DocumentMeta, StoredDocument } from '../storage/storagePort.ts';
+import type { DocumentListing, DocumentMeta, DocumentSource, StoredDocument } from '../storage/storagePort.ts';
 import { createAutosave } from './autosave.ts';
 import type { Autosave, AutosaveState, AutosaveTimers } from './autosave.ts';
+import { toValidTitle } from './documentStore.ts';
 import type { DocumentStore } from './documentStore.ts';
 import type { SessionStore, SessionTab } from './session.ts';
 import type { TabManager } from './tabManager.ts';
@@ -49,6 +50,13 @@ export interface WorkspaceOptions {
   onSaveStateChange: (state: AutosaveState | undefined) => void;
 }
 
+/** A local file that was read and decoded, ready to be shown in a tab. */
+export interface OpenedFile {
+  text: string;
+  /** The file's name and the form it is in, so it can be written back the same way. */
+  source: DocumentSource;
+}
+
 export type CloseResult =
   | 'closed'
   /** The tab is still open because its changes could not be saved. */
@@ -61,6 +69,11 @@ export interface Workspace {
   newMemo(): boolean;
   /** Shows a stored memo, in its existing tab if it has one. Resolves false if it could not be shown. */
   openMemo(documentId: string): Promise<boolean>;
+  /**
+   * Shows a local file in a new tab. Like a blank memo it is stored only once it is edited, so
+   * files that are merely looked at leave nothing behind. Returns false at the tab limit.
+   */
+  openFile(file: OpenedFile): boolean;
   activateTab(tabId: string): void;
   /**
    * Saves the tab's pending changes and closes it. If they cannot be saved the tab stays open and
@@ -87,12 +100,24 @@ interface OpenMemo {
   // should not leave an empty memo behind.
   meta: DocumentMeta | undefined;
   title: string;
+  /** For an opened file without a stored document yet: what its first save has to record. */
+  source: DocumentSource | undefined;
   /** Text and cursor the editor starts from when the tab is shown for the first time. */
   initialText: string;
   initialCursor: number;
   autosave: Autosave;
   /** undefined until the tab is edited for the first time. */
   saveState: AutosaveState | undefined;
+}
+
+/** What a new tab starts with. */
+interface TabContent {
+  title: string;
+  text: string;
+  /** Present when the tab shows a stored document. */
+  meta?: DocumentMeta;
+  source?: DocumentSource;
+  cursor?: number;
 }
 
 function saveFailureReason(error: unknown): SaveFailureReason {
@@ -139,7 +164,7 @@ export function createWorkspace(options: WorkspaceOptions): Workspace {
     // A tab that was never shown has no editor content, so it cannot have been edited.
     if (text === undefined) return;
     if (!memo.meta) {
-      memo.meta = await store.create(memo.title, text);
+      memo.meta = await store.create(memo.title, text, memo.source);
       persistSession();
       return;
     }
@@ -154,20 +179,29 @@ export function createWorkspace(options: WorkspaceOptions): Workspace {
     }
   }
 
-  /** Adds a tab for a stored memo, or a blank one. Returns undefined at the tab limit. */
-  function addTab(document: StoredDocument | undefined, initialCursor = 0): OpenMemo | undefined {
+  const blankTab = (): TabContent => ({ title: options.defaultTitle, text: '' });
+  const documentTab = (document: StoredDocument, cursor = 0): TabContent => ({
+    title: document.meta.title,
+    text: document.content,
+    meta: document.meta,
+    cursor,
+  });
+
+  /** Adds a tab and makes it the active one. Returns undefined at the tab limit. */
+  function addTab(content: TabContent): OpenMemo | undefined {
     const tabId = options.createTabId();
-    const title = document?.meta.title ?? options.defaultTitle;
+    const { title } = content;
     if (tabs.open(tabId, title) === 'limit') {
       onNotice({ kind: 'tab-limit' });
       return undefined;
     }
     const memo: OpenMemo = {
       tabId,
-      meta: document?.meta,
+      meta: content.meta,
       title,
-      initialText: document?.content ?? '',
-      initialCursor,
+      source: content.source,
+      initialText: content.text,
+      initialCursor: content.cursor ?? 0,
       saveState: undefined,
       autosave: createAutosave({
         save: () => saveMemo(memo),
@@ -206,7 +240,7 @@ export function createWorkspace(options: WorkspaceOptions): Workspace {
     editor.remove(memo.tabId);
     tabs.close(memo.tabId);
     // There is always something to type into.
-    if (memos.size === 0) addTab(undefined);
+    if (memos.size === 0) addTab(blankTab());
     showActiveTab();
     persistSession();
   }
@@ -229,7 +263,7 @@ export function createWorkspace(options: WorkspaceOptions): Workspace {
       // A memo deleted in another window since the last visit is simply not restored.
       const document = await store.load(entry.documentId);
       if (!document) continue;
-      const memo = addTab(document, entry.cursor);
+      const memo = addTab(documentTab(document, entry.cursor));
       if (!memo) break;
       if (entry.documentId === session.activeDocumentId) activeTabId = memo.tabId;
     }
@@ -238,7 +272,7 @@ export function createWorkspace(options: WorkspaceOptions): Workspace {
       for (const meta of listing.documents) {
         const document = await store.load(meta.id);
         if (document) {
-          addTab(document);
+          addTab(documentTab(document));
           break;
         }
       }
@@ -254,14 +288,14 @@ export function createWorkspace(options: WorkspaceOptions): Workspace {
       } catch {
         onNotice({ kind: 'load-failed' });
       }
-      if (memos.size === 0) addTab(undefined);
+      if (memos.size === 0) addTab(blankTab());
       if (activeTabId !== undefined) tabs.activate(activeTabId);
       showActiveTab();
     },
 
     newMemo() {
       saveActiveTab();
-      if (!addTab(undefined)) return false;
+      if (!addTab(blankTab())) return false;
       showActiveTab();
       persistSession();
       return true;
@@ -279,7 +313,16 @@ export function createWorkspace(options: WorkspaceOptions): Workspace {
         return false;
       }
       saveActiveTab();
-      if (!addTab(document)) return false;
+      if (!addTab(documentTab(document))) return false;
+      showActiveTab();
+      persistSession();
+      return true;
+    },
+
+    openFile(file) {
+      saveActiveTab();
+      const title = toValidTitle(file.source.fileName, options.defaultTitle);
+      if (!addTab({ title, text: file.text, source: file.source })) return false;
       showActiveTab();
       persistSession();
       return true;

@@ -13,6 +13,15 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 12:14] 파일 열기 절차 — 로직 (4.3)</h2>
+<ul>
+<li><b>기획:</b> 파일을 검사·디코딩해 탭으로 여는 절차를 화면 없이 구현. 연 파일은 빈 메모처럼 처음 편집할 때 문서로 저장되며, 보기만 한 파일은 흔적을 남기지 않는다.</li>
+<li><b>TC:</b> 정상 — 여러 파일을 순서대로 열기, 편집 시 source와 함께 저장, 다음 방문에 복원. 경계 — 10MB 초과(읽기 전·후), 이진 파일, 읽기 실패 후 계속, 탭 한도에서 중단, 200KB 경계의 로딩 표시와 실패 시 해제, 긴 파일 이름.</li>
+<li><b>개발:</b> <code>src/app/localFiles.ts</code>, <code>src/app/workspace.ts</code>, <code>src/app/documentStore.ts</code>, 테스트 3개 파일, <code>test/build/buildOutput.test.ts</code></li>
+<li><b>검증:</b> 단위 474 passed, 빌드 28 passed, 0 failed</li>
+<li><b>비고:</b> 화면 연결(파일 선택, 드래그 앤 드롭, 로딩 표시)은 다음 커밋. 확장자 목록 대신 내용으로 텍스트 여부를 판별.</li>
+</ul>
+
 <h2>[2026-11-17 12:10] 문서에 원본 파일 정보 저장 (4.3 준비)</h2>
 <ul>
 <li><b>기획:</b> 파일에서 연 문서는 메타데이터에 <code>source</code>(파일 이름·인코딩·줄바꿈·BOM)를 갖는다. 메모에는 이 키가 없다. 레코드에 필드만 늘어나므로 DB 버전은 그대로.</li>

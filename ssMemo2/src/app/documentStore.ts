@@ -13,6 +13,7 @@ import type {
 export const MAX_TITLE_LENGTH = 100;
 
 const LINE_BREAK_PATTERN = /[\r\n]/;
+const LINE_BREAK_RUNS = /[\r\n]+/g;
 
 export type TitleProblem = 'empty' | 'too-long' | 'line-break';
 
@@ -26,6 +27,16 @@ export function findTitleProblem(title: string): TitleProblem | undefined {
   if (LINE_BREAK_PATTERN.test(trimmed)) return 'line-break';
   if (trimmed.length > MAX_TITLE_LENGTH) return 'too-long';
   return undefined;
+}
+
+/**
+ * A title made from any text, for names that come from outside (a file name can be longer than a
+ * title may be). Line breaks become spaces and the text is cut to the allowed length; `fallback`
+ * is used when nothing is left.
+ */
+export function toValidTitle(text: string, fallback: string): string {
+  const title = text.replace(LINE_BREAK_RUNS, ' ').trim().slice(0, MAX_TITLE_LENGTH).trim();
+  return title === '' ? fallback : title;
 }
 
 export interface DocumentStoreOptions {

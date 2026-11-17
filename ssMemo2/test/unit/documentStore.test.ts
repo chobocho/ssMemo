@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MAX_TITLE_LENGTH, createDocumentStore, findTitleProblem } from '../../src/app/documentStore.ts';
+import { MAX_TITLE_LENGTH, createDocumentStore, findTitleProblem, toValidTitle } from '../../src/app/documentStore.ts';
 import type { DocumentStore } from '../../src/app/documentStore.ts';
 import { createRandomId } from '../../src/app/randomId.ts';
 import type { RandomSource } from '../../src/app/randomId.ts';
@@ -58,6 +58,28 @@ test('findTitleProblem rejects titles over the length limit, ignoring surroundin
 test('findTitleProblem rejects line breaks', () => {
   assert.equal(findTitleProblem('two\nlines'), 'line-break');
   assert.equal(findTitleProblem('carriage\rreturn'), 'line-break');
+});
+
+// --- toValidTitle -----------------------------------------------------------
+
+test('toValidTitle keeps a text that already is a valid title', () => {
+  assert.equal(toValidTitle('notes.txt', 'fallback'), 'notes.txt');
+  assert.equal(toValidTitle('x'.repeat(MAX_TITLE_LENGTH), 'fallback'), 'x'.repeat(MAX_TITLE_LENGTH));
+});
+
+test('toValidTitle trims, cuts and removes line breaks until the title is valid', () => {
+  assert.equal(toValidTitle('  spaced.txt  ', 'fallback'), 'spaced.txt');
+  assert.equal(toValidTitle('two\r\nlines\nhere', 'fallback'), 'two lines here');
+  const cut = toValidTitle(`${'x'.repeat(MAX_TITLE_LENGTH - 1)}   tail`, 'fallback');
+  assert.equal(cut, 'x'.repeat(MAX_TITLE_LENGTH - 1));
+  for (const text of ['a'.repeat(300), ' \n padded \n '.repeat(50), 'tab\tname']) {
+    assert.equal(findTitleProblem(toValidTitle(text, 'fallback')), undefined, text.slice(0, 20));
+  }
+});
+
+test('toValidTitle falls back when nothing usable is left', () => {
+  assert.equal(toValidTitle('', 'fallback'), 'fallback');
+  assert.equal(toValidTitle(' \n\r\n ', 'fallback'), 'fallback');
 });
 
 // --- create / load ----------------------------------------------------------
