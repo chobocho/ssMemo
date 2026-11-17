@@ -22,6 +22,7 @@ export const en = {
   'command.fontSmaller': 'Smaller text',
   'command.fontLarger': 'Larger text',
   'command.language': 'Language',
+  'command.menu': 'Menu',
 
   'language.auto': 'Automatic (browser language)',
   // The language's own name, shown the same in every locale. Escaped because Korean text may only

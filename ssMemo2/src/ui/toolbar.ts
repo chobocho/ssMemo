@@ -9,7 +9,17 @@ export interface Toolbar {
   refresh(): void;
 }
 
-export function createToolbar(doc: Document, commands: readonly Command[], t: Translate): Toolbar {
+export interface ToolbarOptions {
+  /** Commands whose buttons give way on narrow screens; they stay reachable through the menu. */
+  secondaryIds?: ReadonlySet<string>;
+  /** Turns a shortcut such as "Mod-o" into what is shown to the user. */
+  formatShortcut?: (shortcut: string) => string;
+}
+
+const SECONDARY_CLASS = 'toolbar-button-secondary';
+
+export function createToolbar(doc: Document, commands: readonly Command[], t: Translate, options: ToolbarOptions = {}): Toolbar {
+  const { secondaryIds, formatShortcut = (shortcut: string) => shortcut } = options;
   const element = doc.createElement('div');
   element.className = 'toolbar';
   element.setAttribute('role', 'toolbar');
@@ -23,10 +33,11 @@ export function createToolbar(doc: Document, commands: readonly Command[], t: Tr
     const button = doc.createElement('button');
     button.type = 'button';
     button.className = 'toolbar-button';
+    if (secondaryIds?.has(command.id)) button.classList.add(SECONDARY_CLASS);
     button.textContent = command.icon;
     // The icon alone says nothing to a screen reader.
     button.setAttribute('aria-label', label);
-    button.title = shortcut ? `${label} (${shortcut})` : label;
+    button.title = shortcut ? `${label} (${formatShortcut(shortcut)})` : label;
     button.addEventListener('click', () => command.run());
     if (command.isOn) toggles.push({ button, isOn: command.isOn });
     element.append(button);

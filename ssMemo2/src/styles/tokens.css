@@ -43,6 +43,11 @@
   --tab-close-width: 2.25rem;
   --tab-indicator-width: 0.125rem;
 
+  /* Toolbar buttons of secondary commands appear only where the header has room for them. */
+  --toolbar-secondary-display: none;
+  /* Command menu: width reserved for the icon in front of each label. */
+  --command-icon-width: 2rem;
+
   /* Outline of the editor area while files are dragged over the page. */
   --drop-outline-width: 0.1875rem;
 
@@ -75,5 +80,6 @@
 @media (min-width: 52.5em) {
   :root {
     --page-gutter: var(--space-4);
+    --toolbar-secondary-display: inline-block;
   }
 }

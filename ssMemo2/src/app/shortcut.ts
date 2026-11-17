@@ -87,3 +87,26 @@ export function matchesShortcut(event: ShortcutEvent, shortcut: Shortcut, isMac:
   if (shiftMatters(shortcut.key) && event.shiftKey !== shortcut.shift) return false;
   return keyMatches(event, shortcut.key);
 }
+
+const DISPLAY_SEPARATOR = '+';
+// How each modifier is labelled on the keyboard: elsewhere, and on a Mac.
+const MODIFIER_LABELS: Readonly<Record<ModifierName, { other: string; mac: string }>> = {
+  mod: { other: 'Ctrl', mac: 'Cmd' },
+  ctrl: { other: 'Ctrl', mac: 'Ctrl' },
+  alt: { other: 'Alt', mac: 'Option' },
+  shift: { other: 'Shift', mac: 'Shift' },
+};
+
+/** A shortcut as shown to the user, e.g. "Mod-Shift-s" as "Ctrl+Shift+S". Throws like parseShortcut. */
+export function formatShortcut(text: string, isMac: boolean): string {
+  parseShortcut(text);
+  const parts = text.split(SEPARATOR);
+  const key = parts.pop() ?? '';
+  const labels = parts.map((part) => {
+    const label = MODIFIER_LABELS[MODIFIER_NAMES[part] ?? 'mod'];
+    return isMac ? label.mac : label.other;
+  });
+  // Single characters are printed on the key in upper case; names such as PageDown stay as written.
+  labels.push(key.length === 1 ? key.toUpperCase() : key);
+  return labels.join(DISPLAY_SEPARATOR);
+}

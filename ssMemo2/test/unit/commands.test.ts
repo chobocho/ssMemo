@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createCommandRegistry } from '../../src/app/commands.ts';
 import type { Command } from '../../src/app/commands.ts';
-import { matchesShortcut, parseShortcut } from '../../src/app/shortcut.ts';
+import { formatShortcut, matchesShortcut, parseShortcut } from '../../src/app/shortcut.ts';
 import type { ShortcutEvent } from '../../src/app/shortcut.ts';
 
 /** A key press with every modifier off unless stated. */
@@ -13,6 +13,29 @@ function keyEvent(overrides: Partial<ShortcutEvent>): ShortcutEvent {
 function command(id: string, shortcuts: readonly string[] = []): Command {
   return { id, labelKey: 'memo.defaultTitle', icon: '➕', shortcuts, run: () => undefined };
 }
+
+// --- formatShortcut ---------------------------------------------------------
+
+test('formatShortcut writes a shortcut the way keyboards label it', () => {
+  assert.equal(formatShortcut('Alt-o', false), 'Alt+O');
+  assert.equal(formatShortcut('Mod-Shift-s', false), 'Ctrl+Shift+S');
+  assert.equal(formatShortcut('Alt-PageDown', false), 'Alt+PageDown');
+  assert.equal(formatShortcut('F2', false), 'F2');
+  assert.equal(formatShortcut('Mod-<', false), 'Ctrl+<');
+  assert.equal(formatShortcut('Ctrl-6', false), 'Ctrl+6');
+});
+
+test('formatShortcut uses the Mac names for the modifier keys', () => {
+  assert.equal(formatShortcut('Mod-o', true), 'Cmd+O');
+  assert.equal(formatShortcut('Alt-n', true), 'Option+N');
+  // Ctrl is a key of its own on a Mac and keeps its name.
+  assert.equal(formatShortcut('Ctrl-Alt-n', true), 'Ctrl+Option+N');
+});
+
+test('formatShortcut rejects what parseShortcut rejects', () => {
+  assert.throws(() => formatShortcut('Hyper-x', false), /unknown modifier/);
+  assert.throws(() => formatShortcut('', false), /names no key/);
+});
 
 // --- parseShortcut ----------------------------------------------------------
 

@@ -273,6 +273,26 @@ test('a memo can be renamed and deleted from the memo list', async () => {
   page.close();
 });
 
+test('the menu lists the commands and runs the one that is picked', async () => {
+  const page = await openPage({ factory: await seededFactory() });
+  toolbarButton(page, 'Menu').click();
+  await wait(50);
+  const labels = [...topDialog(page).querySelectorAll('.command-label')].map((node) => node.textContent);
+  assert.ok(labels.includes('Open file'));
+  assert.ok(labels.includes('Language'));
+  // The menu does not offer to open itself.
+  assert.equal(labels.includes('Menu'), false);
+
+  const newMemo = [...topDialog(page).querySelectorAll<HTMLElement>('.command-item')].find((item) => item.textContent?.includes('New memo'));
+  assert.ok(newMemo);
+  newMemo.click();
+  await wait(50);
+  assert.equal(page.document.querySelector('dialog[open]'), null);
+  assert.deepEqual(page.tabTitles(), ['Shopping', 'Ideas', 'New memo']);
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
 /** Simulates choosing files in the dialog that the open-file button brought up. */
 async function chooseFiles(page: Page, files: File[]): Promise<void> {
   const input = page.document.querySelector<HTMLInputElement>('input[type="file"]');

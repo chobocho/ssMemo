@@ -66,3 +66,20 @@ test('a toggle command shows whether it is on, and follows the setting after ref
   refresh();
   assert.equal(toggle?.getAttribute('aria-pressed'), 'false');
 });
+
+test('buttons of secondary commands are marked, so the stylesheet can hide them on narrow screens', () => {
+  const { document } = createTestDom();
+  const command = (id: string): Command => ({ id, labelKey: 'command.newMemo', icon: id, shortcuts: [], run: () => undefined });
+  const toolbar = createToolbar(document, [command('a'), command('b'), command('c')], (key) => key, {
+    secondaryIds: new Set(['b']),
+  });
+  const marked = [...toolbar.element.querySelectorAll('button')].map((button) => button.classList.contains('toolbar-button-secondary'));
+  assert.deepEqual(marked, [false, true, false]);
+});
+
+test('the tooltip shows the shortcut as the given formatter writes it', () => {
+  const { document } = createTestDom();
+  const command: Command = { id: 'a', labelKey: 'command.newMemo', icon: 'a', shortcuts: ['Mod-o'], run: () => undefined };
+  const toolbar = createToolbar(document, [command], () => 'Open', { formatShortcut: (shortcut) => `<${shortcut}>` });
+  assert.equal(toolbar.element.querySelector('button')?.title, 'Open (<Mod-o>)');
+});

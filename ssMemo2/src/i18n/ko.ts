@@ -23,6 +23,7 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'command.fontSmaller': '글자 작게',
   'command.fontLarger': '글자 크게',
   'command.language': '언어',
+  'command.menu': '메뉴',
 
   'language.auto': '자동 (브라우저 언어)',
   'language.ko': '한국어',

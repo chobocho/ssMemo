@@ -1,0 +1,38 @@
+/* The list of all commands shown in the menu dialog. */
+.command-menu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.command-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-inline: var(--space-3);
+  text-align: start;
+}
+
+.command-item[aria-pressed="true"] {
+  border-color: var(--color-accent);
+}
+
+/* Same width for every icon, so the labels line up. */
+.command-icon {
+  flex: none;
+  inline-size: var(--command-icon-width);
+  text-align: center;
+}
+
+.command-label {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.command-shortcut {
+  flex: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--font-size-small);
+}

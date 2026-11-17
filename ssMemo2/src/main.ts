@@ -1,6 +1,7 @@
 // Composition root: the only module that touches the real window and wires modules together.
 import { readBuildId } from './app/buildInfo.ts';
 import { createCommandRegistry } from './app/commands.ts';
+import type { Command } from './app/commands.ts';
 import { describeEnvironment } from './app/diagnostics.ts';
 import { createDocumentStore, findTitleProblem } from './app/documentStore.ts';
 import { createLocalFiles } from './app/localFiles.ts';
@@ -17,6 +18,7 @@ import {
 import { createRandomId } from './app/randomId.ts';
 import { createSessionStore } from './app/session.ts';
 import { createSettingsStore, stepEditorFontSize } from './app/settings.ts';
+import { formatShortcut } from './app/shortcut.ts';
 import type { LanguageSetting, Settings } from './app/settings.ts';
 import { adjacentTabId, createTabManager } from './app/tabManager.ts';
 import { createWorkspace } from './app/workspace.ts';
@@ -26,6 +28,7 @@ import { isSafeModeRequested, openStorage } from './storage/openStorage.ts';
 import type { DocumentMeta } from './storage/storagePort.ts';
 import { createAppShell } from './ui/appShell.ts';
 import { copyToClipboard } from './ui/clipboard.ts';
+import { createCommandMenu } from './ui/commandMenu.ts';
 import { createDiagnosticsPanel } from './ui/diagnosticsPanel.ts';
 import { isApplePlatform, readEnvironment } from './ui/environment.ts';
 import { installFileDrop } from './ui/fileDrop.ts';
@@ -48,6 +51,7 @@ const AUTOSAVE_MAX_WAIT_MS = 10_000;
 const EDITOR_FONT_SIZE_VARIABLE = '--editor-font-size';
 // Set on the page while files are dragged over it (see styles/layout.css).
 const DROP_TARGET_CLASS = 'is-drop-target';
+const MENU_COMMAND_ID = 'app.menu';
 // Commands that get a button in the header, in display order. Tabs have their own controls.
 const TOOLBAR_COMMAND_IDS: readonly string[] = [
   'memo.manage',
@@ -56,7 +60,15 @@ const TOOLBAR_COMMAND_IDS: readonly string[] = [
   'view.fontSmaller',
   'view.fontLarger',
   'settings.language',
+  MENU_COMMAND_ID,
 ];
+// Of those, the ones that leave the header on narrow screens. The menu still lists them.
+const SECONDARY_TOOLBAR_COMMAND_IDS: ReadonlySet<string> = new Set([
+  'view.toggleWrap',
+  'view.fontSmaller',
+  'view.fontLarger',
+  'settings.language',
+]);
 
 async function start(win: Window): Promise<void> {
   const doc = win.document;
@@ -81,6 +93,9 @@ async function start(win: Window): Promise<void> {
     settings = { ...settings, ...change };
     void settingsStore.save(settings);
   };
+
+  const useCommandKey = isApplePlatform(win);
+  const describeShortcut = (shortcut: string): string => formatShortcut(shortcut, useCommandKey);
 
   const locale = resolveLocale(win.navigator.languages, settings.language);
   // Tells the browser which language the page is in (hyphenation, screen readers, spell check).
@@ -268,6 +283,23 @@ async function start(win: Window): Promise<void> {
     win.location.reload();
   };
 
+  // Every command except the menu itself, for narrow screens where the toolbar shows only a few.
+  const showMenu = (): void => {
+    void modals.open((close) => ({
+      title: t('command.menu'),
+      content: createCommandMenu(doc, {
+        commands: commands.list().filter((command) => command.id !== MENU_COMMAND_ID),
+        t,
+        formatShortcut: describeShortcut,
+        // The menu is closed first: the command may open a dialog of its own.
+        onPick: (command: Command) => {
+          close();
+          command.run();
+        },
+      }),
+    }));
+  };
+
   // Browsers keep Ctrl+T/W/N/Tab for themselves, so those shortcuts use Alt. Ctrl+O can be taken over.
   const commands = createCommandRegistry([
     { id: 'memo.manage', labelKey: 'command.manageMemos', icon: '📋', shortcuts: ['Alt-o'], run: showMemoManager },
@@ -287,16 +319,17 @@ async function start(win: Window): Promise<void> {
     { id: 'view.fontSmaller', labelKey: 'command.fontSmaller', icon: 'A−', shortcuts: [], run: () => stepFontSize(-1) },
     { id: 'view.fontLarger', labelKey: 'command.fontLarger', icon: 'A+', shortcuts: [], run: () => stepFontSize(1) },
     { id: 'settings.language', labelKey: 'command.language', icon: '🌐', shortcuts: [], run: () => void chooseLanguage() },
+    { id: MENU_COMMAND_ID, labelKey: 'command.menu', icon: '☰', shortcuts: ['Alt-m'], run: showMenu },
   ]);
 
   const toolbar = createToolbar(
     doc,
     TOOLBAR_COMMAND_IDS.flatMap((id) => commands.get(id) ?? []),
     t,
+    { secondaryIds: SECONDARY_TOOLBAR_COMMAND_IDS, formatShortcut: describeShortcut },
   );
   shell.header.insertBefore(toolbar.element, status.element);
 
-  const useCommandKey = isApplePlatform(win);
   // One handler on the document, so shortcuts work wherever the focus is (in ssMemoWeb they
   // only worked while the text area had it).
   doc.addEventListener('keydown', (event) => {
