@@ -13,6 +13,15 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 17:25] CSP 메타 (7.2)</h2>
+<ul>
+<li><b>기획:</b> 빌드가 <code>default-src 'none'</code>과 인라인 스크립트의 SHA-256 해시만 허용하는 정책을 페이지에 넣는다. 빌드가 검사하던 "외부 참조 없음"을 브라우저가 실행 중에도 강제하고, 미리보기에 대한 2차 방어가 된다.</li>
+<li><b>TC:</b> 정상 — CSP 명세의 예제 해시와 일치, 빌드된 페이지를 HTML 파서로 읽은 스크립트의 해시와 정책이 일치, 정책이 스크립트·스타일보다 앞에 위치. 경계 — CR·NUL이 든 스크립트 거부, UTF-8 바이트 기준 해시, unsafe-eval·외부 출처 없음, charset이 1KB 안에 있음.</li>
+<li><b>개발:</b> <code>scripts/contentSecurityPolicy.ts</code>, <code>scripts/buildHtml.ts</code>, <code>src/index.template.html</code>, 테스트 2개 파일</li>
+<li><b>검증:</b> 단위 884 passed, 빌드 75 passed, 0 failed</li>
+<li><b>비고:</b> jsdom은 정책을 강제하지 않으므로 실제 브라우저에서 앱이 뜨는지 확인 필요. 해시는 Python으로도 대조함.</li>
+</ul>
+
 <h2>[2026-11-17 17:22] 시작하지 못했을 때의 안내 (7.2 준비)</h2>
 <ul>
 <li><b>기획:</b> 스크립트가 막히거나 시작 중 오류가 나면 빈 화면만 남았다. 빌드가 두 언어의 안내 문구를 마크업에 직접 넣고, 8초 뒤 CSS로 드러나게 한다. 앱이 뜨면 지우고, 시작이 실패하면 즉시 보이며 원인을 콘솔에 남긴다.</li>

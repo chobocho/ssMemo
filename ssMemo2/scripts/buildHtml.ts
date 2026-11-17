@@ -8,6 +8,7 @@ import type { BuildOptions } from 'esbuild';
 import { en } from '../src/i18n/en.ts';
 import { ko } from '../src/i18n/ko.ts';
 import { escapeHtml } from '../src/lib/markdown.ts';
+import { buildContentSecurityPolicy } from './contentSecurityPolicy.ts';
 import { fillTemplate, prepareInlineScript, prepareInlineStyle } from './htmlTemplate.ts';
 import { ALLOWED_URL_LITERALS, findExternalReferences } from './selfContained.ts';
 
@@ -128,10 +129,13 @@ export async function buildHtml(): Promise<BuildResult> {
   const js = script.text;
   const css = style.text;
   const buildId = computeBuildId(version, [template, css, js, favicon]);
+  // The script exactly as it goes into the page: the policy lists the hash of this very text.
+  const inlineScript = prepareInlineScript(js);
   const pageValues = {
     FAVICON: `data:image/svg+xml;base64,${favicon}`,
     BUILD_ID: buildId,
     BOOT_MESSAGE: renderBootMessage(),
+    CONTENT_SECURITY_POLICY: buildContentSecurityPolicy(inlineScript),
   };
 
   const markup = fillTemplate(template, { ...pageValues, STYLE: '', SCRIPT: '' });
@@ -143,7 +147,7 @@ export async function buildHtml(): Promise<BuildResult> {
   const html = fillTemplate(template, {
     ...pageValues,
     STYLE: prepareInlineStyle(css),
-    SCRIPT: prepareInlineScript(js),
+    SCRIPT: inlineScript,
   });
   const sourceFiles = [...script.inputs, ...style.inputs, TEMPLATE_PATH, FAVICON_PATH].sort();
   return { html, buildId, sourceFiles };

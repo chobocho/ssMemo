@@ -1,4 +1,5 @@
 // Guards the single-file build output: one self-contained index.html, nothing fetched at runtime.
+import { createHash } from 'node:crypto';
 import { before, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildHtml } from '../../scripts/buildHtml.ts';
@@ -131,4 +132,47 @@ test('the page carries a message for the case that the app never starts, in both
   // Hidden while the app is still loading; the stylesheet reveals it only after a while.
   assert.match(parts.css, /\.boot-message\{[^}]*max-block-size:0/);
   assert.match(parts.css, /@keyframes boot-message-reveal/);
+});
+
+// --- content security policy ------------------------------------------------
+
+const CSP_META_PATTERN = /<meta http-equiv="Content-Security-Policy" content="([^"]*)">/g;
+
+function policyOfPage(): string {
+  const metas = [...result.html.matchAll(CSP_META_PATTERN)];
+  assert.equal(metas.length, 1, 'expected exactly one content security policy');
+  return metas[0]?.[1] ?? '';
+}
+
+test('the policy comes before everything it has to govern, and after the character set', () => {
+  const policyAt = result.html.search(CSP_META_PATTERN);
+  assert.ok(policyAt > result.html.indexOf('<meta charset'));
+  // A policy only applies to what follows it in the document.
+  assert.ok(policyAt < result.html.indexOf('<style>'));
+  assert.ok(policyAt < result.html.indexOf('<script>'));
+  assert.ok(policyAt < result.html.indexOf('<link'));
+});
+
+test('the script hash in the policy is the hash of the script as a browser reads it', async () => {
+  // Parsed by a real HTML parser, not cut out with a pattern: what counts is the text the
+  // browser ends up with. A mismatch would block the script, and with it the whole app.
+  const { JSDOM } = await import('jsdom');
+  const scripts = new JSDOM(result.html).window.document.querySelectorAll('script');
+  assert.equal(scripts.length, 1);
+  const expected = `sha256-${createHash('sha256').update(scripts[0]?.textContent ?? '', 'utf8').digest('base64')}`;
+  const scriptSources = /script-src ([^;]*)/.exec(policyOfPage())?.[1];
+  assert.equal(scriptSources, `'${expected}'`);
+});
+
+test('the policy lets nothing in from outside and runs no script but the page\'s own', () => {
+  const policy = policyOfPage();
+  assert.match(policy, /default-src 'none'/);
+  assert.equal(/script-src[^;]*'unsafe-inline'/.test(policy), false);
+  assert.equal(policy.includes("'unsafe-eval'"), false);
+  assert.equal(/https?:|\*/.test(policy), false);
+});
+
+test('the character set is still declared within the first kilobyte', () => {
+  // Browsers only look that far for it; the policy sits right behind it and is long.
+  assert.ok(result.html.indexOf('<meta charset="utf-8">') < 1024);
 });

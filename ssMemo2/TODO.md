@@ -147,7 +147,7 @@
 ### Phase 7 — 추가 아이디어 (9절의 웹 검색 포함, 채택 여부는 M6에서 결정)
 - [x] 저장소 영속 요청(`navigator.storage.persist`) + 사용량 표시(`estimate`)
   - 브라우저 기본 저장은 "최선 노력"이라 공간이 부족하면 통째로 지워질 수 있음. 첫 저장 때 사용자 동작 안에서 요청하고, 결과를 진단 정보에 표시 (web.dev "Persistent storage")
-- [ ] CSP 메타로 외부 참조 차단
+- [x] CSP 메타로 외부 참조 차단
   - `default-src 'none'; script-src 'sha256-…'`: 빌드가 인라인 스크립트의 해시를 넣음. 미리보기에 대한 2차 방어. 해시는 `default-src`가 아니라 `script-src`에 둘 것. CodeMirror가 스타일을 동적으로 넣으므로 `style-src`는 nonce나 `'unsafe-inline'` 필요 (WebKit "A Refined Content Security Policy")
 - [ ] 다크/라이트 테마
 - [ ] 휴지통(삭제 복구)
