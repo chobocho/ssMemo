@@ -30,6 +30,31 @@
   text-align: center;
 }
 
+/* Calculator result: the output scrolls inside the dialog, sideways too for a very long number. */
+.calc-memory {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  overflow-wrap: anywhere;
+}
+
+.calc-output {
+  max-block-size: var(--calc-output-max-height);
+  margin: 0;
+  padding: var(--space-2);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-small);
+  background: var(--color-surface-muted);
+  font-family: var(--editor-font-family);
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.calc-output-empty {
+  color: var(--color-text-muted);
+}
+
 .modal-input {
   display: block;
   inline-size: 100%;

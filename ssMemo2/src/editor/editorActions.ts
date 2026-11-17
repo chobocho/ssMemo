@@ -62,3 +62,39 @@ export function toggleChunks(state: EditorState, length: number): { action: Chun
   const spec = action === 'split' ? splitIntoChunks(state, length) : action === 'join' ? joinChunks(state) : undefined;
   return { action, spec: spec ?? {} };
 }
+
+/** A piece of the document to run as a calculation, and where its result goes. */
+export interface CodeToRun {
+  code: string;
+  /** Position in the document right behind the code. */
+  end: number;
+}
+
+/** What "run" applies to: the selected text, or without a selection the line the cursor is on. */
+export function getCodeToRun(state: EditorState): CodeToRun {
+  const { from, to, empty, head } = state.selection.main;
+  if (!empty) return { code: state.sliceDoc(from, to), end: to };
+  const line = state.doc.lineAt(head);
+  return { code: line.text, end: line.to };
+}
+
+/**
+ * Puts `lines` right behind position `end`, on lines of their own: a line break is added before
+ * them unless `end` is the start of a line, and after them unless a line ends there anyway.
+ * (ssMemoWeb left the second one out and glued the result to the following line.)
+ */
+export function insertResultLines(state: EditorState, end: number, lines: readonly string[]): TransactionSpec {
+  if (lines.length === 0) return {};
+  const at = Math.min(Math.max(end, 0), state.doc.length);
+  const textBefore = at > 0 && state.sliceDoc(at - 1, at) !== LINE_BREAK;
+  const textAfter = at < state.doc.length && state.sliceDoc(at, at + 1) !== LINE_BREAK;
+  const insert = `${textBefore ? LINE_BREAK : ''}${lines.join(LINE_BREAK)}${textAfter ? LINE_BREAK : ''}`;
+  return {
+    changes: { from: at, insert },
+    // Behind the result itself, not behind the line break that separates it from what follows.
+    selection: { anchor: at + insert.length - (textAfter ? LINE_BREAK.length : 0) },
+    scrollIntoView: true,
+    userEvent: INPUT_EVENT,
+    annotations: OWN_UNDO_STEP,
+  };
+}

@@ -13,6 +13,15 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 15:50] 계산 실행, 결과 창, 변수 메모리 (5.9)</h2>
+<ul>
+<li><b>기획:</b> 🧮(Ctrl+Enter)로 선택한 내용이나 커서가 있는 줄을 계산해 결과 창에 표시. 창에서 결과를 메모에 주석 줄로 넣거나, 변수를 저장하거나, 저장된 변수를 지운다. 저장한 변수는 다음 방문에도 남는다.</li>
+<li><b>TC:</b> 정상 — 계산·삽입·변수 저장·다음 실행에서 사용·새로고침 후 유지. 경계 — 빈 줄, 주석만 있는 코드, 오류 13종의 문구, 손상되거나 읽을 수 없는 저장값, 저장 실패 시에도 이번 방문에는 유지, 줄바꿈으로 끝난 선택 뒤 삽입.</li>
+<li><b>개발:</b> <code>src/app/calcActions.ts</code>, <code>noticeText.ts</code>, <code>commandTable.ts</code>, <code>src/ui/calcDialog.ts</code>, <code>src/editor/editorActions.ts</code>, <code>editorTabs.ts</code>, <code>editorSetup.ts</code>, <code>src/main.ts</code> 외 12개 파일</li>
+<li><b>검증:</b> 단위 809 passed, 빌드 55 passed, 0 failed</li>
+<li><b>비고:</b> 백업에 변수 메모리를 넣는 것은 다음 커밋.</li>
+</ul>
+
 <h2>[2026-11-17 15:42] 계산기 이식 (5.8)</h2>
 <ul>
 <li><b>기획:</b> ssMemoWeb의 <code>calc.js</code>(큰 정수 산술, 변수, sin·cos·tan·factorial, # 주석)를 옮긴다. 변수와 함수는 Map에 두고, 오류는 한글 문장 대신 코드로 던져 두 언어로 표시할 수 있게 한다.</li>

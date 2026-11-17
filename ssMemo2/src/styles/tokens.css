@@ -66,6 +66,9 @@
   /* Memo list: how tall the list may grow before it scrolls inside the dialog. */
   --memo-list-max-height: 60dvh;
 
+  /* Calculator result: how tall the output may grow before it scrolls. */
+  --calc-output-max-height: 40dvh;
+
   /* Dialogs: preferred width (never wider than the screen) and how tall they may grow. */
   --modal-width: 28rem;
   --modal-max-height: 85dvh;

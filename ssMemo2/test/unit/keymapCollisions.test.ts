@@ -118,6 +118,7 @@ test('the shortcuts ssMemoWeb users know are all there', () => {
     'Mod-Shift-r': 'insert.note',
     'Mod-Shift-x': 'insert.cross',
     'Mod-Shift-z': 'insert.green',
+    'Mod-Enter': 'tools.calc',
   };
   for (const [shortcut, id] of Object.entries(expected)) assert.equal(byShortcut.get(shortcut), id, shortcut);
 });

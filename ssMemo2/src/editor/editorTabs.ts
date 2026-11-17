@@ -81,6 +81,8 @@ export interface EditorTabs {
    * Does nothing while no tab is shown.
    */
   apply(build: (state: EditorState) => TransactionSpec): void;
+  /** Looks something up in the visible document; undefined while no tab is shown. */
+  read<T>(look: (state: EditorState) => T): T | undefined;
   /** Call after something outside the editor changed its text metrics (the font size). */
   remeasure(): void;
 }
@@ -173,6 +175,8 @@ export function createEditorTabs(view: EditorViewPort, options: EditorTabsOption
     apply(build) {
       if (activeTabId !== undefined) view.dispatch(build(view.state));
     },
+
+    read: (look) => (activeTabId === undefined ? undefined : look(view.state)),
 
     remeasure: () => view.requestMeasure(),
   };

@@ -2,7 +2,16 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { undo } from '@codemirror/commands';
 import type { EditorState, TransactionSpec } from '@codemirror/state';
-import { DIVIDER_LENGTH, insertDivider, insertText, joinChunks, splitIntoChunks, toggleChunks } from '../../src/editor/editorActions.ts';
+import {
+  DIVIDER_LENGTH,
+  getCodeToRun,
+  insertDivider,
+  insertResultLines,
+  insertText,
+  joinChunks,
+  splitIntoChunks,
+  toggleChunks,
+} from '../../src/editor/editorActions.ts';
 import { CHUNK_DELIMITER } from '../../src/lib/chunks.ts';
 import { createEditorState } from '../../src/editor/editorSetup.ts';
 
@@ -176,4 +185,54 @@ test('toggleChunks splits a long text, joins a split one and leaves a short one 
   const nothing = toggleChunks(short, 2);
   assert.equal(nothing.action, 'none');
   assert.equal(applied(short, nothing.spec).doc.toString(), 'ab');
+});
+
+// --- code to run and its result ---------------------------------------------
+
+test('the selected text is what gets run, whichever way it was selected', () => {
+  const text = 'note\n1 + 2\nmore';
+  assert.deepEqual(getCodeToRun(stateWith(text, 5, 10)), { code: '1 + 2', end: 10 });
+  assert.deepEqual(getCodeToRun(stateWith(text, 10, 5)), { code: '1 + 2', end: 10 });
+  // Several lines at once.
+  assert.deepEqual(getCodeToRun(stateWith('x = 1\nx + 1\nrest', 0, 11)), { code: 'x = 1\nx + 1', end: 11 });
+});
+
+test('without a selection the line with the cursor is run', () => {
+  const text = 'note\n1 + 2\nmore';
+  for (const cursor of [5, 7, 10]) assert.deepEqual(getCodeToRun(stateWith(text, cursor)), { code: '1 + 2', end: 10 }, String(cursor));
+  assert.deepEqual(getCodeToRun(stateWith(text, 0)), { code: 'note', end: 4 });
+  assert.deepEqual(getCodeToRun(stateWith('a\n\nb', 2)), { code: '', end: 2 });
+  assert.deepEqual(getCodeToRun(stateWith('', 0)), { code: '', end: 0 });
+});
+
+test('result lines go on lines of their own right below the code', () => {
+  const before = stateWith('note\n1 + 2\nmore', 7);
+  const after = applied(before, insertResultLines(before, 10, ['# 3']));
+  assert.equal(after.doc.toString(), 'note\n1 + 2\n# 3\nmore');
+  // The cursor ends up behind the result.
+  assert.equal(after.selection.main.head, 'note\n1 + 2\n# 3'.length);
+});
+
+test('several result lines stay together, and the end of the document needs no line break after them', () => {
+  const before = stateWith('x = 1\nx + 1', 0);
+  const after = applied(before, insertResultLines(before, 11, ['# x = 1', '# 2']));
+  assert.equal(after.doc.toString(), 'x = 1\nx + 1\n# x = 1\n# 2');
+});
+
+test('a selection that ended with a line break does not glue the result to the next line', () => {
+  // ssMemoWeb produced "# 3more" here.
+  const before = stateWith('1 + 2\nmore', 0, 6);
+  const after = applied(before, insertResultLines(before, 6, ['# 3']));
+  assert.equal(after.doc.toString(), '1 + 2\n# 3\nmore');
+});
+
+test('a position beyond the document is treated as its end, and no lines change nothing', () => {
+  const before = stateWith('1 + 2', 0);
+  assert.equal(applied(before, insertResultLines(before, 999, ['# 3'])).doc.toString(), '1 + 2\n# 3');
+  assert.equal(applied(before, insertResultLines(before, 5, [])).doc.toString(), '1 + 2');
+});
+
+test('an inserted result is one step for undo', () => {
+  const before = stateWith('1 + 2', 0);
+  assert.equal(undone(applied(before, insertResultLines(before, 5, ['# 3']))).doc.toString(), '1 + 2');
 });

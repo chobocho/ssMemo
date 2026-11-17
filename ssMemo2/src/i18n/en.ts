@@ -33,6 +33,7 @@ export const en = {
   'command.insertCross': 'Cross mark',
   'command.insertGreen': 'Green square',
   'command.chunks': 'Split with cut lines / join again',
+  'command.runCode': 'Calculate',
   'command.closeTab': 'Close tab',
   'command.nextTab': 'Next tab',
   'command.previousTab': 'Previous tab',
@@ -104,6 +105,7 @@ export const en = {
 
   'modal.confirm': 'OK',
   'modal.cancel': 'Cancel',
+  'modal.close': 'Close',
 
   'notice.dismiss': 'Close',
   'notice.temporaryUnavailable': 'Browser storage cannot be used, so memos are kept only until this page is closed.',
@@ -127,6 +129,27 @@ export const en = {
   'notice.fileSaved': 'Saved to {name}.',
   'notice.fileSaveFailed': 'Could not save to {name}. "Save to file as…" lets you choose another place.',
 
+  'calc.title': 'Result',
+  'calc.errorTitle': 'Could not calculate',
+  'calc.noOutput': '(no output)',
+  'calc.memory': 'Stored variables: {names}',
+  'calc.insert': '📥 Insert into the memo',
+  'calc.save': '💾 Keep the variables',
+  'calc.clear': '🗑️ Forget stored variables',
+  'calc.error.sourceTooLong': 'That is too much to calculate at once (at most {detail} characters).',
+  'calc.error.tooComplex': 'The calculation is nested too deeply or its result is too large.',
+  'calc.error.unknownCharacter': 'The character "{detail}" cannot be calculated with.',
+  'calc.error.unexpectedToken': '"{detail}" is not expected here.',
+  'calc.error.incomplete': 'The calculation is incomplete.',
+  'calc.error.expectedToken': 'A "{detail}" is missing.',
+  'calc.error.undefinedVariable': 'The variable "{detail}" has no value.',
+  'calc.error.unknownFunction': 'There is no function called "{detail}".',
+  'calc.error.wrongArgumentCount': 'The function "{detail}" takes exactly one value.',
+  'calc.error.divisionByZero': 'Cannot divide by zero.',
+  'calc.error.factorialNotInteger': 'factorial needs a whole number.',
+  'calc.error.factorialNegative': 'factorial is not defined for negative numbers.',
+  'calc.error.factorialTooLarge': 'factorial works for numbers up to {detail}.',
+
   'preview.label': 'Preview',
   'preview.tooLong': 'This memo is too long to preview (at most {max} characters).',
 
@@ -135,6 +158,8 @@ export const en = {
   'file.convertAccept': 'Save as {to}',
 
   'notice.chunksNotNeeded': 'The memo has {count} characters or fewer, so there is nothing to split.',
+  'notice.calcNothingToRun': 'Select what to calculate, or put the cursor on a line with a calculation.',
+  'notice.calcMemoryNotSaved': 'The variables could not be stored. They apply until this page is closed.',
   'notice.backupExported': 'Backup saved with {count} memo(s).',
   'notice.backupUnreadableRecords': '{count} damaged record(s) could not be included.',
   'notice.backupExportFailed': 'The backup could not be saved.',

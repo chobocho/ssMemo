@@ -1,6 +1,8 @@
 // Composition root: the only module that touches the real window and wires modules together.
 import type { ImportMode } from './app/backup.ts';
 import { createBackupActions } from './app/backupActions.ts';
+import { createCalcActions } from './app/calcActions.ts';
+import type { CalcDialogAction } from './app/calcActions.ts';
 import { readBuildId } from './app/buildInfo.ts';
 import { COMMAND_GROUPS, SYMBOL_COMMAND_IDS, bindCommands, iconOf } from './app/commandTable.ts';
 import type { CommandId } from './app/commandTable.ts';
@@ -14,6 +16,8 @@ import {
   SAVE_STATE_KEYS,
   describeBackupNotice,
   describeBackupSummary,
+  describeCalcError,
+  describeCalcNotice,
   describeFileNotice,
   describeNotice,
   describeStorage,
@@ -29,7 +33,7 @@ import { formatShortcut } from './app/shortcut.ts';
 import type { LanguageSetting, Settings } from './app/settings.ts';
 import { adjacentTabId, createTabManager } from './app/tabManager.ts';
 import { createWorkspace } from './app/workspace.ts';
-import { insertDivider, insertText, toggleChunks } from './editor/editorActions.ts';
+import { getCodeToRun, insertDivider, insertResultLines, insertText, toggleChunks } from './editor/editorActions.ts';
 import { mountEditorTabs } from './editor/editorTabs.ts';
 import { createSearchPhrases } from './editor/searchPhrases.ts';
 import type { MessageKey } from './i18n/en.ts';
@@ -41,6 +45,7 @@ import type { TextEncoding } from './lib/encoding.ts';
 import { isSafeModeRequested, openStorage } from './storage/openStorage.ts';
 import type { DocumentMeta } from './storage/storagePort.ts';
 import { createAppShell } from './ui/appShell.ts';
+import { createCalcErrorContent, createCalcResultContent } from './ui/calcDialog.ts';
 import { copyToClipboard } from './ui/clipboard.ts';
 import { createCommandMenu } from './ui/commandMenu.ts';
 import { createDiagnosticsPanel } from './ui/diagnosticsPanel.ts';
@@ -424,6 +429,36 @@ async function start(win: Window): Promise<void> {
     if (action === 'split') editor.searchFor(CHUNK_LABEL);
   };
 
+  const calc = createCalcActions({
+    storage: opened.storage,
+    getCode: () => editor.read(getCodeToRun),
+    insertResult: (end, lines) => editInPlace((state) => insertResultLines(state, end, lines)),
+    showResult: (view) =>
+      modals.open<CalcDialogAction>((close) => ({
+        title: t('calc.title'),
+        content: createCalcResultContent(
+          doc,
+          view,
+          {
+            memory: (names) => t('calc.memory', { names }),
+            noOutput: t('calc.noOutput'),
+            insert: t('calc.insert'),
+            save: t('calc.save'),
+            clear: t('calc.clear'),
+            close: t('modal.close'),
+          },
+          close,
+        ),
+      })),
+    showError: async (code, detail) => {
+      await modals.open((close) => ({
+        title: t('calc.errorTitle'),
+        content: createCalcErrorContent(doc, describeCalcError(code, detail, t), t('modal.close'), () => close()),
+      }));
+    },
+    onNotice: (notice) => notices.show(describeCalcNotice(notice, t), notice.kind === 'calc-nothing-to-run' ? 'info' : 'warning'),
+  });
+
   const groupLabelKeys = new Map<string, MessageKey>(COMMAND_GROUPS.map((group) => [group.id, group.labelKey]));
   // Every command except the menu itself, for narrow screens where the toolbar shows only a few.
   const showMenu = (): void => {
@@ -463,6 +498,7 @@ async function start(win: Window): Promise<void> {
       'move.pageDown': () => editor.pageDown(),
       'insert.divider': () => editInPlace(insertDivider),
       ...symbolCommands,
+      'tools.calc': () => void calc.run(),
       'tools.chunks': { run: toggleCutLines, isOn: hasCutLines },
       'view.preview': { run: togglePreview, isOn: () => preview.isEnabled() },
       'view.toggleWrap': { run: toggleLineWrapping, isOn: () => settings.lineWrapping },

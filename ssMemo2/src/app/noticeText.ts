@@ -5,7 +5,9 @@ import type { Eol, TextFormat } from '../lib/textFile.ts';
 import type { Translate } from '../i18n/i18n.ts';
 import type { StorageMode, TemporaryReason } from '../storage/openStorage.ts';
 import type { AutosaveState } from './autosave.ts';
+import type { CalcErrorCode } from '../lib/calc.ts';
 import type { BackupProblem } from './backup.ts';
+import type { CalcNotice } from './calcActions.ts';
 import type { BackupNotice, BackupSummary } from './backupActions.ts';
 import { MAX_TITLE_LENGTH } from './documentStore.ts';
 import type { TitleProblem } from './documentStore.ts';
@@ -121,6 +123,37 @@ export function describeBackupSummary(summary: BackupSummary, t: Translate, loca
       : t('backup.summary', { ...counts, time: formatTimestamp(summary.exportedAt, locale, timeZone) }),
     summary.skipped > 0 && t('backup.skippedEntries', { count: summary.skipped }),
   );
+}
+
+const CALC_ERROR_KEYS: Readonly<Record<CalcErrorCode, MessageKey>> = {
+  'source-too-long': 'calc.error.sourceTooLong',
+  'too-complex': 'calc.error.tooComplex',
+  'unknown-character': 'calc.error.unknownCharacter',
+  'unexpected-token': 'calc.error.unexpectedToken',
+  'expected-token': 'calc.error.expectedToken',
+  'undefined-variable': 'calc.error.undefinedVariable',
+  'unknown-function': 'calc.error.unknownFunction',
+  'wrong-argument-count': 'calc.error.wrongArgumentCount',
+  'division-by-zero': 'calc.error.divisionByZero',
+  'factorial-not-integer': 'calc.error.factorialNotInteger',
+  'factorial-negative': 'calc.error.factorialNegative',
+  'factorial-too-large': 'calc.error.factorialTooLarge',
+};
+
+/** Why a calculation failed. `detail` is the name, character or limit the error is about. */
+export function describeCalcError(code: CalcErrorCode, detail: string, t: Translate): string {
+  // An "unexpected token" without a token means the input ended in the middle of an expression.
+  if (code === 'unexpected-token' && detail === '') return t('calc.error.incomplete');
+  return t(CALC_ERROR_KEYS[code], { detail });
+}
+
+export function describeCalcNotice(notice: CalcNotice, t: Translate): string {
+  switch (notice.kind) {
+    case 'calc-nothing-to-run':
+      return t('notice.calcNothingToRun');
+    case 'calc-memory-not-saved':
+      return t('notice.calcMemoryNotSaved');
+  }
 }
 
 /** The message explaining temporary mode. An unknown reason is explained as the unexpected case. */

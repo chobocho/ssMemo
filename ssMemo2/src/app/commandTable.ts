@@ -54,6 +54,7 @@ export const COMMAND_DEFINITIONS = [
   { id: 'insert.cross', group: 'insert', labelKey: 'command.insertCross', icon: '❎', shortcuts: ['Mod-Shift-x'] },
   { id: 'insert.green', group: 'insert', labelKey: 'command.insertGreen', icon: '🟩', shortcuts: ['Mod-Shift-z'] },
 
+  { id: 'tools.calc', group: 'tools', labelKey: 'command.runCode', icon: '🧮', shortcuts: ['Mod-Enter'] },
   { id: 'tools.chunks', group: 'tools', labelKey: 'command.chunks', icon: '➗', shortcuts: [] },
 
   { id: 'view.preview', group: 'view', labelKey: 'command.preview', icon: '📖', shortcuts: ['Alt-p'] },

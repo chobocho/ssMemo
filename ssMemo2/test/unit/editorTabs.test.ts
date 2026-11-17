@@ -434,3 +434,14 @@ test('two tabs with the same text still have different content keys', () => {
   harness.tabs.show('b', 'same');
   assert.notEqual(harness.tabs.getContentKey(), first);
 });
+
+// --- read -------------------------------------------------------------------
+
+test('read looks at the visible document as it is now', () => {
+  const harness = createHarness();
+  assert.equal(harness.tabs.read((state) => state.doc.toString()), undefined);
+  harness.tabs.show('a', 'alpha');
+  harness.type('new ');
+  assert.equal(harness.tabs.read((state) => state.doc.toString()), 'new alpha');
+  assert.equal(harness.tabs.read((state) => state.doc.lines), 1);
+});

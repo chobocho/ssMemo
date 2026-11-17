@@ -68,6 +68,8 @@ const editorTheme = EditorView.theme({
 const KEYS_LEFT_TO_THE_APP: ReadonlySet<string> = new Set([
   // "Select parent syntax" in the editor; the app opens the search with it, as ssMemoWeb did.
   'Mod-i',
+  // "Insert blank line" in the editor; the app runs the calculator with it, as ssMemoWeb did.
+  'Mod-Enter',
   // Redo on Mac and Linux; the app inserts a symbol with it, as ssMemoWeb did. Redo keeps Mod-y.
   'Mod-Shift-z',
   'Ctrl-Shift-z',

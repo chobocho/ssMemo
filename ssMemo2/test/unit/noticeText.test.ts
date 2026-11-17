@@ -5,6 +5,8 @@ import { MAX_TITLE_LENGTH } from '../../src/app/documentStore.ts';
 import {
   SAVE_STATE_KEYS,
   describeBackupNotice,
+  describeCalcError,
+  describeCalcNotice,
   describeBackupSummary,
   describeFileNotice,
   describeNotice,
@@ -202,4 +204,37 @@ test('describeBackupSummary copes with a backup that does not say when it was ma
   assert.equal(text.includes('undefined'), false);
   // Entries that cannot be used are mentioned, so the count does not surprise afterwards.
   assert.match(text, /\b2\b/);
+});
+
+test('every calculator error has a message of its own that names what it is about', () => {
+  const cases = [
+    ['source-too-long', '100000'],
+    ['too-complex', ''],
+    ['unknown-character', '@'],
+    ['unexpected-token', ')'],
+    ['unexpected-token', ''],
+    ['expected-token', ')'],
+    ['undefined-variable', 'total'],
+    ['unknown-function', 'sqrt'],
+    ['wrong-argument-count', 'sin'],
+    ['division-by-zero', ''],
+    ['factorial-not-integer', ''],
+    ['factorial-negative', ''],
+    ['factorial-too-large', '1000'],
+  ] as const;
+  const texts = cases.map(([code, detail]) => describeCalcError(code, detail, t));
+  assert.equal(new Set(texts).size, cases.length);
+  cases.forEach(([code, detail], index) => {
+    const text = texts[index] ?? '';
+    assert.ok(text.length > 0, code);
+    if (detail !== '') assert.ok(text.includes(detail), `${code}: ${text}`);
+    assert.equal(text.includes('{'), false, `${code}: ${text}`);
+  });
+});
+
+test('describeCalcNotice explains how to run something and what a failed store means', () => {
+  const nothing = describeCalcNotice({ kind: 'calc-nothing-to-run' }, t);
+  const notSaved = describeCalcNotice({ kind: 'calc-memory-not-saved' }, t);
+  assert.ok(nothing.length > 0 && notSaved.length > 0);
+  assert.notEqual(nothing, notSaved);
 });

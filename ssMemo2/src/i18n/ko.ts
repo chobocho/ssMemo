@@ -34,6 +34,7 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'command.insertCross': '엑스 표시',
   'command.insertGreen': '초록 사각형',
   'command.chunks': '절취선으로 나누기 / 다시 합치기',
+  'command.runCode': '계산',
   'command.closeTab': '탭 닫기',
   'command.nextTab': '다음 탭',
   'command.previousTab': '이전 탭',
@@ -101,6 +102,7 @@ export const ko: Readonly<Record<MessageKey, string>> = {
 
   'modal.confirm': '확인',
   'modal.cancel': '취소',
+  'modal.close': '닫기',
 
   'notice.dismiss': '닫기',
   'notice.temporaryUnavailable': '브라우저 저장소를 쓸 수 없어, 메모는 이 페이지를 닫을 때까지만 유지됩니다.',
@@ -123,6 +125,27 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'notice.fileSaved': '{name} 파일로 저장했습니다.',
   'notice.fileSaveFailed': '{name} 파일로 저장하지 못했습니다. "다른 이름으로 저장…"으로 다른 위치를 골라 보세요.',
 
+  'calc.title': '계산 결과',
+  'calc.errorTitle': '계산할 수 없습니다',
+  'calc.noOutput': '(출력 없음)',
+  'calc.memory': '저장된 변수: {names}',
+  'calc.insert': '📥 메모에 넣기',
+  'calc.save': '💾 변수 저장',
+  'calc.clear': '🗑️ 저장된 변수 지우기',
+  'calc.error.sourceTooLong': '한 번에 계산하기에는 너무 깁니다(최대 {detail}자).',
+  'calc.error.tooComplex': '식이 너무 깊게 중첩되었거나 결과가 너무 큽니다.',
+  'calc.error.unknownCharacter': '"{detail}" 문자는 계산에 쓸 수 없습니다.',
+  'calc.error.unexpectedToken': '"{detail}"이(가) 올 자리가 아닙니다.',
+  'calc.error.incomplete': '식이 완성되지 않았습니다.',
+  'calc.error.expectedToken': '"{detail}"이(가) 빠졌습니다.',
+  'calc.error.undefinedVariable': '변수 "{detail}"에 값이 없습니다.',
+  'calc.error.unknownFunction': '"{detail}"라는 함수는 없습니다.',
+  'calc.error.wrongArgumentCount': '함수 "{detail}"에는 값을 하나만 넣을 수 있습니다.',
+  'calc.error.divisionByZero': '0으로 나눌 수 없습니다.',
+  'calc.error.factorialNotInteger': 'factorial에는 정수를 넣어야 합니다.',
+  'calc.error.factorialNegative': 'factorial은 음수에 대해 정의되지 않습니다.',
+  'calc.error.factorialTooLarge': 'factorial은 {detail}까지만 계산합니다.',
+
   'preview.label': '미리보기',
   'preview.tooLong': '메모가 너무 길어 미리보기를 표시하지 않습니다(최대 {max}자).',
 
@@ -131,6 +154,8 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'file.convertAccept': '{to}로 저장',
 
   'notice.chunksNotNeeded': '메모가 {count}자 이하라 나눌 필요가 없습니다.',
+  'notice.calcNothingToRun': '계산할 내용을 선택하거나, 계산식이 있는 줄에 커서를 두세요.',
+  'notice.calcMemoryNotSaved': '변수를 저장하지 못했습니다. 이 페이지를 닫을 때까지만 유지됩니다.',
   'notice.backupExported': '메모 {count}개를 백업 파일로 저장했습니다.',
   'notice.backupUnreadableRecords': '손상된 기록 {count}개는 넣지 못했습니다.',
   'notice.backupExportFailed': '백업을 저장하지 못했습니다.',

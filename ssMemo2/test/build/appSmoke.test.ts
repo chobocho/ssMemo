@@ -818,6 +818,79 @@ test('markup typed into a memo is shown as text in the preview, never run', asyn
   page.close();
 });
 
+/** Replaces the text of the first line the way typing does. */
+async function typeLine(page: Page, text: string): Promise<void> {
+  const line = page.document.querySelector('.cm-line');
+  assert.ok(line);
+  line.textContent = text;
+  await wait(100);
+}
+
+function dialogButton(page: Page, label: string): HTMLElement {
+  const button = [...topDialog(page).querySelectorAll<HTMLElement>('button')].find((candidate) => candidate.textContent?.includes(label));
+  assert.ok(button, `the dialog has no button labelled ${label}`);
+  return button;
+}
+
+test('Ctrl+Enter calculates the current line and can put the result into the memo', async () => {
+  const page = await openPage({ factory: await seededFactory() });
+  await typeLine(page, '(1 + 2) * 7');
+  const press = await pressKey(page, { key: 'Enter', code: 'Enter', ctrlKey: true });
+  assert.equal(press.defaultPrevented, true);
+  assert.equal(topDialog(page).querySelector('.calc-output')?.textContent, '21');
+  // The line itself is unchanged: Ctrl+Enter did not also insert a blank line.
+  assert.equal(page.editorText(), '(1 + 2) * 7');
+
+  dialogButton(page, 'Insert into the memo').click();
+  await wait(100);
+  assert.equal(page.document.querySelector('dialog[open]'), null);
+  assert.deepEqual([...page.document.querySelectorAll('.cm-line')].map((line) => line.textContent), ['(1 + 2) * 7', '# 21']);
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
+test('kept variables are used by later calculations and are still there after a reload', async () => {
+  const factory = await seededFactory();
+  const page = await openPage({ factory });
+  await typeLine(page, 'rate = 1250');
+  await pickFromMenu(page, 'Calculate');
+  assert.equal(topDialog(page).querySelector('.calc-output')?.textContent, 'rate = 1250');
+  dialogButton(page, 'Keep the variables').click();
+  await wait(100);
+
+  await typeLine(page, 'rate * 3');
+  await pressKey(page, { key: 'Enter', code: 'Enter', ctrlKey: true });
+  assert.equal(topDialog(page).querySelector('.calc-output')?.textContent, '3750');
+  assert.match(topDialog(page).querySelector('.calc-memory')?.textContent ?? '', /rate/);
+  dialogButton(page, 'Close').click();
+  await wait(AUTOSAVE_WAIT_MS);
+  assert.deepEqual(page.errors, []);
+  page.close();
+
+  const reloaded = await openPage({ factory });
+  assert.equal(reloaded.editorText(), 'rate * 3');
+  await pressKey(reloaded, { key: 'Enter', code: 'Enter', ctrlKey: true });
+  assert.equal(topDialog(reloaded).querySelector('.calc-output')?.textContent, '3750');
+  reloaded.close();
+});
+
+test('a calculation that cannot be done is explained, and an empty line gives a hint', async () => {
+  const page = await openPage({ factory: await seededFactory() });
+  await typeLine(page, '10 / 0');
+  await pressKey(page, { key: 'Enter', code: 'Enter', ctrlKey: true });
+  assert.equal(topDialog(page).querySelector('.modal-message')?.textContent, 'Cannot divide by zero.');
+  dialogButton(page, 'Close').click();
+  await wait(50);
+  assert.equal(page.document.querySelector('dialog[open]'), null);
+
+  await typeLine(page, '');
+  await pressKey(page, { key: 'Enter', code: 'Enter', ctrlKey: true });
+  assert.equal(page.document.querySelector('dialog[open]'), null);
+  assert.equal(page.noticeTexts().length, 1);
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
 test('the search panel speaks the language of the app', async () => {
   const factory = await seededFactory();
   const storage = await openIndexedDbStorage(factory);
