@@ -11,6 +11,13 @@
 // Every operation resolves only on the transaction's "complete" event. A request's "success"
 // event is not enough: the transaction can still abort afterwards (for example when the quota is
 // exhausted), which is how ssMemoWeb came to report saves that were never stored.
+//
+// Every failure is turned into a StorageError with a kind the app can act on:
+//   unavailable      the database cannot be opened      -> fall back to memory storage
+//   write-failed     a write was rolled back            -> the document stays unsaved
+//   quota            same, because storage is full
+//   conflict         another tab saved first            -> see storagePort.ts
+//   connection-lost  the connection is gone             -> the page has to be reloaded
 import { StorageError, createNextMeta } from './storagePort.ts';
 import type { DocumentListing, DocumentMeta, StoragePort, StoredDocument } from './storagePort.ts';
 
@@ -21,16 +28,36 @@ const BODY_STORE = 'docBody';
 const KEY_VALUE_STORE = 'kv';
 const DOCUMENT_STORES = [META_STORE, BODY_STORE];
 
+// Opening normally takes milliseconds. A request that is blocked by another tab or stuck in a
+// broken browser profile fires no event at all, so only a timeout can end the wait.
+const DEFAULT_OPEN_TIMEOUT_MS = 5000;
+const FIRST_REVISION = 1;
+const QUOTA_ERROR_NAME = 'QuotaExceededError';
+
 export interface IndexedDbStorage extends StoragePort {
   /** Releases the connection so other tabs can upgrade or delete the database. */
   close(): void;
+}
+
+export interface OpenOptions {
+  /** How long to wait for the database to open before reporting it as unavailable. */
+  timeoutMs?: number;
+  /** Called once if the connection is closed underneath the app. */
+  onConnectionLost?: () => void;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-/** A clean copy of a stored metadata record, or undefined if the record is malformed. */
+function isCount(value: unknown, minimum: number): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= minimum;
+}
+
+/**
+ * A clean copy of a stored metadata record, or undefined if the record is malformed. Unknown
+ * extra fields are ignored, so records written by a newer version of the app stay readable.
+ */
 function parseMeta(value: unknown): DocumentMeta | undefined {
   if (!isRecord(value)) return undefined;
   const { id, title, createdAt, updatedAt, length, rev } = value;
@@ -39,8 +66,8 @@ function parseMeta(value: unknown): DocumentMeta | undefined {
     typeof title !== 'string' ||
     typeof createdAt !== 'string' ||
     typeof updatedAt !== 'string' ||
-    typeof length !== 'number' ||
-    typeof rev !== 'number'
+    !isCount(length, 0) ||
+    !isCount(rev, FIRST_REVISION)
   ) {
     return undefined;
   }
@@ -51,19 +78,53 @@ function parseContent(value: unknown): string | undefined {
   return isRecord(value) && typeof value.content === 'string' ? value.content : undefined;
 }
 
+/** Turns the reason a write transaction aborted into the error the app should see. */
+export function classifyWriteFailure(cause: unknown): StorageError {
+  if (isRecord(cause) && cause.name === QUOTA_ERROR_NAME) {
+    return new StorageError('quota', 'The browser storage quota is exhausted', { cause });
+  }
+  return new StorageError('write-failed', 'The storage transaction was aborted', { cause });
+}
+
 function createSchema(database: IDBDatabase): void {
   database.createObjectStore(META_STORE, { keyPath: 'id' });
   database.createObjectStore(BODY_STORE, { keyPath: 'id' });
   database.createObjectStore(KEY_VALUE_STORE, { keyPath: 'key' });
 }
 
-function openDatabase(factory: IDBFactory): Promise<IDBDatabase> {
+function openDatabase(factory: IDBFactory, timeoutMs: number): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = factory.open(DATABASE_NAME, DATABASE_VERSION);
+    let settled = false;
+    const fail = (message: string, cause?: unknown): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      reject(new StorageError('unavailable', message, { cause }));
+    };
+    const timer = setTimeout(() => fail(`IndexedDB did not open within ${timeoutMs} ms`), timeoutMs);
+
+    let request: IDBOpenDBRequest;
+    try {
+      // Throws when storage is blocked for the page, or when there is no IndexedDB at all.
+      request = factory.open(DATABASE_NAME, DATABASE_VERSION);
+    } catch (error) {
+      fail('IndexedDB is not accessible', error);
+      return;
+    }
+
     request.onupgradeneeded = () => createSchema(request.result);
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => {
-      reject(new StorageError('unavailable', 'IndexedDB could not be opened', { cause: request.error }));
+    // Also reached when the stored database is newer than this build (VersionError).
+    request.onerror = () => fail('IndexedDB could not be opened', request.error);
+    request.onsuccess = () => {
+      if (settled) {
+        // The app has already moved on to the fallback; an unused open connection would only
+        // block other tabs from upgrading the database.
+        request.result.close();
+        return;
+      }
+      settled = true;
+      clearTimeout(timer);
+      resolve(request.result);
     };
   });
 }
@@ -82,7 +143,15 @@ function runTransaction<T>(
   work: (transaction: IDBTransaction, abort: (error: unknown) => void) => () => T,
 ): Promise<T> {
   return new Promise<T>((resolve, reject) => {
-    const transaction = database.transaction(DOCUMENT_STORES, mode);
+    let transaction: IDBTransaction;
+    try {
+      transaction = database.transaction(DOCUMENT_STORES, mode);
+    } catch (error) {
+      // The connection is closing or closed; no transaction can be started on it any more.
+      reject(new StorageError('connection-lost', 'The storage connection is closed', { cause: error }));
+      return;
+    }
+
     let failure: unknown;
     const abort = (error: unknown): void => {
       failure = error;
@@ -93,20 +162,39 @@ function runTransaction<T>(
 
     transaction.oncomplete = () => resolve(readResult());
     transaction.onabort = () => {
-      if (failure instanceof StorageError) {
-        reject(failure);
-      } else {
-        const cause = failure ?? transaction.error;
-        reject(new StorageError('write-failed', 'The storage transaction was aborted', { cause }));
-      }
+      reject(failure instanceof StorageError ? failure : classifyWriteFailure(failure ?? transaction.error));
     };
   });
 }
 
-function createStorage(database: IDBDatabase): IndexedDbStorage {
+function createStorage(database: IDBDatabase, onConnectionLost: () => void): IndexedDbStorage {
+  let connected = true;
+
+  const disconnect = (notify: boolean): void => {
+    if (!connected) return;
+    connected = false;
+    database.close();
+    if (notify) onConnectionLost();
+  };
+
+  // Another tab wants to upgrade or delete the database. Holding on would block that tab forever.
+  database.onversionchange = () => disconnect(true);
+  // The browser closed the connection itself (site data cleared, disk error).
+  database.onclose = () => disconnect(true);
+
+  const run = <T>(
+    mode: IDBTransactionMode,
+    work: (transaction: IDBTransaction, abort: (error: unknown) => void) => () => T,
+  ): Promise<T> => {
+    if (!connected) {
+      return Promise.reject(new StorageError('connection-lost', 'The storage connection is closed'));
+    }
+    return runTransaction(database, mode, work);
+  };
+
   return {
     listDocuments() {
-      return runTransaction(database, 'readonly', (transaction) => {
+      return run('readonly', (transaction) => {
         const request = transaction.objectStore(META_STORE).getAll();
         return (): DocumentListing => {
           const documents: DocumentMeta[] = [];
@@ -122,7 +210,7 @@ function createStorage(database: IDBDatabase): IndexedDbStorage {
     },
 
     getDocument(id) {
-      return runTransaction(database, 'readonly', (transaction) => {
+      return run('readonly', (transaction) => {
         const metaRequest = transaction.objectStore(META_STORE).get(id);
         const bodyRequest = transaction.objectStore(BODY_STORE).get(id);
         return (): StoredDocument | undefined => {
@@ -134,7 +222,7 @@ function createStorage(database: IDBDatabase): IndexedDbStorage {
     },
 
     saveDocument(draft, expectedRev) {
-      return runTransaction(database, 'readwrite', (transaction, abort) => {
+      return run('readwrite', (transaction, abort) => {
         const metaStore = transaction.objectStore(META_STORE);
         const existing = metaStore.get(draft.id);
         let meta: DocumentMeta | undefined;
@@ -142,6 +230,7 @@ function createStorage(database: IDBDatabase): IndexedDbStorage {
         // between the check and the write.
         existing.onsuccess = () => {
           try {
+            // A malformed stored record counts as absent, so creating the id anew repairs it.
             meta = createNextMeta(draft, parseMeta(existing.result)?.rev, expectedRev);
             metaStore.put(meta);
             transaction.objectStore(BODY_STORE).put({ id: draft.id, content: draft.content });
@@ -157,7 +246,7 @@ function createStorage(database: IDBDatabase): IndexedDbStorage {
     },
 
     deleteDocument(id) {
-      return runTransaction(database, 'readwrite', (transaction) => {
+      return run('readwrite', (transaction) => {
         const metaStore = transaction.objectStore(META_STORE);
         // getKey answers "did it exist" without loading the record.
         const existing = metaStore.getKey(id);
@@ -168,11 +257,13 @@ function createStorage(database: IDBDatabase): IndexedDbStorage {
     },
 
     close() {
-      database.close();
+      disconnect(false);
     },
   };
 }
 
-export async function openIndexedDbStorage(factory: IDBFactory): Promise<IndexedDbStorage> {
-  return createStorage(await openDatabase(factory));
+/** Rejects with StorageError 'unavailable' when the database cannot be opened. */
+export async function openIndexedDbStorage(factory: IDBFactory, options: OpenOptions = {}): Promise<IndexedDbStorage> {
+  const database = await openDatabase(factory, options.timeoutMs ?? DEFAULT_OPEN_TIMEOUT_MS);
+  return createStorage(database, options.onConnectionLost ?? (() => undefined));
 }

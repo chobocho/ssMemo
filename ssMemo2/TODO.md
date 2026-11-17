@@ -97,7 +97,7 @@
 - [x] 2.1 i18n(카탈로그, `t()`, 언어 결정, 키 일치 테스트)
 - [x] 2.2 StoragePort + MemoryStorage + 공용 계약 테스트
 - [x] 2.3 IndexedDbStorage CRUD
-- [ ] 2.4 IndexedDB 실패 처리(abort, blocked, 손상 레코드, 용량, rev 충돌)
+- [x] 2.4 IndexedDB 실패 처리(abort, blocked, 손상 레코드, 용량, rev 충돌)
 - [ ] 2.5 저장소 열기 폴백 + `?safe` 임시 모드
 - [ ] 2.6 documentStore(id 기반 CRUD, 제목 검증, 원자적 이름 변경)
 - [ ] 2.7 autosave 스케줄러
