@@ -13,6 +13,15 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 09:10] 저장소 인터페이스와 메모리 저장소 (2.2)</h2>
+<ul>
+<li><b>기획:</b> 문서를 고정 id로 식별하고 저장할 때마다 rev를 올려, 다른 창이 먼저 저장한 내용을 덮어쓰지 않게 하는 <code>StoragePort</code>를 정의. 메모리 구현과 IndexedDB 구현이 함께 통과할 공용 계약 테스트를 작성.</li>
+<li><b>TC:</b> 정상 — 생성(rev 1)·갱신·삭제·목록(본문 미포함). 경계 — 빈 저장소, 낡은 rev 저장은 충돌, 같은 id 재생성, 삭제된 문서 갱신, 반환값이 사본인지, 빈 문자열·NUL·이모지·짝 없는 서러게이트·1MB 본문.</li>
+<li><b>개발:</b> <code>src/storage/storagePort.ts</code>, <code>src/storage/memoryStorage.ts</code>, <code>test/helpers/storageContract.ts</code>, <code>test/unit/memoryStorage.test.ts</code>, <code>test/build/buildOutput.test.ts</code></li>
+<li><b>검증:</b> 단위 124 passed, 0 failed · 빌드 16 passed, 0 failed · tsc 오류 없음</li>
+<li><b>비고:</b> 저장소 모듈은 2.8에서 앱에 연결되므로, 미사용 파일 검사에 "아직 연결 전" 목록을 두었고 마일스톤마다 비워야 함.</li>
+</ul>
+
 <h2>[2026-11-17 09:08] 다국어 기반: 한·영 카탈로그와 언어 결정 (2.1)</h2>
 <ul>
 <li><b>기획:</b> 화면 문구를 <code>en.ts</code>·<code>ko.ts</code> 카탈로그로 옮기고 코드에서는 키로만 참조. 언어는 브라우저 언어 목록에서 처음으로 지원되는 것을 선택.</li>
