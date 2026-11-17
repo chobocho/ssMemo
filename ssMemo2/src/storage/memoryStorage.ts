@@ -3,6 +3,15 @@
 import { NEW_DOCUMENT_REV, copyMeta, createNextMeta } from './storagePort.ts';
 import type { StoragePort, StoredDocument } from './storagePort.ts';
 
+/**
+ * A copy of plain data. Done through JSON rather than structuredClone, which older browsers do
+ * not have: this storage is what is left where IndexedDB cannot be used, so it should rely on as
+ * little as possible. Stored values are plain data by contract (see StoragePort.setValue).
+ */
+function copyValue(value: unknown): unknown {
+  return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
+}
+
 export function createMemoryStorage(): StoragePort {
   const documents = new Map<string, StoredDocument>();
   const values = new Map<string, unknown>();
@@ -44,13 +53,13 @@ export function createMemoryStorage(): StoragePort {
       return documents.delete(id);
     },
 
-    // structuredClone copies on the way in and out, as IndexedDB does.
+    // Copied on the way in and out, as IndexedDB does.
     async getValue(key) {
-      return structuredClone(values.get(key));
+      return copyValue(values.get(key));
     },
 
     async setValue(key, value) {
-      values.set(key, structuredClone(value));
+      values.set(key, copyValue(value));
     },
   };
 }
