@@ -34,7 +34,7 @@ import { createSettingsStore, stepEditorFontSize } from './app/settings.ts';
 import { describeStorageFacts, readStorageFacts, requestPersistence } from './app/storageDurability.ts';
 import type { StorageFacts } from './app/storageDurability.ts';
 import { formatShortcut } from './app/shortcut.ts';
-import type { LanguageSetting, Settings } from './app/settings.ts';
+import type { LanguageSetting, Settings, ThemeSetting } from './app/settings.ts';
 import { adjacentTabId, createTabManager } from './app/tabManager.ts';
 import { createWorkspace } from './app/workspace.ts';
 import {
@@ -154,6 +154,14 @@ async function start(win: Window): Promise<void> {
     settings = { ...settings, ...change };
     void settingsStore.save(settings);
   };
+
+  // The stylesheet has both palettes; this attribute only says which one the user insists on.
+  // Without it the page follows the system's light or dark setting.
+  const applyTheme = (theme: ThemeSetting): void => {
+    if (theme === 'auto') delete doc.documentElement.dataset.theme;
+    else doc.documentElement.dataset.theme = theme;
+  };
+  applyTheme(settings.theme);
 
   const useCommandKey = isApplePlatform(win);
   const describeShortcut = (shortcut: string): string => formatShortcut(shortcut, useCommandKey);
@@ -438,6 +446,20 @@ async function start(win: Window): Promise<void> {
     // The editor caches line heights; they are wrong once the text size has changed.
     editor.remeasure();
   };
+  const chooseTheme = async (): Promise<void> => {
+    const theme = await modals.choose<ThemeSetting>(
+      t('command.theme'),
+      [
+        { label: t('theme.auto'), value: 'auto' },
+        { label: t('theme.light'), value: 'light' },
+        { label: t('theme.dark'), value: 'dark' },
+      ],
+      settings.theme,
+    );
+    if (theme === undefined) return;
+    updateSettings({ theme });
+    applyTheme(theme);
+  };
   const chooseLanguage = async (): Promise<void> => {
     const language = await modals.choose<LanguageSetting>(
       t('command.language'),
@@ -605,6 +627,7 @@ async function start(win: Window): Promise<void> {
       'view.fontLarger': () => stepFontSize(1),
       'backup.export': () => void backups.exportBackup(),
       'backup.import': () => void backups.importBackup(),
+      'settings.theme': () => void chooseTheme(),
       'settings.language': () => void chooseLanguage(),
       'help.show': showHelp,
       'app.menu': showMenu,

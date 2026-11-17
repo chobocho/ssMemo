@@ -44,6 +44,30 @@ const editorTheme = EditorView.theme({
   // The caret already shows focus; an outline around the whole editing area is only noise.
   '&.cm-focused': { outline: 'none' },
   '.cm-scroller': { fontFamily: 'var(--editor-font-family)', lineHeight: 'var(--editor-line-height)' },
+  // Colours. The editor library paints these parts for a light page by default. Taking the
+  // colours from the tokens instead is what lets the dark theme reach into the editor.
+  '.cm-content': { caretColor: 'var(--color-text)' },
+  '.cm-gutters': {
+    borderColor: 'var(--color-border)',
+    color: 'var(--color-text-muted)',
+    backgroundColor: 'var(--color-surface-muted)',
+  },
+  '.cm-panels': { color: 'var(--color-text)', backgroundColor: 'var(--color-surface-muted)' },
+  '.cm-panels-top': { borderBottomColor: 'var(--color-border)' },
+  '.cm-textfield': {
+    borderColor: 'var(--color-border)',
+    color: 'var(--color-text)',
+    backgroundColor: 'var(--color-surface)',
+  },
+  '.cm-button': {
+    borderColor: 'var(--color-border)',
+    color: 'var(--color-text)',
+    backgroundColor: 'var(--color-surface)',
+    backgroundImage: 'none',
+    '&:active': { backgroundColor: 'var(--color-surface-muted)', backgroundImage: 'none' },
+  },
+  '.cm-searchMatch': { backgroundColor: 'var(--color-search-match)' },
+  '.cm-searchMatch-selected': { backgroundColor: 'var(--color-search-match-selected)' },
   // The search panel is made for a mouse; these rules give its controls the size of a finger.
   // The text size stays at the page's base size: below 16 CSS px mobile browsers zoom in on focus.
   '.cm-search': {

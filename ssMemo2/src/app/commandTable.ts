@@ -67,6 +67,7 @@ export const COMMAND_DEFINITIONS = [
   { id: 'backup.export', group: 'backup', labelKey: 'command.exportBackup', icon: '📤', shortcuts: [] },
   { id: 'backup.import', group: 'backup', labelKey: 'command.importBackup', icon: '📥', shortcuts: [] },
 
+  { id: 'settings.theme', group: 'app', labelKey: 'command.theme', icon: '🌓', shortcuts: [] },
   { id: 'settings.language', group: 'app', labelKey: 'command.language', icon: '🌐', shortcuts: [] },
   { id: 'help.show', group: 'app', labelKey: 'command.help', icon: '❓', shortcuts: ['F1'] },
   { id: 'app.menu', group: 'app', labelKey: 'command.menu', icon: '☰', shortcuts: ['Alt-m'] },

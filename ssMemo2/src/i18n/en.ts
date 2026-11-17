@@ -48,6 +48,7 @@ export const en = {
   'command.exportBackup': 'Export backup',
   'command.importBackup': 'Import backup',
   'command.language': 'Language',
+  'command.theme': 'Theme',
   'command.help': 'Help',
   'command.menu': 'Menu',
 
@@ -60,6 +61,10 @@ export const en = {
   'group.view': 'View',
   'group.backup': 'Backup',
   'group.app': 'App',
+
+  'theme.auto': 'Automatic (as the system)',
+  'theme.light': 'Light',
+  'theme.dark': 'Dark',
 
   'language.auto': 'Automatic (browser language)',
   // The language's own name, shown the same in every locale. Escaped because Korean text may only

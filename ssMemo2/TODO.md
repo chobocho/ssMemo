@@ -149,7 +149,7 @@
   - 브라우저 기본 저장은 "최선 노력"이라 공간이 부족하면 통째로 지워질 수 있음. 첫 저장 때 사용자 동작 안에서 요청하고, 결과를 진단 정보에 표시 (web.dev "Persistent storage")
 - [x] CSP 메타로 외부 참조 차단
   - `default-src 'none'; script-src 'sha256-…'`: 빌드가 인라인 스크립트의 해시를 넣음. 미리보기에 대한 2차 방어. 해시는 `default-src`가 아니라 `script-src`에 둘 것. CodeMirror가 스타일을 동적으로 넣으므로 `style-src`는 nonce나 `'unsafe-inline'` 필요 (WebKit "A Refined Content Security Policy")
-- [ ] 다크/라이트 테마
+- [x] 다크/라이트 테마
 - [ ] 휴지통(삭제 복구)
 - [ ] 모든 메모에서 찾기, 메모 목록 정렬·고정
 - [ ] 파일 연결을 새로고침 뒤에도 유지(파일 핸들을 IndexedDB에 보관하고 권한을 다시 요청)

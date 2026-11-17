@@ -13,7 +13,7 @@ import { StorageError } from '../../src/storage/storagePort.ts';
 
 const SMALLEST = EDITOR_FONT_SIZES_REM[0] ?? 0;
 const LARGEST = EDITOR_FONT_SIZES_REM.at(-1) ?? 0;
-const custom: Settings = { language: 'ko', lineWrapping: false, editorFontSizeRem: LARGEST };
+const custom: Settings = { language: 'ko', theme: 'dark', lineWrapping: false, editorFontSizeRem: LARGEST };
 
 // --- parseSettings ----------------------------------------------------------
 
@@ -31,6 +31,8 @@ test('parseSettings keeps valid fields and replaces each invalid one by its defa
   // One damaged field must not throw away the rest of the user's settings.
   assert.deepEqual(parseSettings({ language: 'en', lineWrapping: 'yes', editorFontSizeRem: LARGEST }), {
     language: 'en',
+    // Not given at all, so the default.
+    theme: DEFAULT_SETTINGS.theme,
     lineWrapping: DEFAULT_SETTINGS.lineWrapping,
     editorFontSizeRem: LARGEST,
   });
@@ -107,4 +109,24 @@ test('the settings store repairs damaged stored settings when loading', async ()
   const storage = createMemoryStorage();
   await storage.setValue('settings', { language: 'ko', lineWrapping: 'broken' });
   assert.deepEqual(await createSettingsStore(storage).load(), { ...DEFAULT_SETTINGS, language: 'ko' });
+});
+
+// --- theme ------------------------------------------------------------------
+
+test('the theme follows the system unless the user chose one', () => {
+  assert.equal(DEFAULT_SETTINGS.theme, 'auto');
+  assert.equal(parseSettings({}).theme, 'auto');
+  for (const theme of ['auto', 'light', 'dark'] as const) assert.equal(parseSettings({ theme }).theme, theme);
+});
+
+test('a theme that does not exist falls back to the default without touching other settings', () => {
+  for (const theme of ['sepia', '', 1, null, true]) {
+    assert.deepEqual(parseSettings({ theme, language: 'ko' }), { ...DEFAULT_SETTINGS, language: 'ko' }, String(theme));
+  }
+});
+
+test('settings stored before themes existed load with the default theme', async () => {
+  const storage = createMemoryStorage();
+  await storage.setValue('settings', { language: 'en', lineWrapping: false, editorFontSizeRem: 1 });
+  assert.deepEqual(await createSettingsStore(storage).load(), { language: 'en', lineWrapping: false, editorFontSizeRem: 1, theme: 'auto' });
 });

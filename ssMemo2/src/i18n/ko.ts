@@ -48,6 +48,7 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'command.exportBackup': '백업 내보내기',
   'command.importBackup': '백업 가져오기',
   'command.language': '언어',
+  'command.theme': '테마',
   'command.help': '도움말',
   'command.menu': '메뉴',
 
@@ -60,6 +61,10 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'group.view': '보기',
   'group.backup': '백업',
   'group.app': '앱',
+
+  'theme.auto': '자동 (시스템 설정)',
+  'theme.light': '밝게',
+  'theme.dark': '어둡게',
 
   'language.auto': '자동 (브라우저 언어)',
   'language.ko': '한국어',

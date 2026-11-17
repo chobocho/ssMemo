@@ -172,3 +172,66 @@ test('keyboard focus is always visible, except in the text area where the caret 
     assert.deepEqual(removals.filter((selector) => !selector.includes('.cm-content')), [], file);
   }
 });
+
+// --- dark theme -------------------------------------------------------------
+
+/** The declarations of the first block whose selector text matches. */
+function blockOf(selectorPattern: RegExp): Map<string, string> {
+  const match = selectorPattern.exec(tokensCss);
+  assert.ok(match, `tokens.css has no block for ${selectorPattern}`);
+  const open = tokensCss.indexOf('{', match.index + match[0].length - 1);
+  return parseDeclarations(tokensCss.slice(open + 1, tokensCss.indexOf('}', open)));
+}
+
+// The dark colours exist twice, because CSS cannot share one block between "the system is dark
+// and the user did not choose light" and "the user chose dark".
+const darkBySystem = blockOf(/@media\s*\(prefers-color-scheme:\s*dark\)\s*\{\s*:root:not\(\[data-theme="light"\]\)\s*\{/);
+const darkByChoice = blockOf(/:root\[data-theme="dark"\]\s*\{/);
+const colourTokens = [...tokens.compact.keys()].filter((name) => name.startsWith('--color-'));
+
+test('the two copies of the dark colours are identical', () => {
+  assert.deepEqual([...darkBySystem].sort(), [...darkByChoice].sort());
+});
+
+test('the dark theme redefines every colour and nothing else', () => {
+  assert.ok(colourTokens.length >= 10);
+  const expected = [...colourTokens, 'color-scheme'].sort();
+  assert.deepEqual([...darkByChoice.keys()].sort(), expected);
+});
+
+test('form controls and scrollbars follow the theme', () => {
+  assert.equal(tokens.compact.get('color-scheme'), 'light');
+  assert.equal(darkByChoice.get('color-scheme'), 'dark');
+});
+
+test('every text colour is readable on its background in the dark theme too', () => {
+  const pairs: [string, string][] = [
+    ['--color-text', '--color-surface'],
+    ['--color-text', '--color-surface-muted'],
+    ['--color-text-muted', '--color-surface'],
+    ['--color-text-muted', '--color-surface-muted'],
+    ['--color-accent', '--color-surface'],
+    ['--color-accent', '--color-surface-muted'],
+    ['--color-on-accent', '--color-accent'],
+    ['--color-danger', '--color-surface'],
+    ['--color-text', '--color-warning-surface'],
+    ['--color-text', '--color-info-surface'],
+  ];
+  for (const [foreground, background] of pairs) {
+    const ratio = contrast(darkByChoice.get(foreground) ?? '', darkByChoice.get(background) ?? '');
+    assert.ok(ratio >= 4.5, `dark: ${foreground} on ${background} is only ${ratio.toFixed(2)} : 1`);
+  }
+});
+
+test('the dark theme is dark and the light theme is light', () => {
+  assert.ok(luminance(darkByChoice.get('--color-surface') ?? '') < 0.1);
+  assert.ok(luminance(tokens.compact.get('--color-surface') ?? '') > 0.9);
+});
+
+test('the editor takes its colours from the tokens instead of its own light defaults', () => {
+  // The editor library colours its gutter, panels, buttons and matches for a light page.
+  const theme = read('src/editor/editorSetup.ts');
+  for (const part of ['.cm-gutters', '.cm-panels', '.cm-button', '.cm-textfield', '.cm-searchMatch', '.cm-content']) {
+    assert.match(theme, new RegExp(`'[^']*\\${part}[^']*':\\s*\\{[^}]*var\\(--color-`), part);
+  }
+});

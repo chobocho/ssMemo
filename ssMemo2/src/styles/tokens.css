@@ -26,7 +26,9 @@
   --radius-small: 0.25rem;
   --radius-medium: 0.5rem;
 
-  /* Light theme. A dark theme is a later roadmap item. */
+  /* Light theme: the default. The dark colours are at the end of this file. "color-scheme"
+     makes form controls and scrollbars match. */
+  color-scheme: light;
   --color-surface: #ffffff;
   --color-surface-muted: #f6f8fa;
   --color-text: #1f2328;
@@ -42,6 +44,9 @@
   /* Messages that merely confirm something. */
   --color-info-surface: #ddf4ff;
   --color-info-border: #54aeff;
+  /* Search matches in the editor: every match, and the one the search is at. */
+  --color-search-match: #ffff0054;
+  --color-search-match-selected: #ff6a0054;
 
   /* Horizontal page margin; grows with the width class below. */
   --page-gutter: var(--space-2);
@@ -122,4 +127,47 @@
     --preview-editor-display: block;
     --preview-back-display: none;
   }
+}
+
+/* Dark theme. It applies when the system is dark and the user did not choose the light theme,
+   or when the user chose the dark one. CSS cannot share one block between those two cases, so
+   the colours are written twice; a test keeps the two copies identical. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --color-surface: #0d1117;
+    --color-surface-muted: #161b22;
+    --color-text: #e6edf3;
+    --color-text-muted: #9198a1;
+    --color-border: #3d444d;
+    --color-accent: #4493f8;
+    --color-on-accent: #0d1117;
+    --color-danger: #ff7b72;
+    --color-backdrop: rgb(0 0 0 / 60%);
+    --color-warning-surface: #3a2d00;
+    --color-warning-border: #9e6a03;
+    --color-info-surface: #0b2a5b;
+    --color-info-border: #1f6feb;
+    --color-search-match: #00ffff8a;
+    --color-search-match-selected: #ff00ff8a;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-surface: #0d1117;
+  --color-surface-muted: #161b22;
+  --color-text: #e6edf3;
+  --color-text-muted: #9198a1;
+  --color-border: #3d444d;
+  --color-accent: #4493f8;
+  --color-on-accent: #0d1117;
+  --color-danger: #ff7b72;
+  --color-backdrop: rgb(0 0 0 / 60%);
+  --color-warning-surface: #3a2d00;
+  --color-warning-border: #9e6a03;
+  --color-info-surface: #0b2a5b;
+  --color-info-border: #1f6feb;
+  --color-search-match: #00ffff8a;
+  --color-search-match-selected: #ff00ff8a;
 }

@@ -1111,6 +1111,28 @@ test('when start-up fails, the page says so instead of staying blank', async () 
   page.close();
 });
 
+test('the theme can be chosen, applies at once and is kept for the next visit', async () => {
+  const factory = await seededFactory();
+  const page = await openPage({ factory });
+  const root = page.document.documentElement;
+  // Nothing chosen: the stylesheet follows the system by itself.
+  assert.equal(root.hasAttribute('data-theme'), false);
+
+  await pickFromMenu(page, 'Theme');
+  assert.equal(topDialog(page).querySelector('.choice[aria-pressed="true"]')?.textContent, 'Automatic (as the system)');
+  await pickChoice(page, 'Dark');
+  assert.equal(root.dataset.theme, 'dark');
+  assert.deepEqual(page.errors, []);
+  page.close();
+
+  const reloaded = await openPage({ factory });
+  assert.equal(reloaded.document.documentElement.dataset.theme, 'dark');
+  await pickFromMenu(reloaded, 'Theme');
+  await pickChoice(reloaded, 'Automatic (as the system)');
+  assert.equal(reloaded.document.documentElement.hasAttribute('data-theme'), false);
+  reloaded.close();
+});
+
 test('the search panel speaks the language of the app', async () => {
   const factory = await seededFactory();
   const storage = await openIndexedDbStorage(factory);

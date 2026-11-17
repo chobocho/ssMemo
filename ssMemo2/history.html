@@ -13,6 +13,15 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 17:31] 다크 테마 (7.3)</h2>
+<ul>
+<li><b>기획:</b> 기본은 시스템의 밝게·어둡게 설정을 따르고, 🌓 테마 설정(자동·밝게·어둡게)으로 고정할 수 있다. 색이 모두 토큰이라 어두운 값 한 벌을 더하면 된다. 편집기 라이브러리가 밝은 화면용으로 칠하던 줄번호·검색 줄·버튼·일치 표시도 토큰 색을 쓰게 한다.</li>
+<li><b>TC:</b> 정상 — 설정 저장·복원, 선택 즉시 적용, 자동이면 속성 제거. 경계 — 없는 테마 값은 기본값, 예전 설정 호환, 어두운 값 두 벌의 일치, 모든 색 토큰 재정의, 어두운 조합 10쌍의 대비 4.5:1 이상.</li>
+<li><b>개발:</b> <code>src/styles/tokens.css</code>, <code>src/app/settings.ts</code>, <code>commandTable.ts</code>, <code>src/editor/editorSetup.ts</code>, <code>src/main.ts</code>, <code>src/index.template.html</code>, <code>src/i18n/en.ts</code>, <code>ko.ts</code> 외 4개 파일</li>
+<li><b>검증:</b> 단위 893 passed, 빌드 76 passed, 0 failed</li>
+<li><b>비고:</b> 실제 화면에서 본 적이 없다. 색은 대비 계산으로만 확인.</li>
+</ul>
+
 <h2>[2026-11-17 17:25] CSP 메타 (7.2)</h2>
 <ul>
 <li><b>기획:</b> 빌드가 <code>default-src 'none'</code>과 인라인 스크립트의 SHA-256 해시만 허용하는 정책을 페이지에 넣는다. 빌드가 검사하던 "외부 참조 없음"을 브라우저가 실행 중에도 강제하고, 미리보기에 대한 2차 방어가 된다.</li>

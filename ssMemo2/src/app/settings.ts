@@ -5,8 +5,12 @@ import type { StoragePort } from '../storage/storagePort.ts';
 /** "auto" follows the browser's language. */
 export type LanguageSetting = 'auto' | Locale;
 
+/** "auto" follows the system's light or dark setting. */
+export type ThemeSetting = 'auto' | 'light' | 'dark';
+
 export interface Settings {
   language: LanguageSetting;
+  theme: ThemeSetting;
   lineWrapping: boolean;
   /** Editor text size in rem; always one of EDITOR_FONT_SIZES_REM. */
   editorFontSizeRem: number;
@@ -15,13 +19,19 @@ export interface Settings {
 /** The sizes the user can step through, smallest first. */
 export const EDITOR_FONT_SIZES_REM: readonly number[] = [0.75, 0.875, 1, 1.125, 1.25, 1.5, 1.75];
 
-export const DEFAULT_SETTINGS: Settings = { language: 'auto', lineWrapping: true, editorFontSizeRem: 0.875 };
+export const DEFAULT_SETTINGS: Settings = { language: 'auto', theme: 'auto', lineWrapping: true, editorFontSizeRem: 0.875 };
 
 const SETTINGS_KEY = 'settings';
 const LANGUAGE_SETTINGS: readonly string[] = ['auto', 'ko', 'en'];
 
+const THEME_SETTINGS: readonly string[] = ['auto', 'light', 'dark'];
+
 function isLanguageSetting(value: unknown): value is LanguageSetting {
   return typeof value === 'string' && LANGUAGE_SETTINGS.includes(value);
+}
+
+function isThemeSetting(value: unknown): value is ThemeSetting {
+  return typeof value === 'string' && THEME_SETTINGS.includes(value);
 }
 
 /**
@@ -31,9 +41,10 @@ function isLanguageSetting(value: unknown): value is LanguageSetting {
  */
 export function parseSettings(value: unknown): Settings {
   if (typeof value !== 'object' || value === null) return { ...DEFAULT_SETTINGS };
-  const { language, lineWrapping, editorFontSizeRem } = value as Record<string, unknown>;
+  const { language, theme, lineWrapping, editorFontSizeRem } = value as Record<string, unknown>;
   return {
     language: isLanguageSetting(language) ? language : DEFAULT_SETTINGS.language,
+    theme: isThemeSetting(theme) ? theme : DEFAULT_SETTINGS.theme,
     lineWrapping: typeof lineWrapping === 'boolean' ? lineWrapping : DEFAULT_SETTINGS.lineWrapping,
     editorFontSizeRem:
       typeof editorFontSizeRem === 'number' && EDITOR_FONT_SIZES_REM.includes(editorFontSizeRem)
