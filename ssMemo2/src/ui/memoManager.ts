@@ -1,5 +1,5 @@
 // The list of stored memos, shown inside a dialog: open one, rename, delete, start a new one,
-// search the text of all of them, or go on to the trash.
+// search the text of all of them, put them in another order, or go on to the trash.
 // It only displays and reports; what an action does (prompts, confirmations, storage) is decided
 // by the callbacks it is given.
 import type { MemoSearchHit } from '../app/memoSearch.ts';
@@ -10,6 +10,8 @@ export interface MemoManagerLabels {
   trash: string;
   /** Names the search field. */
   search: string;
+  /** Says which order the list is in; read again whenever the list is shown anew. */
+  sort: () => string;
   noMatches: string;
   loading: string;
   empty: string;
@@ -32,6 +34,8 @@ export interface MemoManagerOptions {
   onRename(meta: DocumentMeta): Promise<void>;
   onDelete(meta: DocumentMeta): Promise<void>;
   onNew(): void;
+  /** Lets the user choose the order of the list, which is reloaded afterwards. */
+  onSort(): Promise<void>;
   /** Shows the deleted memos. */
   onTrash(): void;
   /** Closes the dialog the manager is shown in. */
@@ -41,6 +45,7 @@ export interface MemoManagerOptions {
 const NEW_SYMBOL = '➕';
 const RENAME_SYMBOL = '✏️';
 const DELETE_SYMBOL = '🗑️';
+const SORT_SYMBOL = '↕️';
 
 export function createMemoManager(doc: Document, options: MemoManagerOptions): HTMLElement {
   const { labels } = options;
@@ -56,6 +61,25 @@ export function createMemoManager(doc: Document, options: MemoManagerOptions): H
     options.onNew();
     options.close();
   });
+
+  const sortButton = doc.createElement('button');
+  sortButton.type = 'button';
+  sortButton.className = 'button memo-sort';
+  const showSort = (): void => {
+    sortButton.textContent = `${SORT_SYMBOL} ${labels.sort()}`;
+  };
+  showSort();
+  sortButton.addEventListener('click', () => {
+    void runAction(() => options.onSort()).then(() => {
+      showSort();
+      return refresh();
+    });
+  });
+
+  // One row above the list for what concerns the list as a whole.
+  const actions = doc.createElement('div');
+  actions.className = 'memo-actions';
+  actions.append(newButton, sortButton);
 
   const problem = doc.createElement('p');
   problem.className = 'modal-problem';
@@ -90,7 +114,7 @@ export function createMemoManager(doc: Document, options: MemoManagerOptions): H
     options.onTrash();
   });
 
-  element.append(newButton, search, problem, info, list, trashButton);
+  element.append(actions, search, problem, info, list, trashButton);
 
   function createIconButton(className: string, symbol: string, label: string, onClick: () => void): HTMLButtonElement {
     const button = doc.createElement('button');

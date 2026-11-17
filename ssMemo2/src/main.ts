@@ -15,6 +15,8 @@ import { buildHelpGroups } from './app/helpContent.ts';
 import { formatThirdPartyNotices } from './app/licenses.ts';
 import { createLegacyImport } from './app/legacyImport.ts';
 import { createLocalFiles } from './app/localFiles.ts';
+import { MEMO_SORTS, orderMemos } from './app/memoOrder.ts';
+import type { MemoOrder, MemoSort } from './app/memoOrder.ts';
 import { findInMemos } from './app/memoSearch.ts';
 import { createPreview } from './app/preview.ts';
 import {
@@ -87,6 +89,11 @@ import { createTrashList } from './ui/trashList.ts';
 import type { ToolbarTier } from './ui/toolbar.ts';
 
 const APP_NAME = 'ssMemo2';
+const MEMO_SORT_LABEL_KEYS: Readonly<Record<MemoSort, MessageKey>> = {
+  updated: 'sort.updated',
+  created: 'sort.created',
+  title: 'sort.title',
+};
 // What a memo is shared as when it is too long to be handed over as text.
 const SHARED_FILE_MIME_TYPE = 'text/plain';
 const MOUNT_POINT_ID = 'app';
@@ -466,6 +473,17 @@ async function start(win: Window): Promise<void> {
       }),
     }));
   };
+  // Titles in the alphabet of the app's language, with "Memo 2" before "Memo 10".
+  const compareTitles = new Intl.Collator(locale, { numeric: true, sensitivity: 'base' }).compare;
+  const memoOrder = (): MemoOrder => ({ sort: settings.memoSort, compareTitles });
+  const chooseMemoSort = async (): Promise<void> => {
+    const memoSort = await modals.choose<MemoSort>(
+      t('manager.sortTitle'),
+      MEMO_SORTS.map((sort) => ({ label: t(MEMO_SORT_LABEL_KEYS[sort]), value: sort })),
+      settings.memoSort,
+    );
+    if (memoSort !== undefined) updateSettings({ memoSort });
+  };
   const showMemoManager = (): void => {
     // Every memo with its text, for the search field. Read when the user starts to search and
     // kept until something changes: reading it anew for every letter typed would be slow.
@@ -485,6 +503,7 @@ async function start(win: Window): Promise<void> {
           newMemo: t('command.newMemo'),
           trash: t('command.trash'),
           search: t('manager.search'),
+          sort: () => t('manager.sort', { order: t(MEMO_SORT_LABEL_KEYS[settings.memoSort]) }),
           noMatches: t('manager.noMatches'),
           loading: t('manager.loading'),
           empty: t('manager.empty'),
@@ -497,12 +516,14 @@ async function start(win: Window): Promise<void> {
         // Pending edits are written first, so the list shows current sizes and times.
         listMemos: async () => {
           await workspace.flushAll();
-          return workspace.listMemos();
+          const listing = await workspace.listMemos();
+          return { ...listing, documents: orderMemos(listing.documents, (meta) => meta, memoOrder()) };
         },
         searchMemos: async (query) => {
           searchable ??= readSearchable();
           try {
-            return findInMemos(await searchable, query);
+            // In the order of the list, so a memo is found where it is in the list.
+            return orderMemos(findInMemos(await searchable, query), (hit) => hit.meta, memoOrder());
           } catch (error) {
             // Not kept, or every later search would fail the same way without trying again.
             forgetSearchable();
@@ -519,6 +540,7 @@ async function start(win: Window): Promise<void> {
         onNew: () => {
           workspace.newMemo();
         },
+        onSort: chooseMemoSort,
         onTrash: showTrash,
         close: () => close(),
       }),

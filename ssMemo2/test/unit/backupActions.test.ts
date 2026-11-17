@@ -16,7 +16,7 @@ import type { StoragePort } from '../../src/storage/storagePort.ts';
 const NOW = new Date(2026, 10, 17, 9, 5);
 const TIMESTAMP = '2026-01-01T00:00:00.000Z';
 const CURRENT_SETTINGS: Settings = { ...DEFAULT_SETTINGS, language: 'en' };
-const BACKUP_SETTINGS: Settings = { language: 'ko', theme: 'dark', lineWrapping: false, editorFontSizeRem: 1.25 };
+const BACKUP_SETTINGS: Settings = { language: 'ko', theme: 'dark', lineWrapping: false, editorFontSizeRem: 1.25, memoSort: 'title' };
 
 interface Harness {
   actions: BackupActions;

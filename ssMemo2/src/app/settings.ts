@@ -1,6 +1,8 @@
 // User preferences that apply to the whole app and survive a reload.
 import type { Locale } from '../i18n/i18n.ts';
 import type { StoragePort } from '../storage/storagePort.ts';
+import { isMemoSort } from './memoOrder.ts';
+import type { MemoSort } from './memoOrder.ts';
 
 /** "auto" follows the browser's language. */
 export type LanguageSetting = 'auto' | Locale;
@@ -14,12 +16,20 @@ export interface Settings {
   lineWrapping: boolean;
   /** Editor text size in rem; always one of EDITOR_FONT_SIZES_REM. */
   editorFontSizeRem: number;
+  /** The order of the memo list. */
+  memoSort: MemoSort;
 }
 
 /** The sizes the user can step through, smallest first. */
 export const EDITOR_FONT_SIZES_REM: readonly number[] = [0.75, 0.875, 1, 1.125, 1.25, 1.5, 1.75];
 
-export const DEFAULT_SETTINGS: Settings = { language: 'auto', theme: 'auto', lineWrapping: true, editorFontSizeRem: 0.875 };
+export const DEFAULT_SETTINGS: Settings = {
+  language: 'auto',
+  theme: 'auto',
+  lineWrapping: true,
+  editorFontSizeRem: 0.875,
+  memoSort: 'updated',
+};
 
 const SETTINGS_KEY = 'settings';
 const LANGUAGE_SETTINGS: readonly string[] = ['auto', 'ko', 'en'];
@@ -41,7 +51,7 @@ function isThemeSetting(value: unknown): value is ThemeSetting {
  */
 export function parseSettings(value: unknown): Settings {
   if (typeof value !== 'object' || value === null) return { ...DEFAULT_SETTINGS };
-  const { language, theme, lineWrapping, editorFontSizeRem } = value as Record<string, unknown>;
+  const { language, theme, lineWrapping, editorFontSizeRem, memoSort } = value as Record<string, unknown>;
   return {
     language: isLanguageSetting(language) ? language : DEFAULT_SETTINGS.language,
     theme: isThemeSetting(theme) ? theme : DEFAULT_SETTINGS.theme,
@@ -50,6 +60,7 @@ export function parseSettings(value: unknown): Settings {
       typeof editorFontSizeRem === 'number' && EDITOR_FONT_SIZES_REM.includes(editorFontSizeRem)
         ? editorFontSizeRem
         : DEFAULT_SETTINGS.editorFontSizeRem,
+    memoSort: isMemoSort(memoSort) ? memoSort : DEFAULT_SETTINGS.memoSort,
   };
 }
 

@@ -13,7 +13,7 @@ import { StorageError } from '../../src/storage/storagePort.ts';
 
 const SMALLEST = EDITOR_FONT_SIZES_REM[0] ?? 0;
 const LARGEST = EDITOR_FONT_SIZES_REM.at(-1) ?? 0;
-const custom: Settings = { language: 'ko', theme: 'dark', lineWrapping: false, editorFontSizeRem: LARGEST };
+const custom: Settings = { language: 'ko', theme: 'dark', lineWrapping: false, editorFontSizeRem: LARGEST, memoSort: 'title' };
 
 // --- parseSettings ----------------------------------------------------------
 
@@ -35,6 +35,7 @@ test('parseSettings keeps valid fields and replaces each invalid one by its defa
     theme: DEFAULT_SETTINGS.theme,
     lineWrapping: DEFAULT_SETTINGS.lineWrapping,
     editorFontSizeRem: LARGEST,
+    memoSort: DEFAULT_SETTINGS.memoSort,
   });
   assert.deepEqual(parseSettings({ lineWrapping: false }), { ...DEFAULT_SETTINGS, lineWrapping: false });
 });
@@ -128,5 +129,31 @@ test('a theme that does not exist falls back to the default without touching oth
 test('settings stored before themes existed load with the default theme', async () => {
   const storage = createMemoryStorage();
   await storage.setValue('settings', { language: 'en', lineWrapping: false, editorFontSizeRem: 1 });
-  assert.deepEqual(await createSettingsStore(storage).load(), { language: 'en', lineWrapping: false, editorFontSizeRem: 1, theme: 'auto' });
+  assert.deepEqual(await createSettingsStore(storage).load(), {
+    language: 'en',
+    lineWrapping: false,
+    editorFontSizeRem: 1,
+    theme: 'auto',
+    memoSort: DEFAULT_SETTINGS.memoSort,
+  });
+});
+
+// --- order of the memo list -------------------------------------------------
+
+test('the memo list starts out with the memo changed last first', () => {
+  assert.equal(DEFAULT_SETTINGS.memoSort, 'updated');
+  assert.equal(parseSettings({}).memoSort, 'updated');
+  for (const memoSort of ['updated', 'created', 'title'] as const) assert.equal(parseSettings({ memoSort }).memoSort, memoSort);
+});
+
+test('an order that does not exist falls back to the default without touching other settings', () => {
+  for (const memoSort of ['size', '', 2, null, true]) {
+    assert.deepEqual(parseSettings({ memoSort, language: 'ko' }), { ...DEFAULT_SETTINGS, language: 'ko' }, String(memoSort));
+  }
+});
+
+test('settings stored before the list could be ordered load with the default order', async () => {
+  const storage = createMemoryStorage();
+  await storage.setValue('settings', { language: 'en', theme: 'dark', lineWrapping: false, editorFontSizeRem: 1 });
+  assert.equal((await createSettingsStore(storage).load()).memoSort, 'updated');
 });

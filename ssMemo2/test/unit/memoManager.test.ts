@@ -33,11 +33,14 @@ async function createHarness(memos: DocumentMeta[], behaviour: Behaviour = {}): 
   const calls: string[] = [];
   const searchCalls: string[] = [];
   let listCalls = 0;
+  // What the sort button is told to show; changes when the user "chooses" another order.
+  let sortName = 'Last changed';
   const element = createMemoManager(document, {
     labels: {
       newMemo: 'New memo',
       trash: 'Trash',
       search: 'Search all memos',
+      sort: () => `Sort: ${sortName}`,
       noMatches: 'No memo contains that.',
       loading: 'Loading…',
       empty: 'No saved memos yet.',
@@ -66,6 +69,10 @@ async function createHarness(memos: DocumentMeta[], behaviour: Behaviour = {}): 
       calls.push(`delete:${item.id}`);
     },
     onNew: () => calls.push('new'),
+    onSort: async () => {
+      calls.push('sort');
+      sortName = 'Title';
+    },
     onTrash: () => calls.push('trash'),
     close: () => calls.push('close'),
   });
@@ -294,4 +301,33 @@ test('the line that matches is shown as text, never interpreted as markup', asyn
   await harness.search('img');
   assert.equal(harness.element.querySelector('.memo-snippet')?.textContent, hostile);
   assert.equal(harness.element.querySelector('img'), null);
+});
+
+// --- order of the list ------------------------------------------------------
+
+test('the sort button says which order the list is in', async () => {
+  const harness = await createHarness([meta('a', 'Shopping')]);
+  assert.equal(harness.element.querySelector('.memo-sort')?.textContent?.includes('Sort: Last changed'), true);
+});
+
+test('choosing another order reloads the list and updates the button', async () => {
+  const harness = await createHarness([meta('a', 'Shopping')]);
+  await harness.click('.memo-sort');
+  assert.deepEqual(harness.calls, ['sort']);
+  assert.equal(harness.listCalls(), 2);
+  assert.equal(harness.element.querySelector('.memo-sort')?.textContent?.includes('Sort: Title'), true);
+});
+
+test('choosing another order while a search is showing repeats the search', async () => {
+  const harness = await createHarness([meta('a', 'Shopping')], { searching: async () => MILK_HITS });
+  await harness.search('milk');
+  await harness.click('.memo-sort');
+  assert.deepEqual(harness.searchCalls, ['milk', 'milk']);
+  assert.deepEqual(harness.titles(), ['Shopping', 'Milk prices']);
+});
+
+test('the sort button sits next to the new-memo button, above the list', async () => {
+  const harness = await createHarness([meta('a', 'Shopping')]);
+  const row = harness.element.querySelector('.memo-actions');
+  assert.deepEqual([...(row?.children ?? [])].map((child) => child.className), ['button memo-new', 'button memo-sort']);
 });

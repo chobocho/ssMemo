@@ -503,6 +503,46 @@ test('the share command says so where the browser cannot share, or the user back
   cancelled.close();
 });
 
+/** Seeded memos plus one that was changed later than both. */
+async function factoryWithLaterMemo(): Promise<IDBFactory> {
+  const factory = await seededFactory();
+  const storage = await openIndexedDbStorage(factory);
+  const later = '2026-02-01T00:00:00.000Z';
+  await storage.saveDocument({ id: 'z', title: 'Zebra', content: 'stripes', createdAt: later, updatedAt: later }, NEW_DOCUMENT_REV);
+  storage.close();
+  return factory;
+}
+
+test('the memo list can be put in another order, which is kept for the next visit', async () => {
+  const factory = await factoryWithLaterMemo();
+  const page = await openPage({ factory });
+  toolbarButton(page, 'Memo list').click();
+  await wait(50);
+  // To begin with: the memo changed last first, the two older ones by title.
+  assert.deepEqual(listedTitles(page), ['Zebra', 'Ideas', 'Shopping']);
+  assert.equal(topDialog(page).querySelector('.memo-sort')?.textContent?.includes('Last changed'), true);
+
+  topDialog(page).querySelector<HTMLElement>('.memo-sort')?.click();
+  await wait(50);
+  assert.equal(topDialog(page).querySelector('.choice[aria-pressed="true"]')?.textContent, 'Last changed');
+  await pickChoice(page, 'Title');
+  await wait(100);
+  assert.deepEqual(listedTitles(page), ['Ideas', 'Shopping', 'Zebra']);
+  assert.equal(topDialog(page).querySelector('.memo-sort')?.textContent?.includes('Title'), true);
+
+  // Search results follow the same order.
+  await searchMemoList(page, 's');
+  assert.deepEqual(listedTitles(page), ['Ideas', 'Shopping', 'Zebra']);
+  assert.deepEqual(page.errors, []);
+  page.close();
+
+  const reloaded = await openPage({ factory });
+  toolbarButton(reloaded, 'Memo list').click();
+  await wait(50);
+  assert.deepEqual(listedTitles(reloaded), ['Ideas', 'Shopping', 'Zebra']);
+  reloaded.close();
+});
+
 async function searchMemoList(page: Page, query: string): Promise<void> {
   const field = topDialog(page).querySelector<HTMLInputElement>('.memo-search');
   assert.ok(field, 'the memo list has no search field');
