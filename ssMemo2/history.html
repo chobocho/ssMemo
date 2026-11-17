@@ -13,6 +13,15 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 09:46] 탭별 편집 상태 유지 (3.3)</h2>
+<ul>
+<li><b>기획:</b> 편집기 화면은 하나만 두고 탭마다 <code>EditorState</code>를 따로 보관해 교체. 상태는 탭을 처음 볼 때 만들어, 복원된 탭이 많아도 열어 보기 전에는 비용이 없음.</li>
+<li><b>TC:</b> 정상 — 탭을 오가도 본문·편집 내용·선택 영역 유지, 돌아오면 스크롤 복원. 경계 — 실행 취소가 다른 탭의 편집으로 넘어가지 않는지, 이미 보이는 탭 다시 표시, 안 보이는 탭의 본문 조회, 보이는 탭 삭제 뒤 다른 탭 표시, 삭제한 id 재사용 시 이력 없음.</li>
+<li><b>개발:</b> <code>src/editor/editorTabs.ts</code>, <code>src/editor/cm6.ts</code>, <code>test/unit/editorTabs.test.ts</code>, <code>test/build/buildOutput.test.ts</code></li>
+<li><b>검증:</b> 단위 261 passed, 0 failed · 빌드 16 passed, 0 failed · tsc 오류 없음</li>
+<li><b>비고:</b> 검색어 유지는 검색 기능(5.1)에서 추가. 실제 화면 부착(<code>mountEditorTabs</code>)은 대역 뷰로 검증할 수 없어 3.7 연결 뒤 jsdom으로 확인.</li>
+</ul>
+
 <h2>[2026-11-17 09:44] 탭 상태 관리자 (3.2)</h2>
 <ul>
 <li><b>기획:</b> 열린 탭의 순서·활성 탭·미저장 표시만 다루는 순수 상태 모듈. 문서·편집기·DOM을 모르므로 탭 바와 작업 공간이 함께 쓰고 단독으로 테스트 가능. "메인 탭" 특례 없이 모든 탭이 동일.</li>
