@@ -87,6 +87,15 @@
   font-size: var(--font-size-small);
 }
 
+/* The line in which a search found the memo. */
+.memo-snippet {
+  max-inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-size-small);
+}
+
 /* An entry of the trash: laid out like .memo-open, but it is not a button. */
 .memo-text {
   display: flex;

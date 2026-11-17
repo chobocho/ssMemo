@@ -6,6 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createBackup, parseBackup, planImport, serializeBackup } from '../../src/app/backup.ts';
+import { findInMemos } from '../../src/app/memoSearch.ts';
 import { DEFAULT_SETTINGS } from '../../src/app/settings.ts';
 import { createEditorState, getEditorStats } from '../../src/editor/editorSetup.ts';
 import { decodeText } from '../../src/lib/encoding.ts';
@@ -111,4 +112,19 @@ test('a 5 MB memo goes into a backup and comes out again quickly', () => {
   assertFast('importing', imported.elapsedMs);
   // The same text came back, so merging recognizes it as already there.
   assert.equal(imported.result.unchanged, 1);
+});
+
+test('5 MB of memo text is searched quickly, whether nothing matches or only the very end', () => {
+  const { text } = readTextFile(bigFile('UTF-8'));
+  const content = `${text}the needle at the end`;
+  const timestamp = '2026-01-01T00:00:00.000Z';
+  const stored: StoredDocument[] = [{ meta: { id: 'a', title: 'big', createdAt: timestamp, updatedAt: timestamp, length: content.length, rev: 1 }, content }];
+
+  const missing = timed(() => findInMemos(stored, 'not in there'));
+  assert.deepEqual(missing.result, []);
+  assertFast('searching without a match', missing.elapsedMs);
+
+  const found = timed(() => findInMemos(stored, 'NEEDLE at'));
+  assert.equal(found.result[0]?.snippet, 'the needle at the end');
+  assertFast('searching with a late match', found.elapsedMs);
 });

@@ -101,6 +101,8 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'manager.title': '메모 목록',
   'manager.loading': '불러오는 중…',
   'manager.empty': '저장된 메모가 없습니다.',
+  'manager.search': '모든 메모에서 찾기',
+  'manager.noMatches': '그 내용이 들어 있는 메모가 없습니다.',
   'manager.failed': '작업을 완료하지 못했습니다. 다른 창에서 메모가 바뀌었을 수 있어 목록을 다시 불러왔습니다.',
   'manager.details': '{time} · {count}자',
   'manager.renameOf': '{title} 이름 변경',

@@ -105,6 +105,8 @@ export const en = {
   'manager.title': 'Memos',
   'manager.loading': 'Loading…',
   'manager.empty': 'No saved memos yet.',
+  'manager.search': 'Search in all memos',
+  'manager.noMatches': 'No memo contains that text.',
   'manager.failed': 'That did not work. The memo may have been changed in another window, so the list was reloaded.',
   'manager.details': '{time} · {count} characters',
   'manager.renameOf': 'Rename {title}',

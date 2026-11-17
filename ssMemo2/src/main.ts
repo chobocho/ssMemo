@@ -13,6 +13,7 @@ import { createDocumentStore, findTitleProblem } from './app/documentStore.ts';
 import { buildHelpGroups } from './app/helpContent.ts';
 import { formatThirdPartyNotices } from './app/licenses.ts';
 import { createLocalFiles } from './app/localFiles.ts';
+import { findInMemos } from './app/memoSearch.ts';
 import { createPreview } from './app/preview.ts';
 import {
   SAVE_STATE_KEYS,
@@ -56,7 +57,7 @@ import { TEXT_ENCODINGS } from './lib/encoding.ts';
 import { escapeHtml, renderMarkdown } from './lib/markdown.ts';
 import type { TextEncoding } from './lib/encoding.ts';
 import { isSafeModeRequested, openStorage } from './storage/openStorage.ts';
-import type { DocumentMeta } from './storage/storagePort.ts';
+import type { DocumentMeta, StoredDocument } from './storage/storagePort.ts';
 import { createAppShell } from './ui/appShell.ts';
 import { createCalcErrorContent, createCalcResultContent } from './ui/calcDialog.ts';
 import { copyToClipboard } from './ui/clipboard.ts';
@@ -438,12 +439,25 @@ async function start(win: Window): Promise<void> {
     }));
   };
   const showMemoManager = (): void => {
+    // Every memo with its text, for the search field. Read when the user starts to search and
+    // kept until something changes: reading it anew for every letter typed would be slow.
+    let searchable: Promise<StoredDocument[]> | undefined;
+    const readSearchable = async (): Promise<StoredDocument[]> => {
+      // Pending edits are written first, so what was typed a moment ago is found as well.
+      await workspace.flushAll();
+      return (await opened.storage.getAllDocuments()).documents;
+    };
+    const forgetSearchable = (): void => {
+      searchable = undefined;
+    };
     void modals.open((close) => ({
       title: t('manager.title'),
       content: createMemoManager(doc, {
         labels: {
           newMemo: t('command.newMemo'),
           trash: t('command.trash'),
+          search: t('manager.search'),
+          noMatches: t('manager.noMatches'),
           loading: t('manager.loading'),
           empty: t('manager.empty'),
           failed: t('manager.failed'),
@@ -457,11 +471,23 @@ async function start(win: Window): Promise<void> {
           await workspace.flushAll();
           return workspace.listMemos();
         },
-        onOpen: async (meta) => {
-          await workspace.openMemo(meta.id);
+        searchMemos: async (query) => {
+          searchable ??= readSearchable();
+          try {
+            return findInMemos(await searchable, query);
+          } catch (error) {
+            // Not kept, or every later search would fail the same way without trying again.
+            forgetSearchable();
+            throw error;
+          }
         },
-        onRename: renameMemo,
-        onDelete: deleteMemo,
+        onOpen: async (meta, foundText) => {
+          const shown = await workspace.openMemo(meta.id);
+          // The search of the editor takes over from here: it shows the place and the next ones.
+          if (shown && foundText !== undefined) editor.searchFor(foundText);
+        },
+        onRename: (meta) => renameMemo(meta).finally(forgetSearchable),
+        onDelete: (meta) => deleteMemo(meta).finally(forgetSearchable),
         onNew: () => {
           workspace.newMemo();
         },

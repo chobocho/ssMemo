@@ -1,12 +1,16 @@
-// The list of stored memos, shown inside a dialog: open one, rename, delete, start a new one, or
-// go on to the trash.
+// The list of stored memos, shown inside a dialog: open one, rename, delete, start a new one,
+// search the text of all of them, or go on to the trash.
 // It only displays and reports; what an action does (prompts, confirmations, storage) is decided
 // by the callbacks it is given.
+import type { MemoSearchHit } from '../app/memoSearch.ts';
 import type { DocumentListing, DocumentMeta } from '../storage/storagePort.ts';
 
 export interface MemoManagerLabels {
   newMemo: string;
   trash: string;
+  /** Names the search field. */
+  search: string;
+  noMatches: string;
   loading: string;
   empty: string;
   /** Shown when the list could not be read or an action failed. */
@@ -21,7 +25,10 @@ export interface MemoManagerLabels {
 export interface MemoManagerOptions {
   labels: MemoManagerLabels;
   listMemos(): Promise<DocumentListing>;
-  onOpen(meta: DocumentMeta): Promise<void>;
+  /** The memos whose text or title contains `query`. */
+  searchMemos(query: string): Promise<MemoSearchHit[]>;
+  /** `foundText` is what was searched for, if the memo was found by its text. */
+  onOpen(meta: DocumentMeta, foundText?: string): Promise<void>;
   onRename(meta: DocumentMeta): Promise<void>;
   onDelete(meta: DocumentMeta): Promise<void>;
   onNew(): void;
@@ -54,6 +61,19 @@ export function createMemoManager(doc: Document, options: MemoManagerOptions): H
   problem.className = 'modal-problem';
   problem.setAttribute('role', 'alert');
 
+  // While it holds text, the list shows the memos containing that text instead of all of them.
+  const search = doc.createElement('input');
+  search.type = 'search';
+  search.className = 'modal-input memo-search';
+  search.placeholder = labels.search;
+  search.setAttribute('aria-label', labels.search);
+  search.autocomplete = 'off';
+  search.spellcheck = false;
+  search.addEventListener('input', () => {
+    problem.textContent = '';
+    void refresh();
+  });
+
   const info = doc.createElement('p');
   info.className = 'memo-info';
 
@@ -70,7 +90,7 @@ export function createMemoManager(doc: Document, options: MemoManagerOptions): H
     options.onTrash();
   });
 
-  element.append(newButton, problem, info, list, trashButton);
+  element.append(newButton, search, problem, info, list, trashButton);
 
   function createIconButton(className: string, symbol: string, label: string, onClick: () => void): HTMLButtonElement {
     const button = doc.createElement('button');
@@ -83,7 +103,8 @@ export function createMemoManager(doc: Document, options: MemoManagerOptions): H
     return button;
   }
 
-  function createItem(meta: DocumentMeta): HTMLElement {
+  /** `foundText` and `snippet` are given for a memo that the search found by its text. */
+  function createItem(meta: DocumentMeta, foundText?: string, snippet?: string): HTMLElement {
     const item = doc.createElement('li');
     item.className = 'memo-item';
 
@@ -98,9 +119,16 @@ export function createMemoManager(doc: Document, options: MemoManagerOptions): H
     details.className = 'memo-details';
     details.textContent = labels.details(meta);
     open.append(title, details);
+    if (snippet !== undefined) {
+      const line = doc.createElement('span');
+      line.className = 'memo-snippet';
+      // textContent again: this is a line out of a memo.
+      line.textContent = snippet;
+      open.append(line);
+    }
     open.addEventListener('click', () => {
       void runAction(async () => {
-        await options.onOpen(meta);
+        await options.onOpen(meta, foundText);
         options.close();
       });
     });
@@ -127,17 +155,35 @@ export function createMemoManager(doc: Document, options: MemoManagerOptions): H
     }
   }
 
+  // Counts the refreshes: while typing, an answer to an earlier one can arrive after a later one
+  // and must not replace it.
+  let refreshCount = 0;
+
   async function refresh(): Promise<void> {
+    const turn = ++refreshCount;
+    const query = search.value;
     info.textContent = labels.loading;
     try {
-      const listing = await options.listMemos();
-      list.replaceChildren(...listing.documents.map(createItem));
-      if (listing.documents.length === 0) {
-        info.textContent = labels.empty;
+      if (query.trim() === '') {
+        const listing = await options.listMemos();
+        if (turn !== refreshCount) return;
+        list.replaceChildren(...listing.documents.map((meta) => createItem(meta)));
+        if (listing.documents.length === 0) {
+          info.textContent = labels.empty;
+        } else {
+          info.textContent = listing.corruptCount > 0 ? labels.corrupt(listing.corruptCount) : '';
+        }
       } else {
-        info.textContent = listing.corruptCount > 0 ? labels.corrupt(listing.corruptCount) : '';
+        const hits = await options.searchMemos(query);
+        if (turn !== refreshCount) return;
+        // Only a memo found by its text gets what was searched for, to be shown the place.
+        list.replaceChildren(
+          ...hits.map((hit) => createItem(hit.meta, hit.snippet === undefined ? undefined : query, hit.snippet)),
+        );
+        info.textContent = hits.length === 0 ? labels.noMatches : '';
       }
     } catch {
+      if (turn !== refreshCount) return;
       list.replaceChildren();
       info.textContent = '';
       problem.textContent = labels.failed;

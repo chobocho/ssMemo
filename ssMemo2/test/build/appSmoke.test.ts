@@ -321,6 +321,59 @@ test('a memo can be renamed and deleted from the memo list', async () => {
   page.close();
 });
 
+async function searchMemoList(page: Page, query: string): Promise<void> {
+  const field = topDialog(page).querySelector<HTMLInputElement>('.memo-search');
+  assert.ok(field, 'the memo list has no search field');
+  field.value = query;
+  field.dispatchEvent(new page.window.Event('input', { bubbles: true }));
+  await wait(150);
+}
+
+test('the memo list finds memos by their text and opens one at what was searched for', async () => {
+  const page = await openPage({ factory: await seededFactory() });
+  toolbarButton(page, 'Memo list').click();
+  await wait(50);
+  assert.equal(topDialog(page).querySelector<HTMLInputElement>('.memo-search')?.placeholder, 'Search in all memos');
+
+  await searchMemoList(page, 'TESTS');
+  assert.deepEqual(listedTitles(page), ['Ideas']);
+  assert.equal(topDialog(page).querySelector('.memo-snippet')?.textContent, 'write more tests');
+  await searchMemoList(page, 'unicorn');
+  assert.deepEqual(listedTitles(page), []);
+  assert.equal(topDialog(page).textContent?.includes('No memo contains that text.'), true);
+  await searchMemoList(page, '');
+  assert.deepEqual([...listedTitles(page)].sort(), ['Ideas', 'Shopping']);
+
+  await searchMemoList(page, 'tests');
+  topDialog(page).querySelector<HTMLElement>('.memo-open')?.click();
+  await wait(150);
+  assert.equal(page.document.querySelector('dialog[open]'), null);
+  assert.equal(page.activeTabTitle(), 'Ideas');
+  // The search of the editor has taken over what was looked for.
+  assert.equal(searchField(page).value, 'tests');
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
+test('the memo list also finds text that was typed a moment ago, and forgets a deleted memo', async () => {
+  const page = await openPage({ factory: await seededFactory() });
+  await typeLine(page, 'a unicorn');
+  toolbarButton(page, 'Memo list').click();
+  await wait(50);
+  await searchMemoList(page, 'unicorn');
+  assert.deepEqual(listedTitles(page), ['Shopping']);
+
+  // Deleted while the search is showing: the result is brought up to date, not left as it was.
+  topDialog(page).querySelector<HTMLElement>('.memo-delete')?.click();
+  await wait(50);
+  dialogButton(page, 'Move to trash').click();
+  await wait(150);
+  assert.deepEqual(listedTitles(page), []);
+  assert.equal(topDialog(page).textContent?.includes('No memo contains that text.'), true);
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
 async function deleteFromMemoList(page: Page, title: string): Promise<void> {
   toolbarButton(page, 'Memo list').click();
   await wait(50);
