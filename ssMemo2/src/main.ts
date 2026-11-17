@@ -1,4 +1,6 @@
 // Composition root: the only module that touches the real window and wires modules together.
+import type { ImportMode } from './app/backup.ts';
+import { createBackupActions } from './app/backupActions.ts';
 import { readBuildId } from './app/buildInfo.ts';
 import { createCommandRegistry } from './app/commands.ts';
 import type { Command } from './app/commands.ts';
@@ -7,6 +9,8 @@ import { createDocumentStore, findTitleProblem } from './app/documentStore.ts';
 import { createLocalFiles } from './app/localFiles.ts';
 import {
   SAVE_STATE_KEYS,
+  describeBackupNotice,
+  describeBackupSummary,
   describeFileNotice,
   describeNotice,
   describeStorage,
@@ -55,6 +59,8 @@ const EDITOR_FONT_SIZE_VARIABLE = '--editor-font-size';
 const DROP_TARGET_CLASS = 'is-drop-target';
 // How long a message that merely confirms something stays on screen.
 const INFO_NOTICE_DURATION_MS = 4000;
+// What the file dialog for importing a backup is limited to.
+const BACKUP_FILE_TYPES = '.json,application/json';
 const MENU_COMMAND_ID = 'app.menu';
 // Commands that get a button in the header, in display order. Tabs have their own controls.
 const TOOLBAR_COMMAND_IDS: readonly string[] = [
@@ -229,6 +235,36 @@ async function start(win: Window): Promise<void> {
     if (tabId !== undefined) workspace.activateTab(tabId);
   };
 
+  const backups = createBackupActions({
+    storage: opened.storage,
+    getSettings: () => settings,
+    saveSettings: (imported) => settingsStore.save(imported),
+    flushAll: () => workspace.flushAll(),
+    saveAs: (suggestedName, bytes) => fileIo.saveAs(suggestedName, bytes),
+    pickFile: async () => (await fileIo.pickFiles({ multiple: false, accept: BACKUP_FILE_TYPES }))[0],
+    chooseMode: (summary) => {
+      const choices: { label: string; value: ImportMode }[] = [{ label: t('backup.merge'), value: 'merge' }];
+      // Replacing ends with a reload, and in temporary mode a reload would drop what was just imported.
+      if (opened.mode === 'persistent') choices.push({ label: t('backup.replace'), value: 'replace' });
+      return modals.choose<ImportMode>(describeBackupSummary(summary, t, locale), choices);
+    },
+    confirmReplace: (count) => modals.confirm(t('backup.replaceConfirm', { count }), t('backup.replaceAccept')),
+    showBusy: () => modals.busy(t('backup.busy')),
+    onNotice: (notice) => {
+      // A complete export or import is merely confirmed; everything else needs to be read.
+      const isPlainSuccess =
+        (notice.kind === 'backup-exported' && notice.unreadable === 0) || (notice.kind === 'backup-imported' && notice.skipped === 0);
+      notices.show(describeBackupNotice(notice, t), isPlainSuccess ? 'info' : 'warning');
+    },
+    // Tabs, titles and settings on screen all describe the memos that were just replaced.
+    restart: () => win.location.reload(),
+    now: () => new Date(),
+    createId: () => createRandomId(win.crypto),
+    buildId: facts.buildId,
+    defaultTitle: t('memo.defaultTitle'),
+    copyTitle: (title) => t('backup.importedCopyTitle', { title }),
+  });
+
   const openLocalFiles = async (): Promise<void> => {
     await localFiles.openFiles(await fileIo.pickFiles({ multiple: true }));
   };
@@ -354,6 +390,8 @@ async function start(win: Window): Promise<void> {
     },
     { id: 'view.fontSmaller', labelKey: 'command.fontSmaller', icon: 'A−', shortcuts: [], run: () => stepFontSize(-1) },
     { id: 'view.fontLarger', labelKey: 'command.fontLarger', icon: 'A+', shortcuts: [], run: () => stepFontSize(1) },
+    { id: 'backup.export', labelKey: 'command.exportBackup', icon: '📤', shortcuts: [], run: () => void backups.exportBackup() },
+    { id: 'backup.import', labelKey: 'command.importBackup', icon: '📥', shortcuts: [], run: () => void backups.importBackup() },
     { id: 'settings.language', labelKey: 'command.language', icon: '🌐', shortcuts: [], run: () => void chooseLanguage() },
     { id: MENU_COMMAND_ID, labelKey: 'command.menu', icon: '☰', shortcuts: ['Alt-m'], run: showMenu },
   ]);

@@ -4,6 +4,8 @@ import type { AutosaveState } from '../../src/app/autosave.ts';
 import { MAX_TITLE_LENGTH } from '../../src/app/documentStore.ts';
 import {
   SAVE_STATE_KEYS,
+  describeBackupNotice,
+  describeBackupSummary,
   describeFileNotice,
   describeNotice,
   describeStorage,
@@ -151,4 +153,53 @@ test('describeFileNotice states the size limit in megabytes', () => {
 test('describeFileNotice names the encoding a doubtful file was read with', () => {
   const text = describeFileNotice({ kind: 'file-garbled', fileName: 'odd.txt', encoding: 'CP949' }, t);
   assert.equal(text.includes('CP949'), true);
+});
+
+test('describeBackupNotice gives every outcome its own message', () => {
+  const notices = [
+    { kind: 'backup-exported', documents: 3, unreadable: 0 },
+    { kind: 'backup-export-failed' },
+    { kind: 'backup-unreadable-file' },
+    { kind: 'backup-invalid', problem: 'not-json' },
+    { kind: 'backup-invalid', problem: 'not-a-backup' },
+    { kind: 'backup-invalid', problem: 'newer-format' },
+    { kind: 'backup-empty' },
+    { kind: 'backup-imported', added: 1, copied: 0, unchanged: 0, skipped: 0 },
+    { kind: 'backup-import-failed' },
+  ] as const;
+  const texts = notices.map((notice) => describeBackupNotice(notice, t));
+  assert.equal(texts.every((text) => text.length > 0), true);
+  assert.equal(new Set(texts).size, notices.length);
+});
+
+test('describeBackupNotice counts the exported memos and mentions damaged records only if there are any', () => {
+  const complete = describeBackupNotice({ kind: 'backup-exported', documents: 12, unreadable: 0 }, t);
+  const partial = describeBackupNotice({ kind: 'backup-exported', documents: 12, unreadable: 4 }, t);
+  assert.match(complete, /\b12\b/);
+  assert.match(partial, /\b12\b/);
+  assert.match(partial, /\b4\b/);
+  assert.notEqual(complete, partial);
+});
+
+test('describeBackupNotice breaks an import down into added, copied and unchanged memos', () => {
+  const text = describeBackupNotice({ kind: 'backup-imported', added: 5, copied: 2, unchanged: 7, skipped: 0 }, t);
+  for (const count of ['5', '2', '7']) assert.match(text, new RegExp(`\\b${count}\\b`));
+  const withSkipped = describeBackupNotice({ kind: 'backup-imported', added: 5, copied: 2, unchanged: 7, skipped: 9 }, t);
+  assert.match(withSkipped, /\b9\b/);
+  assert.ok(withSkipped.startsWith(text));
+});
+
+test('describeBackupSummary says what the backup holds, when it was made and what is stored', () => {
+  const text = describeBackupSummary({ documents: 8, skipped: 0, exportedAt: '2026-10-01T03:04:00.000Z', stored: 3 }, t, 'en', 'UTC');
+  assert.match(text, /\b8\b/);
+  assert.match(text, /\b3\b/);
+  assert.match(text, /Oct 1, 2026/);
+});
+
+test('describeBackupSummary copes with a backup that does not say when it was made', () => {
+  const text = describeBackupSummary({ documents: 8, skipped: 2, exportedAt: undefined, stored: 0 }, t, 'en', 'UTC');
+  assert.match(text, /\b8\b/);
+  assert.equal(text.includes('undefined'), false);
+  // Entries that cannot be used are mentioned, so the count does not surprise afterwards.
+  assert.match(text, /\b2\b/);
 });

@@ -5,6 +5,8 @@ import type { Eol, TextFormat } from '../lib/textFile.ts';
 import type { Translate } from '../i18n/i18n.ts';
 import type { StorageMode, TemporaryReason } from '../storage/openStorage.ts';
 import type { AutosaveState } from './autosave.ts';
+import type { BackupProblem } from './backup.ts';
+import type { BackupNotice, BackupSummary } from './backupActions.ts';
 import { MAX_TITLE_LENGTH } from './documentStore.ts';
 import type { TitleProblem } from './documentStore.ts';
 import type { FileNotice } from './localFiles.ts';
@@ -68,6 +70,57 @@ export function describeFileNotice(notice: FileNotice, t: Translate): string {
     case 'file-save-failed':
       return t('notice.fileSaveFailed', { name: notice.fileName });
   }
+}
+
+const BACKUP_PROBLEM_KEYS: Readonly<Record<BackupProblem, MessageKey>> = {
+  'not-json': 'notice.backupNotJson',
+  'not-a-backup': 'notice.backupNotBackup',
+  'newer-format': 'notice.backupNewerFormat',
+};
+
+/** Sentences that only apply in some cases are added to the main one, separated by a space. */
+function joinSentences(...sentences: (string | false)[]): string {
+  return sentences.filter((sentence) => sentence !== false).join(' ');
+}
+
+export function describeBackupNotice(notice: BackupNotice, t: Translate): string {
+  switch (notice.kind) {
+    case 'backup-exported':
+      return joinSentences(
+        t('notice.backupExported', { count: notice.documents }),
+        notice.unreadable > 0 && t('notice.backupUnreadableRecords', { count: notice.unreadable }),
+      );
+    case 'backup-export-failed':
+      return t('notice.backupExportFailed');
+    case 'backup-unreadable-file':
+      return t('notice.backupUnreadableFile');
+    case 'backup-invalid':
+      return t(BACKUP_PROBLEM_KEYS[notice.problem]);
+    case 'backup-empty':
+      return t('notice.backupEmpty');
+    case 'backup-imported':
+      return joinSentences(
+        t('notice.backupImported', { added: notice.added, copied: notice.copied, unchanged: notice.unchanged }),
+        notice.skipped > 0 && t('backup.skippedEntries', { count: notice.skipped }),
+      );
+    case 'backup-import-failed':
+      return t('notice.backupImportFailed');
+  }
+}
+
+/**
+ * The question shown before an import: what the file holds and what is stored now.
+ *
+ * @param timeZone defaults to the device's time zone; tests pass a fixed one.
+ */
+export function describeBackupSummary(summary: BackupSummary, t: Translate, locale: string, timeZone?: string): string {
+  const counts = { count: summary.documents, stored: summary.stored };
+  return joinSentences(
+    summary.exportedAt === undefined
+      ? t('backup.summaryUndated', counts)
+      : t('backup.summary', { ...counts, time: formatTimestamp(summary.exportedAt, locale, timeZone) }),
+    summary.skipped > 0 && t('backup.skippedEntries', { count: summary.skipped }),
+  );
 }
 
 /** The message explaining temporary mode. An unknown reason is explained as the unexpected case. */

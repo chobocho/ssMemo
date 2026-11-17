@@ -483,6 +483,128 @@ test('a CP949 file is written as UTF-8 only after the user agreed, and keeps its
   page.close();
 });
 
+interface ExportedBackup {
+  app: string;
+  documents: { id: string; title: string; content: string }[];
+}
+
+function backupFileFor(page: Page, documents: unknown[], settings?: unknown): File {
+  return new page.window.File([JSON.stringify({ app: 'ssMemo2', formatVersion: 1, exportedAt: TIMESTAMP, settings, documents })], 'backup.json');
+}
+
+async function storedTitles(factory: IDBFactory): Promise<string[]> {
+  const storage = await openIndexedDbStorage(factory);
+  const { documents } = await storage.listDocuments();
+  storage.close();
+  return documents.map((meta) => meta.title).sort();
+}
+
+test('exporting a backup offers one JSON file with every memo, including unsaved typing', async () => {
+  const page = await openPage({ factory: await seededFactory() });
+  const line = page.document.querySelector('.cm-line');
+  assert.ok(line);
+  line.textContent = 'milk and bread';
+  await wait(100);
+
+  await pickFromMenu(page, 'Export backup');
+  await wait(200);
+  const [download] = await page.downloads();
+  assert.ok(download);
+  assert.match(download.name, /^ssMemo2-backup-\d{8}-\d{4}\.json$/);
+  const backup = JSON.parse(new TextDecoder().decode(new Uint8Array(download.bytes))) as ExportedBackup;
+  assert.equal(backup.app, 'ssMemo2');
+  assert.deepEqual(backup.documents.map((document) => [document.title, document.content]).sort(), [
+    ['Ideas', 'write more tests'],
+    ['Shopping', 'milk and bread'],
+  ]);
+  assert.equal(page.noticeTexts().length, 1);
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
+test('importing a backup can add its memos to the stored ones', async () => {
+  const factory = await seededFactory();
+  const page = await openPage({ factory });
+  await pickFromMenu(page, 'Import backup');
+  assert.equal(page.document.querySelector<HTMLInputElement>('input[type="file"]')?.accept, '.json,application/json');
+  await chooseFiles(page, [backupFileFor(page, [{ id: 'c', title: 'From the backup', content: 'restored text' }, { id: 'a', title: 'Shopping', content: 'milk' }])]);
+
+  assert.match(topDialog(page).textContent ?? '', /2 memo\(s\).*2 memo\(s\) are stored/);
+  await pickChoice(page, 'Add: keep the stored memos and add those of the backup');
+  await wait(100);
+  assert.deepEqual(await storedTitles(factory), ['From the backup', 'Ideas', 'Shopping']);
+  assert.equal(page.noticeTexts().length, 1);
+  // The open tabs are untouched by an addition.
+  assert.deepEqual(page.tabTitles(), ['Shopping', 'Ideas']);
+  assert.deepEqual(page.errors, []);
+  page.close();
+
+  const reloaded = await openPage({ factory });
+  toolbarButton(reloaded, 'Memo list').click();
+  await wait(50);
+  assert.ok([...topDialog(reloaded).querySelectorAll('.memo-title')].some((node) => node.textContent === 'From the backup'));
+  reloaded.close();
+});
+
+test('importing a backup can replace everything, after a second confirmation', async () => {
+  const factory = await seededFactory();
+  const page = await openPage({ factory });
+  const backup = (): File => backupFileFor(page, [{ id: 'c', title: 'Only this', content: 'from the backup' }], { language: 'ko', lineWrapping: false, editorFontSizeRem: 1 });
+
+  // Declined at the confirmation: nothing changes.
+  await pickFromMenu(page, 'Import backup');
+  await chooseFiles(page, [backup()]);
+  await pickChoice(page, 'Replace: delete the stored memos and keep only the backup');
+  assert.match(topDialog(page).textContent ?? '', /All 2 stored memo/);
+  topDialog(page).querySelector('button')?.click();
+  await wait(100);
+  assert.deepEqual(await storedTitles(factory), ['Ideas', 'Shopping']);
+
+  await pickFromMenu(page, 'Import backup');
+  await chooseFiles(page, [backup()]);
+  await pickChoice(page, 'Replace: delete the stored memos and keep only the backup');
+  [...topDialog(page).querySelectorAll('button')].at(-1)?.click();
+  await wait(200);
+  assert.deepEqual(await storedTitles(factory), ['Only this']);
+  // The page reloads itself afterwards, which jsdom cannot do; nothing else may have gone wrong.
+  assert.deepEqual(page.errors.filter((error) => !error.includes('Not implemented: navigation')), []);
+  page.close();
+
+  const reloaded = await openPage({ factory });
+  assert.deepEqual(reloaded.tabTitles(), ['Only this']);
+  assert.equal(reloaded.editorText(), 'from the backup');
+  // The settings of the backup apply too.
+  assert.equal(reloaded.document.documentElement.lang, 'ko');
+  reloaded.close();
+});
+
+test('a file that is not a backup is refused and changes nothing', async () => {
+  const factory = await seededFactory();
+  const page = await openPage({ factory });
+  await pickFromMenu(page, 'Import backup');
+  await chooseFiles(page, [new page.window.File(['just some notes'], 'notes.json')]);
+  assert.equal(page.document.querySelector('dialog[open]'), null);
+  assert.equal(page.noticeTexts().length, 1);
+  assert.deepEqual(await storedTitles(factory), ['Ideas', 'Shopping']);
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
+test('in temporary mode a backup can be exported, and importing only offers to add', async () => {
+  const page = await openPage({ factory: await seededFactory(), url: `${PAGE_URL}?safe` });
+  await pickFromMenu(page, 'Export backup');
+  await wait(200);
+  assert.equal((await page.downloads()).length, 1);
+
+  await pickFromMenu(page, 'Import backup');
+  await chooseFiles(page, [backupFileFor(page, [{ id: 'c', title: 'From the backup', content: 'x' }])]);
+  assert.deepEqual([...topDialog(page).querySelectorAll('.choice')].map((choice) => choice.textContent), [
+    'Add: keep the stored memos and add those of the backup',
+  ]);
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
 test('?safe starts in temporary mode without loading the stored memos', async () => {
   const page = await openPage({ factory: await seededFactory(), url: `${PAGE_URL}?safe` });
   assert.deepEqual(page.errors, []);
