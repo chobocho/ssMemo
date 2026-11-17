@@ -19,6 +19,7 @@ const NOT_YET_WIRED: readonly string[] = [
   'src/app/settings.ts',
   'src/app/shortcut.ts',
   'src/app/tabManager.ts',
+  'src/app/workspace.ts',
   'src/editor/editorTabs.ts',
   'src/ui/modal.ts',
 ];

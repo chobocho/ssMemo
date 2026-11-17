@@ -13,6 +13,15 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 09:58] 작업 공간 로직: 여러 메모를 탭으로 (3.7 중 1/2)</h2>
+<ul>
+<li><b>기획:</b> 단일 메모 세션을 여러 탭을 다루는 작업 공간으로 확장. 탭마다 메모·자동 저장을 따로 두고, 탭을 떠날 때 즉시 저장하며, 열린 탭과 커서를 세션에 기록. 화면과 무관하게 구성해 대역 편집기로 테스트.</li>
+<li><b>TC:</b> 정상 — 세션 복원(순서·활성 탭·커서), 탭별 저장, 새 메모·열기·닫기·이름 변경·삭제. 경계 — 없어진 메모가 든 세션, 불러오기 실패 시 기존 메모 보존, 이미 열린 메모 다시 열기, 탭 한도, 마지막 탭 닫기, 저장 실패한 탭 닫기(확인 후 버리기), 삭제 직전 편집이 사본으로 되살아나지 않는지, 이름 변경 뒤 저장이 충돌로 오인되지 않는지.</li>
+<li><b>개발:</b> <code>src/app/workspace.ts</code>, <code>src/app/autosave.ts</code>, <code>test/unit/workspace.test.ts</code>, <code>test/unit/autosave.test.ts</code>, <code>test/build/buildOutput.test.ts</code></li>
+<li><b>검증:</b> 단위 353 passed, 0 failed · 빌드 16 passed, 0 failed · tsc 오류 없음</li>
+<li><b>비고:</b> 화면 연결과 탭 바는 다음 커밋. 연결되면 기존 단일 메모 세션(<code>memoSession</code>)은 삭제 예정.</li>
+</ul>
+
 <h2>[2026-11-17 09:54] 대화상자와 DOM 테스트 환경 (3.6)</h2>
 <ul>
 <li><b>기획:</b> 네이티브 <code>&lt;dialog&gt;</code> 하나로 확인·입력·사용자 정의 대화상자를 통일. 포커스 가두기와 "맨 위 창만 ESC에 반응"은 브라우저에 맡김. 화면 코드도 테스트를 먼저 쓰도록 jsdom을 개발 의존성으로 추가.</li>

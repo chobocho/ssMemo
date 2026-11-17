@@ -277,3 +277,41 @@ test('a save function that throws instead of rejecting is handled like a failed 
   assert.deepEqual(errors, [failure]);
   assert.equal(autosave.hasUnsavedChanges(), true);
 });
+
+test('discard drops pending changes without saving them', async () => {
+  const harness = createHarness();
+  harness.autosave.notifyChange();
+  harness.autosave.discard();
+  harness.advance(MAX_WAIT_MS * 10);
+  await harness.autosave.flush();
+  assert.equal(harness.saveCount(), 0);
+  assert.equal(harness.autosave.hasUnsavedChanges(), false);
+});
+
+test('after discard, further changes are ignored', async () => {
+  // The tab is gone; a late change notification must not write its text back.
+  const harness = createHarness();
+  harness.autosave.discard();
+  harness.autosave.notifyChange();
+  harness.advance(MAX_WAIT_MS * 10);
+  await harness.autosave.flush();
+  assert.equal(harness.saveCount(), 0);
+  assert.equal(harness.autosave.hasUnsavedChanges(), false);
+});
+
+test('discard during a running save reports nothing more, whatever that save does', async () => {
+  const harness = createHarness();
+  harness.autosave.notifyChange();
+  harness.advance(IDLE_DELAY_MS);
+  harness.autosave.notifyChange();
+  const statesBefore = harness.states.length;
+
+  harness.autosave.discard();
+  await finishSave(harness, new Error('failed after the tab was closed'));
+  harness.advance(MAX_WAIT_MS * 10);
+
+  assert.equal(harness.saveCount(), 1);
+  assert.deepEqual(harness.errors, []);
+  assert.equal(harness.states.length, statesBefore);
+  assert.equal(harness.autosave.hasUnsavedChanges(), false);
+});

@@ -45,6 +45,11 @@ export interface Autosave {
   flush(): Promise<void>;
   /** True while there are changes that are not known to be stored. */
   hasUnsavedChanges(): boolean;
+  /**
+   * Gives up on the content for good: pending changes are dropped, later ones are ignored and
+   * nothing more is reported. Used when the tab is closed without saving or its memo is deleted.
+   */
+  discard(): void;
 }
 
 export function createAutosave(options: AutosaveOptions): Autosave {
@@ -55,12 +60,13 @@ export function createAutosave(options: AutosaveOptions): Autosave {
   /** The most recent save failed and nothing has been retried since. */
   let failed = false;
   let runningSave: Promise<void> | undefined;
+  let discarded = false;
   let idleTimer: unknown;
   let maxWaitTimer: unknown;
   let state: AutosaveState = 'saved';
 
   const setState = (next: AutosaveState): void => {
-    if (next === state) return;
+    if (discarded || next === state) return;
     state = next;
     onStateChange(next);
   };
@@ -109,6 +115,8 @@ export function createAutosave(options: AutosaveOptions): Autosave {
       },
       (error: unknown) => {
         runningSave = undefined;
+        // A save that fails after the content was discarded concerns nobody any more.
+        if (discarded) return;
         dirty = true;
         failed = true;
         setState('failed');
@@ -130,6 +138,7 @@ export function createAutosave(options: AutosaveOptions): Autosave {
 
   return {
     notifyChange() {
+      if (discarded) return;
       dirty = true;
       // While a save is running, its completion schedules the follow-up save.
       if (runningSave) return;
@@ -137,6 +146,11 @@ export function createAutosave(options: AutosaveOptions): Autosave {
       scheduleSave();
     },
     flush,
-    hasUnsavedChanges: () => dirty || runningSave !== undefined,
+    hasUnsavedChanges: () => !discarded && (dirty || runningSave !== undefined),
+    discard() {
+      clearTimers();
+      dirty = false;
+      discarded = true;
+    },
   };
 }
