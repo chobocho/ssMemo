@@ -7,6 +7,8 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'diagnostics.copied': '복사했습니다.',
   'diagnostics.copyFailed': '자동으로 복사하지 못했습니다. 목록을 선택해 두었으니 시스템 메뉴에서 복사하세요.',
 
+  'boot.failed': 'ssMemo2를 시작하지 못했습니다. 페이지를 새로고침해 보세요. 그래도 안 되면 주소 끝에 ?safe를 붙이거나 다른 브라우저를 써 보세요.',
+
   'status.saved': '저장됨',
   'status.pending': '저장 전',
   'status.saving': '저장 중…',

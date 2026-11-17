@@ -16,6 +16,10 @@
   --editor-line-height: 1.7;
 
   /* Smallest comfortable touch target (44 CSS px at the default font size). */
+  /* How long the page waits before it says that the app did not start. Longer than start-up
+     takes on a slow phone with many stored memos. */
+  --boot-message-delay: 8s;
+
   --touch-target: 2.75rem;
   --focus-ring-width: 0.125rem;
   --border-width: 1px;

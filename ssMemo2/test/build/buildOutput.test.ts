@@ -119,3 +119,16 @@ test('output stays within the size budget', () => {
   assert.equal(bytes > 0, true);
   assert.equal(bytes <= MAX_OUTPUT_BYTES, true, `output is ${bytes} bytes, budget is ${MAX_OUTPUT_BYTES}`);
 });
+
+test('the page carries a message for the case that the app never starts, in both languages', () => {
+  // Without it a blocked or broken script leaves a blank page and nothing to go on.
+  const message = /<p id="boot-message"[^>]*>([\s\S]*?)<\/p>/.exec(parts.markup);
+  assert.ok(message, 'no boot message in the page');
+  assert.ok(parts.markup.indexOf('id="boot-message"') < parts.markup.indexOf('id="app"'));
+  const text = message[1] ?? '';
+  assert.match(text, /<span lang="ko">[^<]+<\/span>/);
+  assert.match(text, /<span lang="en">[^<]*could not start[^<]*<\/span>/);
+  // Hidden while the app is still loading; the stylesheet reveals it only after a while.
+  assert.match(parts.css, /\.boot-message\{[^}]*max-block-size:0/);
+  assert.match(parts.css, /@keyframes boot-message-reveal/);
+});

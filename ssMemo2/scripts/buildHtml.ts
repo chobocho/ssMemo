@@ -5,6 +5,9 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 import type { BuildOptions } from 'esbuild';
+import { en } from '../src/i18n/en.ts';
+import { ko } from '../src/i18n/ko.ts';
+import { escapeHtml } from '../src/lib/markdown.ts';
 import { fillTemplate, prepareInlineScript, prepareInlineStyle } from './htmlTemplate.ts';
 import { ALLOWED_URL_LITERALS, findExternalReferences } from './selfContained.ts';
 
@@ -101,6 +104,17 @@ function computeBuildId(version: string, contents: readonly string[]): string {
   return `${version}+${hash.digest('hex').slice(0, BUILD_HASH_LENGTH)}`;
 }
 
+// The page's own words for "the app did not start". They cannot come from the app, which is
+// exactly what is not running then, so both languages are written into the markup.
+function renderBootMessage(): string {
+  return [
+    ['ko', ko['boot.failed']],
+    ['en', en['boot.failed']],
+  ]
+    .map(([language, text]) => `<span lang="${language}">${escapeHtml(text ?? '')}</span>`)
+    .join('');
+}
+
 export async function buildHtml(): Promise<BuildResult> {
   const [script, style, template, favicon, version] = await Promise.all([
     bundle(SCRIPT_BUNDLE_OPTIONS),
@@ -117,6 +131,7 @@ export async function buildHtml(): Promise<BuildResult> {
   const pageValues = {
     FAVICON: `data:image/svg+xml;base64,${favicon}`,
     BUILD_ID: buildId,
+    BOOT_MESSAGE: renderBootMessage(),
   };
 
   const markup = fillTemplate(template, { ...pageValues, STYLE: '', SCRIPT: '' });

@@ -1,0 +1,26 @@
+/* What the page says if the app never starts (a blocked script, a browser that is too old, an
+   error during start-up). It takes no room while the app is loading and shows itself after a
+   while; the app removes it once it runs, or reveals it at once when start-up fails. */
+.boot-message {
+  max-block-size: 0;
+  margin: 0;
+  overflow: hidden;
+  animation: boot-message-reveal 0s linear var(--boot-message-delay) forwards;
+}
+
+.boot-message.boot-failed {
+  max-block-size: none;
+  padding: var(--space-4);
+  animation: none;
+}
+
+.boot-message span {
+  display: block;
+}
+
+@keyframes boot-message-reveal {
+  to {
+    max-block-size: none;
+    padding: var(--space-4);
+  }
+}

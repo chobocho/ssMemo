@@ -78,6 +78,9 @@ import type { ToolbarTier } from './ui/toolbar.ts';
 
 const APP_NAME = 'ssMemo2';
 const MOUNT_POINT_ID = 'app';
+// The page's built-in message for a failed start (see index.template.html and styles/boot.css).
+const BOOT_MESSAGE_ID = 'boot-message';
+const BOOT_FAILED_CLASS = 'boot-failed';
 // Save shortly after typing pauses, and at least this often while typing continues.
 const AUTOSAVE_IDLE_DELAY_MS = 1500;
 const AUTOSAVE_MAX_WAIT_MS = 10_000;
@@ -665,4 +668,11 @@ async function start(win: Window): Promise<void> {
   });
 }
 
-void start(window);
+start(window).then(
+  () => window.document.getElementById(BOOT_MESSAGE_ID)?.remove(),
+  (error: unknown) => {
+    // Without this a failed start is a blank page and a rejected promise nobody sees.
+    console.error('[ssMemo2] The app could not start.', error);
+    window.document.getElementById(BOOT_MESSAGE_ID)?.classList.add(BOOT_FAILED_CLASS);
+  },
+);

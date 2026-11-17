@@ -1,5 +1,6 @@
 /* Stylesheet entry point; the build inlines everything imported here into the page. */
 @import "./tokens.css";
+@import "./boot.css";
 @import "./layout.css";
 @import "./tabs.css";
 @import "./status.css";

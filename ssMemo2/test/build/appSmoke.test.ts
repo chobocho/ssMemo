@@ -50,7 +50,15 @@ function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function openPage(options: { factory?: IDBFactory; url?: string; storageManager?: object } = {}): Promise<Page> {
+interface OpenOptions {
+  factory?: IDBFactory;
+  url?: string;
+  storageManager?: object;
+  /** Makes start-up fail part-way, as a browser quirk the app does not know about would. */
+  breakStartUp?: boolean;
+}
+
+async function openPage(options: OpenOptions = {}): Promise<Page> {
   const errors: string[] = [];
   const downloadNames: string[] = [];
   const opened: unknown[][] = [];
@@ -81,6 +89,11 @@ async function openPage(options: { factory?: IDBFactory; url?: string; storageMa
       if (options.factory) {
         Object.defineProperty(window, 'indexedDB', { value: options.factory, configurable: true });
       }
+      if (options.breakStartUp) {
+        window.matchMedia = () => {
+          throw new Error('this browser does something unexpected');
+        };
+      }
       if (options.storageManager) {
         Object.defineProperty(window.navigator, 'storage', { value: options.storageManager, configurable: true });
       }
@@ -89,7 +102,8 @@ async function openPage(options: { factory?: IDBFactory; url?: string; storageMa
   const { document } = dom.window;
   // The first tab appears when the stored memos were read and the editor shows one of them.
   const deadline = Date.now() + BOOT_TIMEOUT_MS;
-  while (!document.querySelector('.tab-title') && Date.now() < deadline) await wait(BOOT_POLL_MS);
+  const isReady = (): boolean => document.querySelector(options.breakStartUp ? '.boot-failed' : '.tab-title') !== null;
+  while (!isReady() && Date.now() < deadline) await wait(BOOT_POLL_MS);
   await wait(BOOT_SETTLE_MS);
   const text = (element: Element | null | undefined): string => element?.textContent ?? '';
   return {
@@ -1077,6 +1091,23 @@ test('in temporary mode the browser is not asked to keep anything', async () => 
   await wait(AUTOSAVE_WAIT_MS);
   assert.deepEqual(calls, []);
   assert.deepEqual(page.errors, []);
+  page.close();
+});
+
+test('once the app runs, the message for a failed start is gone', async () => {
+  const page = await openPage({ factory: await seededFactory() });
+  assert.equal(page.document.getElementById('boot-message'), null);
+  page.close();
+});
+
+test('when start-up fails, the page says so instead of staying blank', async () => {
+  const page = await openPage({ factory: await seededFactory(), breakStartUp: true });
+  const message = page.document.getElementById('boot-message');
+  assert.ok(message);
+  assert.equal(message.classList.contains('boot-failed'), true);
+  assert.match(message.textContent ?? '', /could not start/);
+  // The reason goes to the console for whoever looks into it.
+  assert.equal(page.errors.some((error) => error.includes('this browser does something unexpected')), true);
   page.close();
 });
 

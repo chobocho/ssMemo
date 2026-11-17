@@ -60,7 +60,8 @@ test('no message is empty', () => {
 
 test('every message key is used somewhere in the app', () => {
   // An unused message is dead code; TODO.md requires deleting it at once.
-  const appSource = listFiles('src', ['.ts'])
+  // The build script counts too: it puts the message for a failed start into the page itself.
+  const appSource = [...listFiles('src', ['.ts']), ...listFiles('scripts', ['.ts'])]
     .filter((file) => !CATALOG_FILES.includes(file))
     .map((file) => readFileSync(join(rootDir, file), 'utf8'))
     .join('\n');

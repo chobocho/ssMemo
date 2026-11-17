@@ -6,6 +6,9 @@ export const en = {
   'diagnostics.copied': 'Copied.',
   'diagnostics.copyFailed': 'Could not copy automatically. The list is selected: copy it from the system menu.',
 
+  // Put into the page by the build, for the case that the app itself never gets to run.
+  'boot.failed': 'ssMemo2 could not start. Reload the page. If that does not help, add ?safe to the address or try another browser.',
+
   'status.saved': 'Saved',
   'status.pending': 'Not saved yet',
   'status.saving': 'Saving…',
