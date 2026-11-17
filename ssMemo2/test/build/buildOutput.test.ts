@@ -15,6 +15,7 @@ const CHARSET_SNIFF_BYTES = 1024;
 // The list must be empty again at every milestone.
 const NOT_YET_WIRED: readonly string[] = [
   'src/app/commands.ts',
+  'src/app/session.ts',
   'src/app/settings.ts',
   'src/app/shortcut.ts',
   'src/app/tabManager.ts',

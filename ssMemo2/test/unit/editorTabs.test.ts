@@ -161,3 +161,38 @@ test('remove of the visible tab leaves no active tab until another one is shown'
   // The removed tab must not have been written back when leaving it.
   assert.equal(harness.tabs.getText('b'), undefined);
 });
+
+test('a tab can be shown with the cursor at a remembered position', () => {
+  const harness = createHarness();
+  harness.tabs.show('a', 'alpha beta', 6);
+  assert.equal(harness.view.state.selection.main.head, 6);
+  assert.equal(harness.tabs.getCursor('a'), 6);
+});
+
+test('a remembered cursor position outside the text is moved into it', () => {
+  // The stored memo may have been shortened in another window since the position was saved.
+  const harness = createHarness();
+  harness.tabs.show('a', 'short', 999);
+  assert.equal(harness.tabs.getCursor('a'), 5);
+  harness.tabs.show('b', 'short', -3);
+  assert.equal(harness.tabs.getCursor('b'), 0);
+});
+
+test('the remembered position only applies the first time a tab is shown', () => {
+  const harness = createHarness();
+  harness.tabs.show('a', 'alpha beta', 2);
+  harness.view.dispatch({ selection: { anchor: 7 } });
+  harness.tabs.show('b', 'beta');
+  harness.tabs.show('a', 'alpha beta', 2);
+  assert.equal(harness.tabs.getCursor('a'), 7);
+});
+
+test('getCursor reports the cursor of any tab, visible or not', () => {
+  const harness = createHarness();
+  harness.tabs.show('a', 'alpha');
+  harness.view.dispatch({ selection: { anchor: 3 } });
+  harness.tabs.show('b', 'beta');
+  assert.equal(harness.tabs.getCursor('a'), 3);
+  assert.equal(harness.tabs.getCursor('b'), 0);
+  assert.equal(harness.tabs.getCursor('missing'), undefined);
+});

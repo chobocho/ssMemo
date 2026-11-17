@@ -18,14 +18,17 @@ export interface EditorViewPort {
 export interface EditorTabs {
   /**
    * Makes `tabId` the visible document. The first time a tab is shown it starts from
-   * `initialText`; afterwards the text it had when it was left is kept and `initialText` is ignored.
+   * `initialText` with the cursor at `initialCursor` (moved into the text if it lies outside);
+   * afterwards the tab is shown as it was left and both arguments are ignored.
    */
-  show(tabId: string, initialText: string): void;
+  show(tabId: string, initialText: string, initialCursor?: number): void;
   /** Current text of a tab, whether visible or not; undefined if the tab is unknown. */
   getText(tabId: string): string | undefined;
   /** Forgets a tab. If it is the visible one, another tab has to be shown next. */
   remove(tabId: string): void;
   getActiveTabId(): string | undefined;
+  /** Cursor offset of a tab, visible or not; undefined if the tab is unknown. */
+  getCursor(tabId: string): number | undefined;
 }
 
 export function createEditorTabs(view: EditorViewPort, createState: (text: string) => EditorState): EditorTabs {
@@ -41,15 +44,23 @@ export function createEditorTabs(view: EditorViewPort, createState: (text: strin
   };
 
   return {
-    show(tabId, initialText) {
+    show(tabId, initialText, initialCursor = 0) {
       if (tabId === activeTabId) return;
       storeActiveTab();
-      const state = states.get(tabId) ?? createState(initialText);
+      const knownState = states.get(tabId);
+      const state = knownState ?? createState(initialText);
       states.set(tabId, state);
       activeTabId = tabId;
       view.setState(state);
+
       const scrollPosition = scrollPositions.get(tabId);
-      if (scrollPosition) view.dispatch({ effects: scrollPosition });
+      if (scrollPosition) {
+        view.dispatch({ effects: scrollPosition });
+      } else if (!knownState) {
+        // A tab restored from the last visit: put the cursor back and bring it into view.
+        const cursor = Math.min(Math.max(initialCursor, 0), state.doc.length);
+        view.dispatch({ selection: { anchor: cursor }, scrollIntoView: true });
+      }
     },
 
     getText(tabId) {
@@ -64,6 +75,11 @@ export function createEditorTabs(view: EditorViewPort, createState: (text: strin
     },
 
     getActiveTabId: () => activeTabId,
+
+    getCursor(tabId) {
+      const state = tabId === activeTabId ? view.state : states.get(tabId);
+      return state?.selection.main.head;
+    },
   };
 }
 

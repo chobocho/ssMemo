@@ -108,7 +108,7 @@
 - [x] 3.2 tabManager
 - [x] 3.3 탭별 EditorState 교체(실행 취소·스크롤·검색어 유지)
 - [x] 3.4 settings(언어·줄바꿈·글자 크기)
-- [ ] 3.5 sessionStore(열린 탭·활성 탭·커서 복원)
+- [x] 3.5 sessionStore(열린 탭·활성 탭·커서 복원)
 - [ ] 3.6 모달 시스템(`<dialog>` 기반 message/confirm/choose/prompt)
 - [ ] 3.7 탭 바(미저장 표시, 닫기 확인)
 - [ ] 3.8 메모 관리(목록·새로 만들기·열기·이름 변경·삭제)
