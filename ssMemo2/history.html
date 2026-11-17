@@ -13,6 +13,15 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 18:34] Phase 7 문서와 수동 점검표</h2>
+<ul>
+<li><b>기획:</b> readme가 M6 상태에 머물러 있어 Phase 7 기능(휴지통, 모든 메모에서 찾기, 공유, 테마, 백업 알림, ssMemoWeb 가져오기, 저장 보호)과 한도, "시작하지 못했습니다" 대처를 추가한다. 수동 점검표에 M7 절(10항목)을 더한다.</li>
+<li><b>TC:</b> 문서 변경이라 새 테스트 없음. 인코딩(UTF-8, LF, 깨진 글자 없음) 확인과 전체 검증 재실행.</li>
+<li><b>개발:</b> <code>readme.md</code>, <code>test/manual/checklist.md</code></li>
+<li><b>검증:</b> 단위 1035 passed, 빌드 87 passed, 0 failed</li>
+<li><b>비고:</b> M7-01(CSP 아래에서 앱이 뜨는지)은 실제 브라우저에서만 확인 가능. Phase 7의 남은 세 항목은 미구현으로 명시.</li>
+</ul>
+
 <h2>[2026-11-17 18:30] ssMemoWeb 구 데이터 가져오기 (7.8)</h2>
 <ul>
 <li><b>기획:</b> 같은 주소에서 쓰던 ssMemoWeb의 DB(<code>ssMemo</code>/<code>notes</code>)를 읽기 전용으로 열어 메모를 새 메모로 추가한다. 옛 DB는 바꾸지 않고, 없으면 만들지도 않는다. 제목과 내용이 같은 메모는 이미 있는 것으로 보아 다시 가져오지 않는다.</li>
