@@ -11,18 +11,9 @@ import { listFiles } from '../helpers/projectFiles.ts';
 const MAX_OUTPUT_BYTES = 1_500_000;
 // Browsers only sniff the first 1024 bytes for a charset; python's http.server sends none.
 const CHARSET_SNIFF_BYTES = 1024;
-// Modules written test-first ahead of the roadmap item that wires them into the app (2.8).
+// Modules written test-first ahead of the roadmap item that wires them into the app.
 // The list must be empty again at every milestone.
-const NOT_YET_WIRED: readonly string[] = [
-  'src/app/autosave.ts',
-  'src/app/documentStore.ts',
-  'src/app/memoSession.ts',
-  'src/app/randomId.ts',
-  'src/storage/indexedDbStorage.ts',
-  'src/storage/memoryStorage.ts',
-  'src/storage/openStorage.ts',
-  'src/storage/storagePort.ts',
-];
+const NOT_YET_WIRED: readonly string[] = [];
 
 interface InlineParts {
   markup: string;

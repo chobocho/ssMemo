@@ -36,6 +36,8 @@ export interface EnvironmentSnapshot {
   canHover: boolean;
   isSecureContext: boolean;
   hasIndexedDb: boolean;
+  /** Which storage the app is actually using, e.g. "persistent" or "temporary (safe-mode)". */
+  storage: string;
   hasFileSystemAccess: boolean;
 }
 
@@ -88,6 +90,7 @@ export function describeEnvironment(snapshot: EnvironmentSnapshot): DiagnosticEn
     { label: 'hover', value: yesNo(snapshot.canHover) },
     { label: 'secure context', value: yesNo(snapshot.isSecureContext) },
     { label: 'IndexedDB', value: availability(snapshot.hasIndexedDb) },
+    { label: 'storage', value: snapshot.storage },
     { label: 'File System Access', value: availability(snapshot.hasFileSystemAccess) },
     { label: 'languages', value: snapshot.languages.length > 0 ? snapshot.languages.join(', ') : UNKNOWN },
     { label: 'user agent', value: snapshot.userAgent || UNKNOWN },

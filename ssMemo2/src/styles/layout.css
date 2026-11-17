@@ -1,7 +1,7 @@
-/* App shell: header, editor area and footer stacked to fill the visible viewport exactly. */
+/* App shell: header, notices, editor area and footer stacked to fill the visible viewport exactly. */
 .app-shell {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   /* dvh follows the browser bars and, with interactive-widget=resizes-content, the on-screen
      keyboard, so the editor shrinks instead of being covered. */
   block-size: 100dvh;
@@ -15,7 +15,11 @@
 
 .app-header {
   display: flex;
+  /* On the cover screen the status moves under the title instead of being cut off. */
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
+  column-gap: var(--space-3);
   min-block-size: var(--touch-target);
   padding-inline: var(--page-gutter);
   border-block-end: var(--border-width) solid var(--color-border);

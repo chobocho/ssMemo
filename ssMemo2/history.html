@@ -13,6 +13,15 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 09:30] 메모 1개 연결: 자동 저장, 복원, 상태 표시 (2.8 중 2/2)</h2>
+<ul>
+<li><b>기획:</b> 저장소·문서 저장소·세션을 화면에 연결. 헤더에 저장 상태와 임시 모드 배지, 그 아래 닫을 수 있는 안내 줄을 두고, 화면이 가려지거나 닫힐 때 즉시 저장하며 미저장 시에만 이탈 경고.</li>
+<li><b>TC:</b> 정상 — 문구의 <code>{name}</code> 치환, 알림 종류별 문구, 저장 상태 4종 문구, 진단의 storage 항목. 경계 — 값 없는 자리표시자는 그대로 표시, 값에 든 <code>$&amp;</code>·<code>{…}</code>는 재치환 안 함, 두 카탈로그의 자리표시자 일치, 임시 모드 사유 누락.</li>
+<li><b>개발:</b> <code>src/main.ts</code>, <code>src/app/noticeText.ts</code>, <code>src/i18n/i18n.ts</code>, <code>src/editor/editorSetup.ts</code>, <code>src/ui/statusIndicator.ts</code>, <code>src/ui/noticeBar.ts</code>, <code>src/ui/appShell.ts</code>, <code>src/styles/status.css</code> 외 14개 파일</li>
+<li><b>검증:</b> 단위 223 passed, 0 failed · 빌드 16 passed, 0 failed · tsc 오류 없음 · 산출물 299,576바이트</li>
+<li><b>비고:</b> jsdom + fake-indexeddb로 저장된 메모 복원, 입력 후 자동 저장, <code>?safe</code>, IndexedDB 없음 네 경우가 예외 없이 동작함을 확인. 실제 브라우저 확인은 점검표 M2 항목으로 남음.</li>
+</ul>
+
 <h2>[2026-11-17 09:25] 메모 세션 로직: 부팅 복원과 저장 흐름 (2.8 중 1/2)</h2>
 <ul>
 <li><b>기획:</b> 시작 시 가장 최근 메모를 보여 주고 편집을 자동 저장으로 잇는 흐름을 DOM 없이 구성. 메모는 첫 저장 때 만들어, 불러오기에 실패한 빈 편집기가 기존 메모를 덮어쓰는 일이 없게 함.</li>

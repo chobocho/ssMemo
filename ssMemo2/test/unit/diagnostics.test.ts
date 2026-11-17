@@ -19,6 +19,7 @@ const fullSnapshot: EnvironmentSnapshot = {
   canHover: false,
   isSecureContext: true,
   hasIndexedDb: true,
+  storage: 'persistent',
   hasFileSystemAccess: false,
 };
 
@@ -41,6 +42,7 @@ test('describeEnvironment lists every fact in a stable order', () => {
     { label: 'hover', value: 'no' },
     { label: 'secure context', value: 'yes' },
     { label: 'IndexedDB', value: 'available' },
+    { label: 'storage', value: 'persistent' },
     { label: 'File System Access', value: 'missing' },
     { label: 'languages', value: 'ko-KR, en-US' },
     { label: 'user agent', value: 'TestBrowser/1.0' },

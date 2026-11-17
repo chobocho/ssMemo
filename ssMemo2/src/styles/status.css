@@ -1,0 +1,50 @@
+/* Save state and storage badge in the header, and the stack of notices below it. */
+.app-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  font-size: var(--font-size-small);
+}
+
+.app-save-state {
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.app-badge {
+  padding: var(--space-1) var(--space-2);
+  border: var(--border-width) solid var(--color-warning-border);
+  border-radius: var(--radius-small);
+  background: var(--color-warning-surface);
+  white-space: nowrap;
+}
+
+.notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-inline-start: var(--page-gutter);
+  border-block-end: var(--border-width) solid var(--color-warning-border);
+  background: var(--color-warning-surface);
+  font-size: var(--font-size-small);
+}
+
+.notice-text {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  padding-block: var(--space-2);
+  overflow-wrap: anywhere;
+}
+
+/* A full touch target even though the visible symbol is small. */
+.notice-dismiss {
+  flex: none;
+  min-block-size: var(--touch-target);
+  min-inline-size: var(--touch-target);
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}

@@ -4,7 +4,7 @@
 /** The part of the Web Crypto API this module needs. */
 export interface RandomSource {
   randomUUID?: () => string;
-  getRandomValues<T extends ArrayBufferView>(array: T): T;
+  getRandomValues(array: Uint8Array<ArrayBuffer>): Uint8Array<ArrayBuffer>;
 }
 
 const UUID_BYTE_LENGTH = 16;

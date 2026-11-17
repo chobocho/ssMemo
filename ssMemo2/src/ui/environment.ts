@@ -28,10 +28,16 @@ function countViewportSegments(win: Window): number | undefined {
   return viewport.segments?.length ?? UNSPLIT_SEGMENT_COUNT;
 }
 
-export function readEnvironment(win: Window, buildId: string): EnvironmentSnapshot {
+/** Facts about this page load that are not read from the window. */
+export interface AppFacts {
+  buildId: string;
+  storage: string;
+}
+
+export function readEnvironment(win: Window, facts: AppFacts): EnvironmentSnapshot {
   const visualViewport = win.visualViewport;
   return {
-    buildId,
+    buildId: facts.buildId,
     userAgent: win.navigator.userAgent,
     languages: win.navigator.languages,
     viewport: { width: win.innerWidth, height: win.innerHeight },
@@ -45,6 +51,7 @@ export function readEnvironment(win: Window, buildId: string): EnvironmentSnapsh
     canHover: win.matchMedia(HOVER_QUERY).matches,
     isSecureContext: win.isSecureContext,
     hasIndexedDb: hasIndexedDb(win),
+    storage: facts.storage,
     hasFileSystemAccess: FILE_PICKER_API in win,
   };
 }

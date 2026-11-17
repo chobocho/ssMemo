@@ -11,7 +11,12 @@ export const FALLBACK_LOCALE: Locale = 'en';
 
 const CATALOGS: Readonly<Record<Locale, Readonly<Record<MessageKey, string>>>> = { ko, en };
 
-export type Translate = (key: MessageKey) => string;
+/** Values for the {name} placeholders of a message. */
+export type MessageParams = Readonly<Record<string, string | number>>;
+
+export type Translate = (key: MessageKey, params?: MessageParams) => string;
+
+const PLACEHOLDER_PATTERN = /\{(\w+)\}/g;
 
 function isLocale(value: string): value is Locale {
   return Object.hasOwn(CATALOGS, value);
@@ -34,7 +39,18 @@ export function resolveLocale(browserLanguages: readonly string[]): Locale {
   return FALLBACK_LOCALE;
 }
 
+/**
+ * Fills the {name} placeholders of `template` from `params`. A placeholder without a value is
+ * left as written: a visible "{name}" gets noticed and reported, a silently missing word does not.
+ * The replacer function inserts values literally and never re-scans them.
+ */
+export function formatMessage(template: string, params: MessageParams = {}): string {
+  return template.replace(PLACEHOLDER_PATTERN, (placeholder, name: string) =>
+    Object.hasOwn(params, name) ? String(params[name]) : placeholder,
+  );
+}
+
 export function createTranslator(locale: Locale): Translate {
   const catalog = CATALOGS[locale];
-  return (key) => catalog[key];
+  return (key, params) => formatMessage(catalog[key], params);
 }
