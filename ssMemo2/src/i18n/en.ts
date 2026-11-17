@@ -165,6 +165,7 @@ export const en = {
   'help.licensesIntro': 'This app contains the following open-source software.',
 
   'preview.label': 'Preview',
+  'preview.back': 'Back to editing',
   'preview.tooLong': 'This memo is too long to preview (at most {max} characters).',
 
   'file.loading': 'Opening {name}…',

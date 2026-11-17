@@ -49,6 +49,12 @@
   /* Markdown preview. Narrow screens show it instead of the editor, wide ones next to it. */
   --preview-columns: minmax(0, 1fr);
   --preview-editor-display: none;
+  --preview-back-display: block;
+
+  /* Find bar of the editor. One row (field, next, previous) on narrow screens; replacing and the
+     finer options are added where there is room for a second row. */
+  --search-layout: flex;
+  --search-extra-display: none;
   --preview-h1-size: 1.75rem;
   --preview-h2-size: 1.5rem;
   --preview-h3-size: 1.25rem;
@@ -93,6 +99,8 @@
     --font-size-title: 1.25rem;
     --toolbar-medium-display: inline-block;
     --tab-max-width: 10rem;
+    --search-layout: block;
+    --search-extra-display: inline-block;
   }
 }
 
@@ -107,5 +115,6 @@
     --tab-max-width: 12rem;
     --preview-columns: minmax(0, 1fr) minmax(0, 1fr);
     --preview-editor-display: block;
+    --preview-back-display: none;
   }
 }

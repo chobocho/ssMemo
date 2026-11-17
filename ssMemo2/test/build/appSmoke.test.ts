@@ -782,7 +782,7 @@ test('a long memo is split with cut lines and joined again, a short one is left 
 test('the preview shows the memo as rendered Markdown and follows typing and tab switches', async () => {
   const page = await openPage({ factory: await seededFactory() });
   const main = page.document.querySelector('.app-main');
-  const pane = page.document.querySelector('.preview-pane');
+  const pane = page.document.querySelector('.preview-content');
   assert.ok(main && pane);
   assert.equal(main.classList.contains('is-previewing'), false);
   assert.equal(pane.innerHTML, '');
@@ -807,6 +807,14 @@ test('the preview shows the memo as rendered Markdown and follows typing and tab
   await wait(50);
   assert.equal(main.classList.contains('is-previewing'), false);
   assert.equal(pane.innerHTML, '');
+
+  // On a narrow screen the preview covers the editor; its own button leads back.
+  toolbarButton(page, 'Markdown preview').click();
+  await wait(50);
+  assert.equal(main.classList.contains('is-previewing'), true);
+  await page.click('.preview-back');
+  assert.equal(main.classList.contains('is-previewing'), false);
+  assert.equal(toolbarButton(page, 'Markdown preview').getAttribute('aria-pressed'), 'false');
   assert.deepEqual(page.errors, []);
   page.close();
 });
@@ -818,7 +826,7 @@ test('markup typed into a memo is shown as text in the preview, never run', asyn
   assert.ok(line);
   line.textContent = '<img src=x onerror="document.title=1"> [x](javascript:document.title=2)';
   await wait(600);
-  const pane = page.document.querySelector('.preview-pane');
+  const pane = page.document.querySelector('.preview-content');
   assert.ok(pane);
   assert.equal(pane.querySelectorAll('img, a, script').length, 0);
   assert.match(pane.textContent ?? '', /<img src=x/);

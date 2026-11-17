@@ -1,58 +1,73 @@
 /* A memo rendered as Markdown. The class names starting with md- are set by lib/markdown.ts. */
 .preview-pane {
+  display: flex;
+  flex-direction: column;
   block-size: 100%;
+}
+
+/* The way back to the editor, where the preview is shown instead of it. Stays put while the
+   text below it scrolls. */
+.preview-back {
+  display: var(--preview-back-display);
+  flex: none;
+  margin: var(--space-2) var(--page-gutter) 0;
+}
+
+.preview-content {
+  flex: 1 1 auto;
+  min-block-size: 0;
   padding: var(--space-3) var(--page-gutter);
   overflow: auto;
   overflow-wrap: anywhere;
 }
 
-.preview-pane h1,
-.preview-pane h2,
-.preview-pane h3,
-.preview-pane h4,
-.preview-pane h5,
-.preview-pane h6 {
+.preview-content h1,
+.preview-content h2,
+.preview-content h3,
+.preview-content h4,
+.preview-content h5,
+.preview-content h6 {
   margin: var(--space-4) 0 var(--space-2);
   line-height: var(--line-height-heading);
 }
 
-.preview-pane h1 {
+.preview-content h1 {
   font-size: var(--preview-h1-size);
 }
 
-.preview-pane h2 {
+.preview-content h2 {
   font-size: var(--preview-h2-size);
 }
 
-.preview-pane h3 {
+.preview-content h3 {
   font-size: var(--preview-h3-size);
 }
 
-.preview-pane h4,
-.preview-pane h5,
-.preview-pane h6 {
+.preview-content h4,
+.preview-content h5,
+.preview-content h6 {
   font-size: var(--font-size-base);
 }
 
-.preview-pane > :first-child {
+.preview-content > :first-child {
   margin-block-start: 0;
 }
 
-.preview-pane p,
-.preview-pane ul,
-.preview-pane ol,
-.preview-pane blockquote,
-.preview-pane pre,
-.preview-pane table,
-.preview-pane details {
+.preview-content p,
+.preview-content ul,
+.preview-content ol,
+.preview-content blockquote,
+.preview-content pre,
+.preview-content table,
+.preview-content details {
   margin: 0 0 var(--space-3);
 }
 
-.preview-pane a {
+.preview-content a {
   color: var(--color-accent);
 }
 
-.preview-pane code {
+.preview-content code {
   padding: 0 var(--space-1);
   border-radius: var(--radius-small);
   background: var(--color-surface-muted);
@@ -61,7 +76,7 @@
 }
 
 /* Long code lines scroll inside their block instead of widening the pane. */
-.preview-pane pre {
+.preview-content pre {
   padding: var(--space-3);
   border-radius: var(--radius-small);
   background: var(--color-surface-muted);
@@ -69,41 +84,41 @@
   overflow-wrap: normal;
 }
 
-.preview-pane pre code {
+.preview-content pre code {
   padding: 0;
   background: none;
 }
 
-.preview-pane blockquote {
+.preview-content blockquote {
   padding-inline-start: var(--space-3);
   border-inline-start: var(--quote-bar-width) solid var(--color-border);
   color: var(--color-text-muted);
 }
 
-.preview-pane hr {
+.preview-content hr {
   border: 0;
   border-block-start: var(--border-width) solid var(--color-border);
 }
 
 /* A wide table scrolls sideways on its own. */
-.preview-pane table {
+.preview-content table {
   display: block;
   max-inline-size: 100%;
   border-collapse: collapse;
   overflow-x: auto;
 }
 
-.preview-pane th,
-.preview-pane td {
+.preview-content th,
+.preview-content td {
   padding: var(--space-1) var(--space-2);
   border: var(--border-width) solid var(--color-border);
 }
 
-.preview-pane th {
+.preview-content th {
   background: var(--color-surface-muted);
 }
 
-.preview-pane summary {
+.preview-content summary {
   min-block-size: var(--touch-target);
   cursor: pointer;
 }

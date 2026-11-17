@@ -215,7 +215,13 @@ async function start(win: Window): Promise<void> {
     clearTimeout: (handle: unknown): void => win.clearTimeout(handle as number),
   };
 
-  const previewPane = createPreviewPane(doc, t('preview.label'));
+  const previewPane = createPreviewPane(doc, {
+    label: t('preview.label'),
+    backLabel: t('preview.back'),
+    onBack: () => {
+      if (preview.isEnabled()) togglePreview();
+    },
+  });
   shell.previewHost.append(previewPane.element);
   const preview = createPreview({
     getContentKey: () => editor.getContentKey(),

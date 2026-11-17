@@ -102,3 +102,20 @@ test('the page does not scroll or zoom on its own where a finger is used', () =>
   // Rotating the phone must not inflate the text.
   assert.match(base, /text-size-adjust:\s*100%/);
 });
+
+test('the find bar is a single row on narrow screens; replacing and the finer options come with more width', () => {
+  assert.equal(valueAt('compact', '--search-layout'), 'flex');
+  assert.equal(valueAt('compact', '--search-extra-display'), 'none');
+  for (const widthClass of ['medium', 'expanded'] as const) {
+    assert.equal(valueAt(widthClass, '--search-layout'), 'block', widthClass);
+    assert.equal(valueAt(widthClass, '--search-extra-display'), 'inline-block', widthClass);
+  }
+});
+
+test('wherever the preview takes the place of the editor, there is a button to get back', () => {
+  for (const widthClass of ['compact', 'medium', 'expanded'] as const) {
+    const editorHidden = valueAt(widthClass, '--preview-editor-display') === 'none';
+    const backShown = valueAt(widthClass, '--preview-back-display') !== 'none';
+    assert.equal(backShown, editorHidden, widthClass);
+  }
+});

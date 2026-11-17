@@ -161,6 +161,7 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'help.licensesIntro': '이 앱에는 다음 오픈 소스 소프트웨어가 들어 있습니다.',
 
   'preview.label': '미리보기',
+  'preview.back': '편집으로 돌아가기',
   'preview.tooLong': '메모가 너무 길어 미리보기를 표시하지 않습니다(최대 {max}자).',
 
   'file.loading': '{name} 여는 중…',

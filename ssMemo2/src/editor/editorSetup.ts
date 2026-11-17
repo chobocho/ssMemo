@@ -44,23 +44,35 @@ const editorTheme = EditorView.theme({
   '.cm-scroller': { fontFamily: 'var(--editor-font-family)', lineHeight: 'var(--editor-line-height)' },
   // The search panel is made for a mouse; these rules give its controls the size of a finger.
   // The text size stays at the page's base size: below 16 CSS px mobile browsers zoom in on focus.
-  '.cm-search': { padding: 'var(--space-1) var(--page-gutter)', fontSize: 'var(--font-size-base)' },
+  '.cm-search': {
+    // A flex row on narrow screens, the editor's own flowing layout elsewhere (see tokens.css).
+    display: 'var(--search-layout)',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 'var(--space-1)',
+    padding: 'var(--space-1) var(--page-gutter)',
+    // The editor puts the close button into the top corner; nothing else may end up under it.
+    paddingInlineEnd: 'calc(var(--touch-target) + var(--space-1))',
+    fontSize: 'var(--font-size-base)',
+  },
   '.cm-search .cm-textfield': {
     minBlockSize: 'var(--touch-target)',
     maxInlineSize: '100%',
     fontSize: 'inherit',
+  },
+  // In the flex row the search field takes whatever the buttons leave.
+  '.cm-search [name="search"]': { flex: '1 1 6rem', minInlineSize: '0' },
+  // What a narrow screen does without: selecting all matches, the options, and replacing.
+  '.cm-search label, .cm-search br, .cm-search [name="select"], .cm-search [name="replace"], .cm-search [name="replaceAll"]': {
+    display: 'var(--search-extra-display)',
   },
   '.cm-search .cm-button, .cm-search button[name="close"]': {
     minBlockSize: 'var(--touch-target)',
     minInlineSize: 'var(--touch-target)',
     fontSize: 'inherit',
   },
-  '.cm-search label': {
-    display: 'inline-flex',
-    alignItems: 'center',
-    minBlockSize: 'var(--touch-target)',
-    fontSize: 'var(--font-size-small)',
-  },
+  // One line of text as tall as a touch target, so the check box and its label are easy to hit.
+  '.cm-search label': { lineHeight: 'var(--touch-target)', fontSize: 'var(--font-size-small)' },
 });
 
 // Keys the app binds itself through its command table (app/commandTable.ts). The editor must not
