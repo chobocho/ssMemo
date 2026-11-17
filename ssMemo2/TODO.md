@@ -99,7 +99,7 @@
 - [x] 2.3 IndexedDbStorage CRUD
 - [x] 2.4 IndexedDB 실패 처리(abort, blocked, 손상 레코드, 용량, rev 충돌)
 - [x] 2.5 저장소 열기 폴백 + `?safe` 임시 모드
-- [ ] 2.6 documentStore(id 기반 CRUD, 제목 검증, 원자적 이름 변경)
+- [x] 2.6 documentStore(id 기반 CRUD, 제목 검증, 원자적 이름 변경)
 - [ ] 2.7 autosave 스케줄러
 - [ ] 2.8 메모 1개 연결(부팅 복원, 자동 저장, 종료 시 저장, 이탈 경고, 상태 배지)
 
