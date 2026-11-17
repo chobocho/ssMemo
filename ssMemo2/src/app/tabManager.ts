@@ -111,3 +111,15 @@ export function createTabManager(maxTabs: number = MAX_TABS): TabManager {
     },
   };
 }
+
+/**
+ * The tab after (1) or before (-1) the active one, wrapping around at the ends; undefined when
+ * there is no other tab to go to.
+ */
+export function adjacentTabId(tabs: TabManager, step: 1 | -1): string | undefined {
+  const ids = tabs.getTabs().map((tab) => tab.id);
+  const activeId = tabs.getActiveId();
+  const activeIndex = activeId === undefined ? -1 : ids.indexOf(activeId);
+  if (activeIndex < 0 || ids.length < 2) return undefined;
+  return ids[(activeIndex + step + ids.length) % ids.length];
+}

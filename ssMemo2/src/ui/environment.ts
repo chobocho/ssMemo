@@ -28,6 +28,11 @@ function countViewportSegments(win: Window): number | undefined {
   return viewport.segments?.length ?? UNSPLIT_SEGMENT_COUNT;
 }
 
+/** Whether shortcuts should use the Command key instead of Ctrl. */
+export function isApplePlatform(win: Window): boolean {
+  return /Mac|iPhone|iPad/.test(win.navigator.platform);
+}
+
 /** Facts about this page load that are not read from the window. */
 export interface AppFacts {
   buildId: string;

@@ -13,6 +13,15 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 10:02] 탭 바와 작업 공간 연결 (3.7 중 2/2)</h2>
+<ul>
+<li><b>기획:</b> 편집기 위에 탭 줄을 두고 작업 공간에 연결. 탭 바는 상태를 보여 주고 요청만 전달. 단축키는 문서 전체에서 한 번만 처리해 포커스 위치와 무관하게 동작. 빌드된 페이지를 jsdom으로 부팅하는 통합 테스트를 저장소에 추가.</li>
+<li><b>TC:</b> 정상 — 탭 표시·활성 표시·미저장 표시, 클릭으로 전환·닫기·새 메모, 재방문 시 탭 복원, 입력 후 자동 저장과 새로고침 복원. 경계 — 닫기 버튼이 전환을 일으키지 않는지, 제목의 HTML이 해석되지 않는지, 긴 제목, 탭이 1개 이하일 때 다음 탭, <code>?safe</code>, IndexedDB 없는 브라우저.</li>
+<li><b>개발:</b> <code>src/ui/tabBar.ts</code>, <code>src/main.ts</code>, <code>src/styles/tabs.css</code>, <code>src/app/noticeText.ts</code>, <code>src/app/tabManager.ts</code>, <code>src/ui/appShell.ts</code>, <code>test/unit/tabBar.test.ts</code>, <code>test/build/appSmoke.test.ts</code> 외 13개 파일</li>
+<li><b>검증:</b> 단위 354 passed, 0 failed · 빌드 23 passed, 0 failed · tsc 오류 없음 · 산출물 313,937바이트</li>
+<li><b>비고:</b> 단일 메모 세션(<code>memoSession</code>)과 단일 문서용 편집기 부착 코드는 삭제. 탭 단축키는 Alt+N(새 메모), Alt+W(닫기), Alt+PageUp/PageDown(이동).</li>
+</ul>
+
 <h2>[2026-11-17 09:58] 작업 공간 로직: 여러 메모를 탭으로 (3.7 중 1/2)</h2>
 <ul>
 <li><b>기획:</b> 단일 메모 세션을 여러 탭을 다루는 작업 공간으로 확장. 탭마다 메모·자동 저장을 따로 두고, 탭을 떠날 때 즉시 저장하며, 열린 탭과 커서를 세션에 기록. 화면과 무관하게 구성해 대역 편집기로 테스트.</li>

@@ -12,6 +12,18 @@ export const en = {
   'status.failed': 'Save failed',
   'storage.temporary': '⚠️ Temporary mode',
 
+  'command.newMemo': 'New memo',
+  'command.closeTab': 'Close tab',
+  'command.nextTab': 'Next tab',
+  'command.previousTab': 'Previous tab',
+
+  'tab.close': 'Close {title}',
+  'tab.closeUnsaved': 'This memo could not be saved. Close it anyway? The unsaved changes will be lost.',
+  'tab.closeDiscard': 'Close without saving',
+
+  'modal.confirm': 'OK',
+  'modal.cancel': 'Cancel',
+
   'notice.dismiss': 'Close',
   'notice.temporaryUnavailable': 'Browser storage cannot be used, so memos are kept only until this page is closed.',
   'notice.temporarySafeMode': 'Safe mode (?safe): stored memos are not loaded and nothing typed here is kept.',
@@ -21,6 +33,8 @@ export const en = {
   'notice.saveFailed': 'The memo could not be saved. Your text is still on screen but not stored.',
   'notice.saveFailedQuota': 'Browser storage is full, so the memo could not be saved.',
   'notice.connectionLost': 'The storage connection was closed. Reload the page to save again.',
+  'notice.tabLimit': 'No more than {max} tabs can be open. Close a tab first.',
+  'notice.memoMissing': 'That memo no longer exists.',
 
   'memo.defaultTitle': 'New memo',
   'memo.conflictCopyTitle': '{title} (conflict copy)',

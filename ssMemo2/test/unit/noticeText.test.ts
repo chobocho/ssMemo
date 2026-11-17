@@ -48,3 +48,11 @@ test('describeStorage names the mode and, when temporary, the reason', () => {
   assert.equal(describeStorage({ mode: 'temporary', reason: 'safe-mode' }), 'temporary (safe-mode)');
   assert.equal(describeStorage({ mode: 'temporary', reason: 'unavailable' }), 'temporary (unavailable)');
 });
+
+test('describeNotice states the tab limit', () => {
+  assert.match(describeNotice({ kind: 'tab-limit' }, t), /\b20\b/);
+});
+
+test('describeNotice explains that a memo is gone', () => {
+  assert.equal(describeNotice({ kind: 'memo-missing' }, t), en['notice.memoMissing']);
+});

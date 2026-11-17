@@ -23,6 +23,7 @@
 
   /* Light theme. A dark theme is a later roadmap item. */
   --color-surface: #ffffff;
+  --color-surface-muted: #f6f8fa;
   --color-text: #1f2328;
   --color-text-muted: #59636e;
   --color-border: #d0d7de;
@@ -36,6 +37,11 @@
 
   /* Horizontal page margin; grows with the width class below. */
   --page-gutter: var(--space-2);
+
+  /* Tab strip: widest a tab may get, the close button's width, and the active-tab underline. */
+  --tab-max-width: 12rem;
+  --tab-close-width: 2.25rem;
+  --tab-indicator-width: 0.125rem;
 
   /* Dialogs: preferred width (never wider than the screen) and how tall they may grow. */
   --modal-width: 28rem;

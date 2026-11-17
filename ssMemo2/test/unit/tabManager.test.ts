@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MAX_TABS, createTabManager } from '../../src/app/tabManager.ts';
+import { MAX_TABS, adjacentTabId, createTabManager } from '../../src/app/tabManager.ts';
 import type { TabManager } from '../../src/app/tabManager.ts';
 
 /** A manager with tabs a, b, c open (c active) and a counter of change notifications. */
@@ -165,4 +165,24 @@ test('getTabs returns copies that cannot change the manager', () => {
   snapshot.pop();
   assert.deepEqual(ids(tabs), ['a', 'b', 'c']);
   assert.equal(tabs.getTabs()[0]?.title, 'title a');
+});
+
+test('adjacentTabId steps to the next or previous tab and wraps around at the ends', () => {
+  const { tabs } = createHarness();
+  openAbc(tabs);
+  tabs.activate('b');
+  assert.equal(adjacentTabId(tabs, 1), 'c');
+  assert.equal(adjacentTabId(tabs, -1), 'a');
+  tabs.activate('c');
+  assert.equal(adjacentTabId(tabs, 1), 'a');
+  tabs.activate('a');
+  assert.equal(adjacentTabId(tabs, -1), 'c');
+});
+
+test('adjacentTabId has nowhere to go with one tab or none', () => {
+  const { tabs } = createHarness();
+  assert.equal(adjacentTabId(tabs, 1), undefined);
+  tabs.open('a', 'a');
+  assert.equal(adjacentTabId(tabs, 1), undefined);
+  assert.equal(adjacentTabId(tabs, -1), undefined);
 });

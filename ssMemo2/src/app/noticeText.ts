@@ -1,10 +1,11 @@
-// Turns what the session and the storage report into the text shown to the user.
+// Turns what the workspace and the storage report into the text shown to the user.
 // Kept apart from the DOM code so the mapping can be tested and stays in one place.
 import type { MessageKey } from '../i18n/en.ts';
 import type { Translate } from '../i18n/i18n.ts';
 import type { StorageMode, TemporaryReason } from '../storage/openStorage.ts';
 import type { AutosaveState } from './autosave.ts';
-import type { SaveFailureReason, SessionNotice } from './memoSession.ts';
+import { MAX_TABS } from './tabManager.ts';
+import type { SaveFailureReason, WorkspaceNotice } from './workspace.ts';
 
 export const SAVE_STATE_KEYS: Readonly<Record<AutosaveState, MessageKey>> = {
   saved: 'status.saved',
@@ -24,7 +25,7 @@ const TEMPORARY_MODE_KEYS: Readonly<Record<TemporaryReason, MessageKey>> = {
   unavailable: 'notice.temporaryUnavailable',
 };
 
-export function describeNotice(notice: SessionNotice, t: Translate): string {
+export function describeNotice(notice: WorkspaceNotice, t: Translate): string {
   switch (notice.kind) {
     case 'load-failed':
       return t('notice.loadFailed');
@@ -34,6 +35,10 @@ export function describeNotice(notice: SessionNotice, t: Translate): string {
       return t('notice.savedAsCopy', { title: notice.title });
     case 'save-failed':
       return t(SAVE_FAILURE_KEYS[notice.reason]);
+    case 'tab-limit':
+      return t('notice.tabLimit', { max: MAX_TABS });
+    case 'memo-missing':
+      return t('notice.memoMissing');
   }
 }
 

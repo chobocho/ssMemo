@@ -25,6 +25,18 @@ function installDialogStandIn(window: JSDOM['window']): void {
   };
 }
 
+/**
+ * Stand-ins for browser features jsdom lacks, for tests that run the built page. jsdom has no
+ * layout engine, so these only let the code run; they say nothing about how the page looks.
+ */
+export function installBrowserStandIns(window: JSDOM['window']): void {
+  installDialogStandIn(window);
+  // CodeMirror measures text with these; it only needs them to exist.
+  window.Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
+  window.Range.prototype.getBoundingClientRect = () => ({ left: 0, right: 0, top: 0, bottom: 0, width: 0, height: 0 }) as DOMRect;
+  window.matchMedia ??= ((query: string) => ({ matches: false, media: query, addEventListener: () => undefined, removeEventListener: () => undefined })) as unknown as typeof window.matchMedia;
+}
+
 export interface TestDom {
   window: JSDOM['window'];
   document: Document;
