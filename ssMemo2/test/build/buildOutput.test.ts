@@ -13,7 +13,11 @@ const MAX_OUTPUT_BYTES = 1_500_000;
 const CHARSET_SNIFF_BYTES = 1024;
 // Modules written test-first ahead of the roadmap item that wires them into the app (2.8).
 // The list must be empty again at every milestone.
-const NOT_YET_WIRED: readonly string[] = ['src/storage/memoryStorage.ts', 'src/storage/storagePort.ts'];
+const NOT_YET_WIRED: readonly string[] = [
+  'src/storage/indexedDbStorage.ts',
+  'src/storage/memoryStorage.ts',
+  'src/storage/storagePort.ts',
+];
 
 interface InlineParts {
   markup: string;

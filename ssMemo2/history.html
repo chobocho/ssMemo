@@ -13,6 +13,15 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 09:12] IndexedDB 저장소 CRUD (2.3)</h2>
+<ul>
+<li><b>기획:</b> 메타(<code>docMeta</code>)와 본문(<code>docBody</code>)을 분리 저장해 목록이 본문을 읽지 않게 하고, rev 검사와 두 쓰기를 한 트랜잭션에 묶음. 모든 연산은 트랜잭션 complete 이벤트에서만 성공 처리.</li>
+<li><b>TC:</b> 정상 — 공용 계약 12개 통과, 닫았다 다시 열어도 유지, 저장소 3개 생성. 경계 — 메타 레코드에 본문이 없는지, 두 연결(브라우저 탭 2개)에서 늦게 저장한 쪽이 충돌 처리되는지.</li>
+<li><b>개발:</b> <code>src/storage/indexedDbStorage.ts</code>, <code>test/unit/indexedDbStorage.test.ts</code>, <code>test/build/buildOutput.test.ts</code>, <code>package.json</code>, <code>package-lock.json</code></li>
+<li><b>검증:</b> 단위 140 passed, 0 failed · 빌드 16 passed, 0 failed · tsc 오류 없음</li>
+<li><b>비고:</b> 테스트는 fake-indexeddb(메모리 구현) 기준. 열기 실패·용량 초과·연결 끊김·손상 레코드 처리는 2.4에서 다룸.</li>
+</ul>
+
 <h2>[2026-11-17 09:10] 저장소 인터페이스와 메모리 저장소 (2.2)</h2>
 <ul>
 <li><b>기획:</b> 문서를 고정 id로 식별하고 저장할 때마다 rev를 올려, 다른 창이 먼저 저장한 내용을 덮어쓰지 않게 하는 <code>StoragePort</code>를 정의. 메모리 구현과 IndexedDB 구현이 함께 통과할 공용 계약 테스트를 작성.</li>
