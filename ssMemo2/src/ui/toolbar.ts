@@ -3,10 +3,18 @@
 import type { Command } from '../app/commands.ts';
 import type { Translate } from '../i18n/i18n.ts';
 
-export function createToolbar(doc: Document, commands: readonly Command[], t: Translate): HTMLElement {
+export interface Toolbar {
+  element: HTMLElement;
+  /** Re-reads which toggle commands are on; call after a setting changed. */
+  refresh(): void;
+}
+
+export function createToolbar(doc: Document, commands: readonly Command[], t: Translate): Toolbar {
   const element = doc.createElement('div');
   element.className = 'toolbar';
   element.setAttribute('role', 'toolbar');
+
+  const toggles: { button: HTMLButtonElement; isOn: () => boolean }[] = [];
 
   for (const command of commands) {
     const label = t(command.labelKey);
@@ -20,7 +28,17 @@ export function createToolbar(doc: Document, commands: readonly Command[], t: Tr
     button.setAttribute('aria-label', label);
     button.title = shortcut ? `${label} (${shortcut})` : label;
     button.addEventListener('click', () => command.run());
+    if (command.isOn) toggles.push({ button, isOn: command.isOn });
     element.append(button);
   }
-  return element;
+
+  const refresh = (): void => {
+    for (const { button, isOn } of toggles) {
+      // aria-pressed is what makes a button a toggle for assistive technology.
+      button.setAttribute('aria-pressed', String(isOn()));
+    }
+  };
+  refresh();
+
+  return { element, refresh };
 }

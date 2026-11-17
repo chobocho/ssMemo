@@ -201,3 +201,38 @@ test('with two dialogs open, only the one on top is answered', async () => {
   harness.pressEscape();
   assert.equal(await list, undefined);
 });
+
+// --- choose -----------------------------------------------------------------
+
+const languages = [
+  { label: 'Automatic', value: 'auto' },
+  { label: '한국어', value: 'ko' },
+  { label: 'English', value: 'en' },
+];
+
+test('choose offers every choice and resolves the one that is picked', async () => {
+  const harness = createHarness();
+  const answer = harness.modals.choose('Language', languages, 'auto');
+  const labels = [...harness.topDialog().querySelectorAll('.choice')].map((button) => button.textContent);
+  assert.deepEqual(labels, ['Automatic', '한국어', 'English']);
+  harness.button('한국어').click();
+  assert.equal(await answer, 'ko');
+});
+
+test('choose marks the current choice', () => {
+  const harness = createHarness();
+  void harness.modals.choose('Language', languages, 'en');
+  const pressed = [...harness.topDialog().querySelectorAll('.choice')].map((button) => button.getAttribute('aria-pressed'));
+  assert.deepEqual(pressed, ['false', 'false', 'true']);
+});
+
+test('choose resolves undefined when dismissed, which is not the same as picking the current choice', async () => {
+  const harness = createHarness();
+  const dismissed = harness.modals.choose('Language', languages, 'auto');
+  harness.pressEscape();
+  assert.equal(await dismissed, undefined);
+
+  const repicked = harness.modals.choose('Language', languages, 'auto');
+  harness.button('Automatic').click();
+  assert.equal(await repicked, 'auto');
+});

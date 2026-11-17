@@ -8,11 +8,14 @@ import {
   describeNotice,
   describeStorage,
   describeTitleProblem,
+  formatEditorStats,
   formatTimestamp,
   temporaryModeKey,
 } from './app/noticeText.ts';
 import { createRandomId } from './app/randomId.ts';
 import { createSessionStore } from './app/session.ts';
+import { createSettingsStore, stepEditorFontSize } from './app/settings.ts';
+import type { LanguageSetting, Settings } from './app/settings.ts';
 import { adjacentTabId, createTabManager } from './app/tabManager.ts';
 import { createWorkspace } from './app/workspace.ts';
 import { mountEditorTabs } from './editor/editorTabs.ts';
@@ -26,6 +29,7 @@ import { isApplePlatform, readEnvironment } from './ui/environment.ts';
 import { createMemoManager } from './ui/memoManager.ts';
 import { createModals } from './ui/modal.ts';
 import { createNoticeBar } from './ui/noticeBar.ts';
+import { createStatusBar } from './ui/statusBar.ts';
 import { createStatusIndicator } from './ui/statusIndicator.ts';
 import { createTabBar } from './ui/tabBar.ts';
 import { createToolbar } from './ui/toolbar.ts';
@@ -35,6 +39,16 @@ const MOUNT_POINT_ID = 'app';
 // Save shortly after typing pauses, and at least this often while typing continues.
 const AUTOSAVE_IDLE_DELAY_MS = 1500;
 const AUTOSAVE_MAX_WAIT_MS = 10_000;
+// The CSS variable the editor theme reads its text size from (see styles/tokens.css).
+const EDITOR_FONT_SIZE_VARIABLE = '--editor-font-size';
+// Commands that get a button in the header, in display order. Tabs have their own controls.
+const TOOLBAR_COMMAND_IDS: readonly string[] = [
+  'memo.manage',
+  'view.toggleWrap',
+  'view.fontSmaller',
+  'view.fontLarger',
+  'settings.language',
+];
 
 async function start(win: Window): Promise<void> {
   const doc = win.document;
@@ -43,7 +57,24 @@ async function start(win: Window): Promise<void> {
     throw new Error(`Mount point #${MOUNT_POINT_ID} is missing`);
   }
 
-  const locale = resolveLocale(win.navigator.languages);
+  // Storage comes first because the language is a stored setting: nothing can be labelled before
+  // it has been read. The connection-lost message therefore gets its text later.
+  let reportConnectionLost = (): void => undefined;
+  // Never rejects: without a usable IndexedDB the app runs on memory, clearly marked as temporary.
+  const opened = await openStorage({
+    getIndexedDb: () => win.indexedDB,
+    safeMode: isSafeModeRequested(win.location.search),
+    onConnectionLost: () => reportConnectionLost(),
+  });
+  const settingsStore = createSettingsStore(opened.storage);
+  let settings = await settingsStore.load();
+  // Applies for the rest of this visit even if it cannot be stored.
+  const updateSettings = (change: Partial<Settings>): void => {
+    settings = { ...settings, ...change };
+    void settingsStore.save(settings);
+  };
+
+  const locale = resolveLocale(win.navigator.languages, settings.language);
   // Tells the browser which language the page is in (hyphenation, screen readers, spell check).
   doc.documentElement.lang = locale;
   const t = createTranslator(locale);
@@ -56,12 +87,7 @@ async function start(win: Window): Promise<void> {
   shell.noticeHost.append(notices.element);
   mountPoint.append(shell.element);
 
-  // Never rejects: without a usable IndexedDB the app runs on memory, clearly marked as temporary.
-  const opened = await openStorage({
-    getIndexedDb: () => win.indexedDB,
-    safeMode: isSafeModeRequested(win.location.search),
-    onConnectionLost: () => notices.show(t('notice.connectionLost')),
-  });
+  reportConnectionLost = () => notices.show(t('notice.connectionLost'));
   if (opened.mode === 'temporary') {
     status.showTemporaryBadge(t('storage.temporary'));
     notices.show(t(temporaryModeKey(opened.reason)));
@@ -70,6 +96,7 @@ async function start(win: Window): Promise<void> {
     }
   }
 
+  const statusBar = createStatusBar(doc);
   const facts = { buildId: readBuildId(doc), storage: describeStorage(opened) };
   const diagnostics = createDiagnosticsPanel(doc, t, (text) => copyToClipboard(win, text));
   const refreshDiagnostics = (): void => diagnostics.update(describeEnvironment(readEnvironment(win, facts)));
@@ -77,16 +104,29 @@ async function start(win: Window): Promise<void> {
   win.addEventListener('resize', refreshDiagnostics);
   win.visualViewport?.addEventListener('resize', refreshDiagnostics);
   refreshDiagnostics();
-  shell.footer.append(diagnostics.element);
+  shell.footer.append(statusBar.element, diagnostics.element);
+
+  // A custom property, not a size computed here: the stylesheet decides what it applies to.
+  const applyEditorFontSize = (sizeRem: number): void => {
+    doc.documentElement.style.setProperty(EDITOR_FONT_SIZE_VARIABLE, `${sizeRem}rem`);
+  };
+  applyEditorFontSize(settings.editorFontSizeRem);
 
   const tabs = createTabManager();
   let editedSinceStart = false;
   // Mounted after the shell is in the document so the editor can measure its real size at once.
   // It is not focused automatically: on a phone that would pop up the keyboard on every load.
-  const editor = mountEditorTabs(shell.editorHost, (tabId) => {
-    editedSinceStart = true;
-    workspace.handleEdit(tabId);
-  });
+  const editor = mountEditorTabs(
+    shell.editorHost,
+    {
+      onDocChange: (tabId) => {
+        editedSinceStart = true;
+        workspace.handleEdit(tabId);
+      },
+      onViewUpdate: () => statusBar.setText(formatEditorStats(editor.getStats(), t)),
+    },
+    settings.lineWrapping,
+  );
 
   const workspace = createWorkspace({
     store: createDocumentStore({
@@ -109,6 +149,8 @@ async function start(win: Window): Promise<void> {
     onNotice: (notice) => notices.show(describeNotice(notice, t)),
     onSaveStateChange: (state) => status.setSaveState(state === undefined ? '' : t(SAVE_STATE_KEYS[state])),
   });
+
+  // --- what the commands do ---------------------------------------------------
 
   // A tab whose changes cannot be saved is closed only after the user agrees to lose them.
   const closeTab = async (tabId: string): Promise<void> => {
@@ -172,14 +214,64 @@ async function start(win: Window): Promise<void> {
     }));
   };
 
-  // Browsers keep Ctrl+T/W/N/Tab for themselves, so tab shortcuts use Alt.
+  const toggleLineWrapping = (): void => {
+    updateSettings({ lineWrapping: !settings.lineWrapping });
+    editor.setLineWrapping(settings.lineWrapping);
+    toolbar.refresh();
+  };
+  const stepFontSize = (direction: 1 | -1): void => {
+    const sizeRem = stepEditorFontSize(settings.editorFontSizeRem, direction);
+    if (sizeRem === settings.editorFontSizeRem) return;
+    updateSettings({ editorFontSizeRem: sizeRem });
+    applyEditorFontSize(sizeRem);
+    // The editor caches line heights; they are wrong once the text size has changed.
+    editor.remeasure();
+  };
+  const chooseLanguage = async (): Promise<void> => {
+    const language = await modals.choose<LanguageSetting>(
+      t('command.language'),
+      [
+        { label: t('language.auto'), value: 'auto' },
+        { label: t('language.ko'), value: 'ko' },
+        { label: t('language.en'), value: 'en' },
+      ],
+      settings.language,
+    );
+    if (language === undefined || language === settings.language) return;
+    settings = { ...settings, language };
+    await settingsStore.save(settings);
+    await workspace.flushAll();
+    // Every label on the page was created in the old language; reloading rebuilds them all.
+    win.location.reload();
+  };
+
+  // Browsers keep Ctrl+T/W/N/Tab for themselves, so these shortcuts use Alt.
   const commands = createCommandRegistry([
     { id: 'memo.manage', labelKey: 'command.manageMemos', icon: '📋', shortcuts: ['Alt-o'], run: showMemoManager },
     { id: 'memo.new', labelKey: 'command.newMemo', icon: '➕', shortcuts: ['Alt-n'], run: () => workspace.newMemo() },
     { id: 'tab.close', labelKey: 'command.closeTab', icon: '✕', shortcuts: ['Alt-w'], run: closeActiveTab },
     { id: 'tab.next', labelKey: 'command.nextTab', icon: '▶', shortcuts: ['Alt-PageDown'], run: () => stepTab(1) },
     { id: 'tab.previous', labelKey: 'command.previousTab', icon: '◀', shortcuts: ['Alt-PageUp'], run: () => stepTab(-1) },
+    {
+      id: 'view.toggleWrap',
+      labelKey: 'command.toggleWrap',
+      icon: '↩️',
+      shortcuts: ['Alt-z'],
+      run: toggleLineWrapping,
+      isOn: () => settings.lineWrapping,
+    },
+    { id: 'view.fontSmaller', labelKey: 'command.fontSmaller', icon: 'A−', shortcuts: [], run: () => stepFontSize(-1) },
+    { id: 'view.fontLarger', labelKey: 'command.fontLarger', icon: 'A+', shortcuts: [], run: () => stepFontSize(1) },
+    { id: 'settings.language', labelKey: 'command.language', icon: '🌐', shortcuts: [], run: () => void chooseLanguage() },
   ]);
+
+  const toolbar = createToolbar(
+    doc,
+    TOOLBAR_COMMAND_IDS.flatMap((id) => commands.get(id) ?? []),
+    t,
+  );
+  shell.header.insertBefore(toolbar.element, status.element);
+
   const useCommandKey = isApplePlatform(win);
   // One handler on the document, so shortcuts work wherever the focus is (in ssMemoWeb they
   // only worked while the text area had it).
@@ -191,10 +283,6 @@ async function start(win: Window): Promise<void> {
     event.preventDefault();
     command.run();
   });
-
-  // The memo list is the one command with a toolbar button so far; tabs have their own controls.
-  const toolbarCommands = commands.list().filter((command) => command.id === 'memo.manage');
-  shell.header.insertBefore(createToolbar(doc, toolbarCommands, t), status.element);
 
   shell.tabBarHost.append(
     createTabBar(doc, {

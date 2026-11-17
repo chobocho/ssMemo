@@ -17,6 +17,20 @@ export const en = {
   'command.closeTab': 'Close tab',
   'command.nextTab': 'Next tab',
   'command.previousTab': 'Previous tab',
+  'command.toggleWrap': 'Line wrapping',
+  'command.fontSmaller': 'Smaller text',
+  'command.fontLarger': 'Larger text',
+  'command.language': 'Language',
+
+  'language.auto': 'Automatic (browser language)',
+  // The language's own name, shown the same in every locale. Escaped because Korean text may only
+  // appear literally in ko.ts.
+  'language.ko': '\uD55C\uAD6D\uC5B4',
+  'language.en': 'English',
+
+  'statusbar.position': 'Ln {line}, Col {column}',
+  'statusbar.selection': '{count} selected',
+  'statusbar.size': '{characters} characters · {lines} lines',
 
   'tab.close': 'Close {title}',
   'tab.closeUnsaved': 'This memo could not be saved. Close it anyway? The unsaved changes will be lost.',

@@ -15,6 +15,11 @@ export interface PromptOptions {
   validate(value: string): string | undefined;
 }
 
+export interface Choice<T> {
+  label: string;
+  value: T;
+}
+
 export interface CustomDialog {
   title: string;
   content: HTMLElement;
@@ -25,6 +30,11 @@ export interface Modals {
   confirm(message: string, confirmLabel?: string): Promise<boolean>;
   /** Resolves the entered text, or undefined if the user backed out. */
   prompt(message: string, options: PromptOptions): Promise<string | undefined>;
+  /**
+   * Lets the user pick one of a few options; `current` is shown as selected. Resolves the picked
+   * value, or undefined if the user backed out.
+   */
+  choose<T>(title: string, choices: readonly Choice<T>[], current?: T): Promise<T | undefined>;
   /**
    * Shows a dialog with custom content. `build` receives a function that closes the dialog with
    * a result; the promise resolves that result, or undefined if the user dismissed the dialog.
@@ -141,6 +151,24 @@ export function createModals(doc: Document, labels: ModalLabels): Modals {
 
         form.append(label, problem, createActions(cancel, confirm));
         dialog.append(form);
+      });
+    },
+
+    choose<T>(title: string, choices: readonly Choice<T>[], current?: T) {
+      return showDialog<T>(doc, (dialog, close) => {
+        const heading = doc.createElement('h2');
+        heading.className = 'modal-title';
+        heading.textContent = title;
+
+        const list = doc.createElement('div');
+        list.className = 'choice-list';
+        for (const choice of choices) {
+          const button = createButton(doc, choice.label, 'button choice');
+          button.setAttribute('aria-pressed', String(choice.value === current));
+          button.addEventListener('click', () => close(choice.value));
+          list.append(button);
+        }
+        dialog.append(heading, list);
       });
     },
 

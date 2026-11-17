@@ -5,7 +5,8 @@ import assert from 'node:assert/strict';
 import { redo, undo } from '@codemirror/commands';
 import { StateEffect } from '@codemirror/state';
 import type { EditorState, TransactionSpec } from '@codemirror/state';
-import { createEditorState } from '../../src/editor/editorSetup.ts';
+import { EditorView } from '@codemirror/view';
+import { createEditorState, lineWrappingEffect } from '../../src/editor/editorSetup.ts';
 import { createEditorTabs } from '../../src/editor/editorTabs.ts';
 import type { EditorTabs, EditorViewPort } from '../../src/editor/editorTabs.ts';
 
@@ -39,10 +40,15 @@ function createHarness(): Harness {
     },
     // Each snapshot gets a new number, so a test can tell which one was restored.
     scrollSnapshot: () => scrollMarker.of(nextScrollMarker++),
+    requestMeasure: () => undefined,
   };
   const run = (command: typeof undo): boolean => command({ state: view.state, dispatch: (transaction) => view.dispatch(transaction) });
   return {
-    tabs: createEditorTabs(view, (text) => createEditorState(text)),
+    tabs: createEditorTabs(view, {
+      createState: (text, lineWrapping) => createEditorState(text, { lineWrapping }),
+      lineWrappingEffect,
+      lineWrapping: true,
+    }),
     view,
     type: (text) => view.dispatch({ changes: { from: 0, insert: text }, userEvent: 'input.type' }),
     restoredScrolls,
@@ -195,4 +201,41 @@ test('getCursor reports the cursor of any tab, visible or not', () => {
   assert.equal(harness.tabs.getCursor('a'), 3);
   assert.equal(harness.tabs.getCursor('b'), 0);
   assert.equal(harness.tabs.getCursor('missing'), undefined);
+});
+
+function wraps(state: EditorState): boolean {
+  return state.facet(EditorView.contentAttributes).some((entry) => typeof entry === 'object' && entry.class === 'cm-lineWrapping');
+}
+
+test('line wrapping applies to the visible tab, the tabs in the background and tabs opened later', () => {
+  const harness = createHarness();
+  harness.tabs.show('a', 'alpha');
+  harness.tabs.show('b', 'beta');
+  harness.type('typed ');
+  assert.equal(wraps(harness.view.state), true);
+
+  harness.tabs.setLineWrapping(false);
+  assert.equal(wraps(harness.view.state), false);
+  harness.tabs.show('a', '');
+  assert.equal(wraps(harness.view.state), false);
+  harness.tabs.show('c', 'gamma');
+  assert.equal(wraps(harness.view.state), false);
+
+  // Switching the setting must not cost any tab its text or undo history.
+  harness.tabs.show('b', '');
+  assert.equal(harness.view.state.doc.toString(), 'typed beta');
+  assert.equal(harness.undo(), true);
+  assert.equal(harness.view.state.doc.toString(), 'beta');
+
+  harness.tabs.setLineWrapping(true);
+  harness.tabs.show('a', '');
+  assert.equal(wraps(harness.view.state), true);
+});
+
+test('getStats describes the visible tab, and is undefined before any tab is shown', () => {
+  const harness = createHarness();
+  assert.equal(harness.tabs.getStats(), undefined);
+  harness.tabs.show('a', 'one\ntwo');
+  harness.view.dispatch({ selection: { anchor: 5 } });
+  assert.deepEqual(harness.tabs.getStats(), { characters: 7, lines: 2, cursorLine: 2, cursorColumn: 2, selectedCharacters: 0 });
 });

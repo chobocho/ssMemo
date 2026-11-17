@@ -6,6 +6,7 @@ import type { StorageMode, TemporaryReason } from '../storage/openStorage.ts';
 import type { AutosaveState } from './autosave.ts';
 import { MAX_TITLE_LENGTH } from './documentStore.ts';
 import type { TitleProblem } from './documentStore.ts';
+import type { EditorStats } from '../editor/editorSetup.ts';
 import { MAX_TABS } from './tabManager.ts';
 import type { SaveFailureReason, WorkspaceNotice } from './workspace.ts';
 
@@ -76,4 +77,17 @@ export function formatTimestamp(iso: string, locale: string, timeZone?: string):
   const time = Date.parse(iso);
   if (Number.isNaN(time)) return iso;
   return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short', timeZone }).format(time);
+}
+
+const STATUS_SEPARATOR = ' · ';
+
+/** The status bar text for the visible memo; empty while there is none. */
+export function formatEditorStats(stats: EditorStats | undefined, t: Translate): string {
+  if (!stats) return '';
+  const parts = [t('statusbar.position', { line: stats.cursorLine, column: stats.cursorColumn })];
+  if (stats.selectedCharacters > 0) {
+    parts.push(t('statusbar.selection', { count: stats.selectedCharacters }));
+  }
+  parts.push(t('statusbar.size', { characters: stats.characters, lines: stats.lines }));
+  return parts.join(STATUS_SEPARATOR);
 }

@@ -18,6 +18,18 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'command.closeTab': '탭 닫기',
   'command.nextTab': '다음 탭',
   'command.previousTab': '이전 탭',
+  'command.toggleWrap': '자동 줄바꿈',
+  'command.fontSmaller': '글자 작게',
+  'command.fontLarger': '글자 크게',
+  'command.language': '언어',
+
+  'language.auto': '자동 (브라우저 언어)',
+  'language.ko': '한국어',
+  'language.en': 'English',
+
+  'statusbar.position': '줄 {line}, 칸 {column}',
+  'statusbar.selection': '{count}자 선택',
+  'statusbar.size': '{characters}자 · {lines}줄',
 
   'tab.close': '{title} 닫기',
   'tab.closeUnsaved': '이 메모를 저장하지 못했습니다. 그래도 닫을까요? 저장되지 않은 변경 내용은 사라집니다.',

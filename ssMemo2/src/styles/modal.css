@@ -55,6 +55,17 @@
   margin-block-start: var(--space-4);
 }
 
+.choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.choice[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  font-weight: 600;
+}
+
 .button {
   min-block-size: var(--touch-target);
   min-inline-size: var(--touch-target);

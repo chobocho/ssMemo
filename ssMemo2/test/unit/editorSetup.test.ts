@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { redo, undo } from '@codemirror/commands';
 import type { EditorState, StateCommand } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
-import { createEditorState } from '../../src/editor/editorSetup.ts';
+import { createEditorState, getEditorStats, lineWrappingEffect } from '../../src/editor/editorSetup.ts';
 
 /** Runs a command against a state and returns the resulting state. */
 function run(command: StateCommand, state: EditorState): { handled: boolean; state: EditorState } {
@@ -84,4 +84,40 @@ test('standard editing and history keys are bound', () => {
   for (const key of ['Enter', 'Backspace', 'Mod-a', 'Mod-z', 'Mod-y']) {
     assert.equal(boundKeys.has(key), true, `${key} is not bound`);
   }
+});
+
+function wraps(state: EditorState): boolean {
+  return state.facet(EditorView.contentAttributes).some((entry) => typeof entry === 'object' && entry.class === 'cm-lineWrapping');
+}
+
+test('line wrapping can be switched off when the state is created', () => {
+  assert.equal(wraps(createEditorState('text', { lineWrapping: false })), false);
+  assert.equal(wraps(createEditorState('text', { lineWrapping: true })), true);
+});
+
+test('line wrapping can be switched on an existing state without losing text or history', () => {
+  const typed = typeAtStart(createEditorState('memo'), 'new ');
+  const unwrapped = typed.update({ effects: lineWrappingEffect(false) }).state;
+  assert.equal(wraps(unwrapped), false);
+  assert.equal(unwrapped.doc.toString(), 'new memo');
+  assert.equal(run(undo, unwrapped).state.doc.toString(), 'memo');
+  assert.equal(wraps(unwrapped.update({ effects: lineWrappingEffect(true) }).state), true);
+});
+
+test('getEditorStats counts characters and lines and locates the cursor', () => {
+  const state = createEditorState('first\nsecond line\nthird').update({ selection: { anchor: 9 } }).state;
+  assert.deepEqual(getEditorStats(state), { characters: 23, lines: 3, cursorLine: 2, cursorColumn: 4, selectedCharacters: 0 });
+});
+
+test('getEditorStats describes an empty document', () => {
+  assert.deepEqual(getEditorStats(createEditorState('')), { characters: 0, lines: 1, cursorLine: 1, cursorColumn: 1, selectedCharacters: 0 });
+});
+
+test('getEditorStats reports the size of the selection, whichever way it was dragged', () => {
+  const forward = createEditorState('abcdef').update({ selection: { anchor: 1, head: 4 } }).state;
+  const backward = createEditorState('abcdef').update({ selection: { anchor: 4, head: 1 } }).state;
+  assert.equal(getEditorStats(forward).selectedCharacters, 3);
+  assert.equal(getEditorStats(backward).selectedCharacters, 3);
+  // The cursor is where the selection ends, not where it started.
+  assert.equal(getEditorStats(backward).cursorColumn, 2);
 });

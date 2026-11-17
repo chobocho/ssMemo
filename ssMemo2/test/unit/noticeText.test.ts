@@ -2,7 +2,15 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { AutosaveState } from '../../src/app/autosave.ts';
 import { MAX_TITLE_LENGTH } from '../../src/app/documentStore.ts';
-import { SAVE_STATE_KEYS, describeNotice, describeStorage, describeTitleProblem, formatTimestamp, temporaryModeKey } from '../../src/app/noticeText.ts';
+import {
+  SAVE_STATE_KEYS,
+  describeNotice,
+  describeStorage,
+  describeTitleProblem,
+  formatEditorStats,
+  formatTimestamp,
+  temporaryModeKey,
+} from '../../src/app/noticeText.ts';
 import { en } from '../../src/i18n/en.ts';
 import { createTranslator } from '../../src/i18n/i18n.ts';
 
@@ -78,4 +86,18 @@ test('formatTimestamp renders a stored time for the given language and time zone
 test('formatTimestamp returns text it cannot parse unchanged', () => {
   assert.equal(formatTimestamp('not a date', 'en', 'UTC'), 'not a date');
   assert.equal(formatTimestamp('', 'en', 'UTC'), '');
+});
+
+test('formatEditorStats shows cursor position and document size', () => {
+  const text = formatEditorStats({ characters: 1234, lines: 56, cursorLine: 12, cursorColumn: 5, selectedCharacters: 0 }, t);
+  assert.equal(text, 'Ln 12, Col 5 · 1234 characters · 56 lines');
+});
+
+test('formatEditorStats adds the selection size only while something is selected', () => {
+  const text = formatEditorStats({ characters: 10, lines: 1, cursorLine: 1, cursorColumn: 4, selectedCharacters: 3 }, t);
+  assert.equal(text, 'Ln 1, Col 4 · 3 selected · 10 characters · 1 lines');
+});
+
+test('formatEditorStats shows nothing when there is no document', () => {
+  assert.equal(formatEditorStats(undefined, t), '');
 });

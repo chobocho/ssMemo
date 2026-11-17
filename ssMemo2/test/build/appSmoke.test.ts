@@ -162,6 +162,58 @@ test('typing is saved automatically and survives a reload', async () => {
   reloaded.close();
 });
 
+function toolbarButton(page: Page, label: string): HTMLElement {
+  const button = page.document.querySelector<HTMLElement>(`.toolbar [aria-label="${label}"]`);
+  assert.ok(button, `no toolbar button labelled ${label}`);
+  return button;
+}
+
+test('the status bar describes the visible memo and follows tab switches', async () => {
+  const page = await openPage({ factory: await seededFactory() });
+  const statusBar = (): string => page.document.querySelector('.status-bar')?.textContent ?? '';
+  assert.match(statusBar(), /4 characters · 1 lines/);
+  await page.click('.tab [role="tab"]', 1);
+  assert.match(statusBar(), /16 characters · 1 lines/);
+  page.close();
+});
+
+test('line wrapping and text size are settings that survive a reload', async () => {
+  const factory = await seededFactory();
+  const page = await openPage({ factory });
+  const wrapsNow = (target: Page): boolean => target.document.querySelector('.cm-content')?.classList.contains('cm-lineWrapping') ?? false;
+  const fontSize = (target: Page): string => target.document.documentElement.style.getPropertyValue('--editor-font-size');
+  assert.equal(wrapsNow(page), true);
+  const sizeBefore = fontSize(page);
+
+  toolbarButton(page, 'Line wrapping').click();
+  toolbarButton(page, 'Larger text').click();
+  await wait(100);
+  assert.equal(wrapsNow(page), false);
+  assert.equal(toolbarButton(page, 'Line wrapping').getAttribute('aria-pressed'), 'false');
+  assert.notEqual(fontSize(page), sizeBefore);
+  const sizeAfter = fontSize(page);
+  assert.deepEqual(page.errors, []);
+  page.close();
+
+  const reloaded = await openPage({ factory });
+  assert.equal(wrapsNow(reloaded), false);
+  assert.equal(fontSize(reloaded), sizeAfter);
+  assert.equal(toolbarButton(reloaded, 'Line wrapping').getAttribute('aria-pressed'), 'false');
+  reloaded.close();
+});
+
+test('a saved language choice overrides the browser language', async () => {
+  const factory = await seededFactory();
+  const storage = await openIndexedDbStorage(factory);
+  await storage.setValue('settings', { language: 'ko', lineWrapping: true, editorFontSizeRem: 0.875 });
+  storage.close();
+  const page = await openPage({ factory });
+  assert.equal(page.document.documentElement.lang, 'ko');
+  assert.ok(page.document.querySelector('.toolbar [aria-label="메모 목록"]'));
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
 /** The dialog on top, as far as the page is concerned. */
 function topDialog(page: Page): HTMLDialogElement {
   const dialog = [...page.document.querySelectorAll<HTMLDialogElement>('dialog[open]')].at(-1);
@@ -176,7 +228,8 @@ test('the memo list opens a memo that is not in a tab yet', async () => {
   storage.close();
 
   const page = await openPage({ factory });
-  await page.click('.toolbar button');
+  toolbarButton(page, 'Memo list').click();
+  await wait(50);
   const listed = [...topDialog(page).querySelectorAll('.memo-title')].map((node) => node.textContent).sort();
   assert.deepEqual(listed, ['Archive', 'Ideas', 'Shopping']);
 
@@ -194,7 +247,8 @@ test('the memo list opens a memo that is not in a tab yet', async () => {
 test('a memo can be renamed and deleted from the memo list', async () => {
   const factory = await seededFactory();
   const page = await openPage({ factory });
-  await page.click('.toolbar button');
+  toolbarButton(page, 'Memo list').click();
+  await wait(50);
 
   // Rename "Shopping": the prompt opens on top of the list.
   const shoppingIndex = [...topDialog(page).querySelectorAll('.memo-title')].findIndex((node) => node.textContent === 'Shopping');

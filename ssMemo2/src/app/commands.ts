@@ -15,6 +15,8 @@ export interface Command {
   /** Shortcuts such as "Alt-n" (see shortcut.ts); empty if the command has none. */
   shortcuts: readonly string[];
   run(): void;
+  /** Present on commands that switch something on and off; tells whether it is on right now. */
+  isOn?: () => boolean;
 }
 
 export interface CommandRegistry {

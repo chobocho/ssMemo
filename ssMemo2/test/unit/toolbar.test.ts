@@ -4,9 +4,10 @@ import type { Command } from '../../src/app/commands.ts';
 import { createToolbar } from '../../src/ui/toolbar.ts';
 import { createTestDom } from '../helpers/dom.ts';
 
-function createHarness(): { toolbar: HTMLElement; ran: string[] } {
+function createHarness(): { toolbar: HTMLElement; ran: string[]; refresh: () => void; setWrap: (on: boolean) => void } {
   const { document } = createTestDom();
   const ran: string[] = [];
+  let wrapOn = true;
   const command = (id: string, icon: string, shortcuts: string[]): Command => ({
     id,
     labelKey: 'command.newMemo',
@@ -14,9 +15,20 @@ function createHarness(): { toolbar: HTMLElement; ran: string[] } {
     shortcuts,
     run: () => ran.push(id),
   });
-  const toolbar = createToolbar(document, [command('memo.manage', '📋', ['Alt-o']), command('view.wrap', '↩️', [])], (key) => `label of ${key}`);
-  document.body.append(toolbar);
-  return { toolbar, ran };
+  const toolbar = createToolbar(
+    document,
+    [command('memo.manage', '📋', ['Alt-o']), { ...command('view.wrap', '↩️', []), isOn: () => wrapOn }],
+    (key) => `label of ${key}`,
+  );
+  document.body.append(toolbar.element);
+  return {
+    toolbar: toolbar.element,
+    ran,
+    refresh: toolbar.refresh,
+    setWrap: (on) => {
+      wrapOn = on;
+    },
+  };
 }
 
 test('the toolbar shows one button per command, in order, with its icon', () => {
@@ -41,5 +53,16 @@ test('each button has an accessible name, and its tooltip mentions the shortcut'
 
 test('an empty command list gives an empty toolbar', () => {
   const { document } = createTestDom();
-  assert.equal(createToolbar(document, [], (key) => key).querySelectorAll('button').length, 0);
+  assert.equal(createToolbar(document, [], (key) => key).element.querySelectorAll('button').length, 0);
+});
+
+test('a toggle command shows whether it is on, and follows the setting after refresh', () => {
+  const { toolbar, refresh, setWrap } = createHarness();
+  const [plain, toggle] = [...toolbar.querySelectorAll('button')];
+  // A plain command is not a toggle and must not claim a pressed state.
+  assert.equal(plain?.hasAttribute('aria-pressed'), false);
+  assert.equal(toggle?.getAttribute('aria-pressed'), 'true');
+  setWrap(false);
+  refresh();
+  assert.equal(toggle?.getAttribute('aria-pressed'), 'false');
 });
