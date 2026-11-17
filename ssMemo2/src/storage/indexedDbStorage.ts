@@ -18,7 +18,7 @@
 //   quota            same, because storage is full
 //   conflict         another tab saved first            -> see storagePort.ts
 //   connection-lost  the connection is gone             -> the page has to be reloaded
-import { StorageError, createNextMeta } from './storagePort.ts';
+import { StorageError, copyMeta, createNextMeta, parseDocumentSource } from './storagePort.ts';
 import type { DocumentListing, DocumentMeta, StoragePort, StoredDocument } from './storagePort.ts';
 
 export const DATABASE_NAME = 'ssMemo2';
@@ -72,7 +72,11 @@ function parseMeta(value: unknown): DocumentMeta | undefined {
   ) {
     return undefined;
   }
-  return { id, title, createdAt, updatedAt, length, rev };
+  const meta: DocumentMeta = { id, title, createdAt, updatedAt, length, rev };
+  // A source that cannot be read is dropped; the document itself is still good.
+  const source = parseDocumentSource(value.source);
+  if (source) meta.source = source;
+  return meta;
 }
 
 function parseContent(value: unknown): string | undefined {
@@ -243,7 +247,7 @@ function createStorage(database: IDBDatabase, onConnectionLost: () => void): Ind
         };
         return (): DocumentMeta => {
           if (!meta) throw new StorageError('write-failed', `Document ${draft.id} was not written`);
-          return { ...meta };
+          return copyMeta(meta);
         };
       });
     },

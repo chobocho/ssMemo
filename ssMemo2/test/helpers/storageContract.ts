@@ -3,11 +3,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { NEW_DOCUMENT_REV, StorageError } from '../../src/storage/storagePort.ts';
-import type { DocumentDraft, StoragePort } from '../../src/storage/storagePort.ts';
+import type { DocumentDraft, DocumentSource, StoragePort } from '../../src/storage/storagePort.ts';
 
 const CREATED_AT = '2026-01-01T00:00:00.000Z';
 const UPDATED_AT = '2026-01-02T00:00:00.000Z';
 const ONE_MEBIBYTE = 1024 * 1024;
+const SOURCE: DocumentSource = { fileName: 'notes.txt', encoding: 'CP949', eol: 'crlf', hasBom: false };
 
 function draft(id: string, content: string, overrides: Partial<DocumentDraft> = {}): DocumentDraft {
   return { id, title: `title of ${id}`, content, createdAt: CREATED_AT, updatedAt: CREATED_AT, ...overrides };
@@ -134,6 +135,38 @@ export function defineStorageContract(label: string, createStorage: () => Promis
       assert.equal(meta.length, content.length, id);
       assert.equal((await storage.getDocument(id))?.content, content, id);
     }
+  });
+
+  test(`${label}: a document remembers the file it came from`, async () => {
+    const storage = await createStorage();
+    const meta = await storage.saveDocument(draft('a', 'text', { source: SOURCE }), NEW_DOCUMENT_REV);
+    assert.deepEqual(meta.source, SOURCE);
+    assert.deepEqual((await storage.getDocument('a'))?.meta, meta);
+    assert.deepEqual((await storage.listDocuments()).documents, [meta]);
+  });
+
+  test(`${label}: a later save can change the source or drop it`, async () => {
+    const storage = await createStorage();
+    const created = await storage.saveDocument(draft('a', 'text', { source: SOURCE }), NEW_DOCUMENT_REV);
+    const converted: DocumentSource = { fileName: 'notes.txt', encoding: 'UTF-8', eol: 'crlf', hasBom: true };
+    const updated = await storage.saveDocument(draft('a', 'text', { source: converted }), created.rev);
+    assert.deepEqual((await storage.getDocument('a'))?.meta.source, converted);
+    await storage.saveDocument(draft('a', 'text'), updated.rev);
+    const plain = (await storage.getDocument('a'))?.meta;
+    assert.ok(plain);
+    assert.equal('source' in plain, false);
+  });
+
+  test(`${label}: the source is copied on the way in and out`, async () => {
+    const storage = await createStorage();
+    const input = draft('a', 'text', { source: { ...SOURCE } });
+    const meta = await storage.saveDocument(input, NEW_DOCUMENT_REV);
+    if (input.source) input.source.fileName = 'changed after saving';
+    if (meta.source) meta.source.fileName = 'changed by the caller';
+    const loaded = await storage.getDocument('a');
+    assert.equal(loaded?.meta.source?.fileName, 'notes.txt');
+    if (loaded?.meta.source) loaded.meta.source.fileName = 'changed again';
+    assert.equal((await storage.listDocuments()).documents[0]?.source?.fileName, 'notes.txt');
   });
 
   test(`${label}: a value that was never set is undefined`, async () => {

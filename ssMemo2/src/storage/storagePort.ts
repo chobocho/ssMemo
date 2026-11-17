@@ -1,6 +1,14 @@
 // The storage boundary of the app. Everything above it (document store, autosave, UI) talks to
 // this interface only, so IndexedDB can be replaced by the in-memory fallback when it is
 // unavailable, and the logic can be tested without a browser.
+import { isTextEncoding } from '../lib/encoding.ts';
+import { isEol } from '../lib/textFile.ts';
+import type { TextFormat } from '../lib/textFile.ts';
+
+/** The local file a document was opened from, and the form that file is in. */
+export interface DocumentSource extends TextFormat {
+  fileName: string;
+}
 
 export interface DocumentMeta {
   /** Stable identifier. The title is just a field, so renaming never re-keys the document. */
@@ -13,6 +21,8 @@ export interface DocumentMeta {
   length: number;
   /** Incremented by every save. Lets a save detect that another window saved in between. */
   rev: number;
+  /** Present only on documents that were opened from a local file. */
+  source?: DocumentSource;
 }
 
 /** What a caller hands to saveDocument; the storage derives `length` and `rev`. */
@@ -22,6 +32,8 @@ export interface DocumentDraft {
   content: string;
   createdAt: string;
   updatedAt: string;
+  /** Leave out for a memo that did not come from a file; a save without it removes it. */
+  source?: DocumentSource;
 }
 
 export interface StoredDocument {
@@ -73,7 +85,7 @@ export function createNextMeta(draft: DocumentDraft, storedRev: number | undefin
       `Document ${draft.id} is at revision ${currentRev} but revision ${expectedRev} was expected`,
     );
   }
-  return {
+  const meta: DocumentMeta = {
     id: draft.id,
     title: draft.title,
     createdAt: draft.createdAt,
@@ -81,6 +93,28 @@ export function createNextMeta(draft: DocumentDraft, storedRev: number | undefin
     length: draft.content.length,
     rev: currentRev + 1,
   };
+  // The key is left out entirely for a plain memo, so stored records stay minimal.
+  if (draft.source) meta.source = { ...draft.source };
+  return meta;
+}
+
+/**
+ * A clean copy of a stored source, or undefined if it is missing or malformed. A document whose
+ * source cannot be read is still a perfectly good memo, so this never makes a record corrupt.
+ */
+export function parseDocumentSource(value: unknown): DocumentSource | undefined {
+  if (typeof value !== 'object' || value === null) return undefined;
+  const { fileName, encoding, eol, hasBom } = value as Record<string, unknown>;
+  if (typeof fileName !== 'string' || fileName === '' || !isTextEncoding(encoding) || !isEol(eol) || typeof hasBom !== 'boolean') {
+    return undefined;
+  }
+  return { fileName, encoding, eol, hasBom };
+}
+
+/** A copy that shares nothing with the original, so callers cannot change stored metadata. */
+export function copyMeta(meta: DocumentMeta): DocumentMeta {
+  const { source, ...rest } = meta;
+  return source ? { ...rest, source: { ...source } } : rest;
 }
 
 export interface StoragePort {

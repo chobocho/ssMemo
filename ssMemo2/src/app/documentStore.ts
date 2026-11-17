@@ -1,7 +1,14 @@
 // Documents as the app sees them: validated titles, ids, timestamps, newest-first listing, and
 // the rule for what happens when two windows save the same document.
 import { NEW_DOCUMENT_REV, StorageError } from '../storage/storagePort.ts';
-import type { DocumentListing, DocumentMeta, StoragePort, StoredDocument } from '../storage/storagePort.ts';
+import type {
+  DocumentDraft,
+  DocumentListing,
+  DocumentMeta,
+  DocumentSource,
+  StoragePort,
+  StoredDocument,
+} from '../storage/storagePort.ts';
 
 export const MAX_TITLE_LENGTH = 100;
 
@@ -38,7 +45,8 @@ export interface SaveOutcome {
 export interface DocumentStore {
   /** Most recently modified first. */
   list(): Promise<DocumentListing>;
-  create(title: string, content: string): Promise<DocumentMeta>;
+  /** `source` is given for a document that was opened from a local file. */
+  create(title: string, content: string, source?: DocumentSource): Promise<DocumentMeta>;
   load(id: string): Promise<StoredDocument | undefined>;
   /**
    * Stores new content for the document described by `current` (the metadata from the last load
@@ -72,6 +80,11 @@ function newestFirst(left: DocumentMeta, right: DocumentMeta): number {
   );
 }
 
+/** A draft carrying `fields`, plus the source if there is one. Drafts without a source have no such key. */
+function toDraft(fields: Omit<DocumentDraft, 'source'>, source: DocumentSource | undefined): DocumentDraft {
+  return source ? { ...fields, source } : fields;
+}
+
 function isConflict(error: unknown): boolean {
   return error instanceof StorageError && error.kind === 'conflict';
 }
@@ -85,11 +98,11 @@ export function createDocumentStore(options: DocumentStoreOptions): DocumentStor
       return { documents: listing.documents.sort(newestFirst), corruptCount: listing.corruptCount };
     },
 
-    async create(title, content) {
+    async create(title, content, source) {
       const normalizedTitle = normalizeTitle(title);
       const timestamp = now().toISOString();
       return storage.saveDocument(
-        { id: createId(), title: normalizedTitle, content, createdAt: timestamp, updatedAt: timestamp },
+        toDraft({ id: createId(), title: normalizedTitle, content, createdAt: timestamp, updatedAt: timestamp }, source),
         NEW_DOCUMENT_REV,
       );
     },
@@ -102,7 +115,10 @@ export function createDocumentStore(options: DocumentStoreOptions): DocumentStor
       const timestamp = now().toISOString();
       try {
         const meta = await storage.saveDocument(
-          { id: current.id, title: current.title, content, createdAt: current.createdAt, updatedAt: timestamp },
+          toDraft(
+            { id: current.id, title: current.title, content, createdAt: current.createdAt, updatedAt: timestamp },
+            current.source,
+          ),
           current.rev,
         );
         return { meta, savedAsCopy: false };
@@ -111,13 +127,16 @@ export function createDocumentStore(options: DocumentStoreOptions): DocumentStor
         // Another window saved or deleted this document first. Overwriting would lose that
         // window's text and giving up would lose this one's, so this text becomes a new document.
         const meta = await storage.saveDocument(
-          {
-            id: createId(),
-            title: conflictCopyTitle(current.title),
-            content,
-            createdAt: timestamp,
-            updatedAt: timestamp,
-          },
+          toDraft(
+            {
+              id: createId(),
+              title: conflictCopyTitle(current.title),
+              content,
+              createdAt: timestamp,
+              updatedAt: timestamp,
+            },
+            current.source,
+          ),
           NEW_DOCUMENT_REV,
         );
         return { meta, savedAsCopy: true };
@@ -134,13 +153,16 @@ export function createDocumentStore(options: DocumentStoreOptions): DocumentStor
       // write is refused, so stale content is never written back under the new title.
       // The modification time is kept because the content did not change.
       return storage.saveDocument(
-        {
-          id: current.id,
-          title: normalizedTitle,
-          content: stored.content,
-          createdAt: current.createdAt,
-          updatedAt: current.updatedAt,
-        },
+        toDraft(
+          {
+            id: current.id,
+            title: normalizedTitle,
+            content: stored.content,
+            createdAt: current.createdAt,
+            updatedAt: current.updatedAt,
+          },
+          current.source,
+        ),
         current.rev,
       );
     },

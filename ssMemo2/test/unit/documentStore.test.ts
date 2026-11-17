@@ -6,10 +6,11 @@ import { createRandomId } from '../../src/app/randomId.ts';
 import type { RandomSource } from '../../src/app/randomId.ts';
 import { createMemoryStorage } from '../../src/storage/memoryStorage.ts';
 import { StorageError } from '../../src/storage/storagePort.ts';
-import type { StoragePort } from '../../src/storage/storagePort.ts';
+import type { DocumentSource, StoragePort } from '../../src/storage/storagePort.ts';
 
 const START_TIME_MS = Date.UTC(2026, 0, 1);
 const ONE_MINUTE_MS = 60_000;
+const FILE_SOURCE: DocumentSource = { fileName: 'notes.txt', encoding: 'CP949', eol: 'crlf', hasBom: false };
 const UUID_V4_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 interface Harness {
@@ -75,6 +76,20 @@ test('create stores a new document with a fresh id and the current time', async 
   assert.deepEqual(await store.load('id-1'), { meta, content: 'hello' });
 });
 
+test('create records the file a document came from', async () => {
+  const { store } = createHarness();
+  const meta = await store.create('notes.txt', 'hello', FILE_SOURCE);
+  assert.deepEqual(meta.source, FILE_SOURCE);
+  assert.deepEqual((await store.load('id-1'))?.meta.source, FILE_SOURCE);
+  assert.deepEqual((await store.list()).documents[0]?.source, FILE_SOURCE);
+});
+
+test('a document created without a source has none', async () => {
+  const { store } = createHarness();
+  const meta = await store.create('memo', 'hello');
+  assert.equal('source' in meta, false);
+});
+
 test('create refuses an invalid title and stores nothing', async () => {
   const { store } = createHarness();
   await assert.rejects(store.create('   ', 'text'), /title/i);
@@ -102,6 +117,25 @@ test('save replaces the content and moves the modification time, keeping title a
     rev: 2,
   });
   assert.equal((await store.load('id-1'))?.content, 'version two');
+});
+
+test('save and rename keep the source of a file document', async () => {
+  const { store } = createHarness();
+  const created = await store.create('notes.txt', 'v1', FILE_SOURCE);
+  const saved = await store.save(created, 'v2');
+  assert.deepEqual(saved.meta.source, FILE_SOURCE);
+  const renamed = await store.rename(saved.meta, 'my notes');
+  assert.deepEqual(renamed.source, FILE_SOURCE);
+  assert.deepEqual((await store.load('id-1'))?.meta.source, FILE_SOURCE);
+});
+
+test('the copy made after a conflict keeps the source too', async () => {
+  const { store } = createHarness();
+  const created = await store.create('notes.txt', 'original', FILE_SOURCE);
+  await store.save(created, 'text from window B');
+  const outcome = await store.save(created, 'text from window A');
+  assert.equal(outcome.savedAsCopy, true);
+  assert.deepEqual(outcome.meta.source, FILE_SOURCE);
 });
 
 test('save keeps both versions when another window saved first', async () => {

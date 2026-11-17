@@ -207,6 +207,47 @@ test('damaged: unknown extra fields do not make a record malformed', async () =>
   });
 });
 
+test('damaged: a malformed source is dropped and the document stays readable', async () => {
+  // Losing the note about the original file is harmless; losing the text would not be.
+  const factory = new FakeIndexedDbFactory();
+  const storage = await openIndexedDbStorage(factory);
+  const meta = (id: string, source: unknown): unknown => ({ id, title: 't', createdAt: TIMESTAMP, updatedAt: TIMESTAMP, length: 4, rev: 1, source });
+  const sources: Record<string, unknown> = {
+    'not-an-object': 'notes.txt',
+    'unknown-encoding': { fileName: 'a.txt', encoding: 'EBCDIC', eol: 'lf', hasBom: false },
+    'unknown-eol': { fileName: 'a.txt', encoding: 'UTF-8', eol: 'nel', hasBom: false },
+    'no-name': { fileName: '', encoding: 'UTF-8', eol: 'lf', hasBom: false },
+    'bom-not-a-flag': { fileName: 'a.txt', encoding: 'UTF-8', eol: 'lf', hasBom: 'yes' },
+  };
+  await plantRecords(factory, {
+    docMeta: Object.entries(sources).map(([id, source]) => meta(id, source)),
+    docBody: Object.keys(sources).map((id) => ({ id, content: 'text' })),
+  });
+  const listing = await storage.listDocuments();
+  assert.equal(listing.corruptCount, 0);
+  assert.equal(listing.documents.length, Object.keys(sources).length);
+  for (const id of Object.keys(sources)) {
+    const document = await storage.getDocument(id);
+    assert.equal(document?.content, 'text', id);
+    assert.equal(document && 'source' in document.meta, false, id);
+  }
+});
+
+test('damaged: a valid source with extra fields is read without them', async () => {
+  const factory = new FakeIndexedDbFactory();
+  const storage = await openIndexedDbStorage(factory);
+  await plantRecords(factory, {
+    docMeta: [
+      {
+        id: 'a', title: 't', createdAt: TIMESTAMP, updatedAt: TIMESTAMP, length: 4, rev: 1,
+        source: { fileName: 'a.txt', encoding: 'UTF-16LE', eol: 'cr', hasBom: true, futureField: 1 },
+      },
+    ],
+    docBody: [{ id: 'a', content: 'text' }],
+  });
+  assert.deepEqual((await storage.getDocument('a'))?.meta.source, { fileName: 'a.txt', encoding: 'UTF-16LE', eol: 'cr', hasBom: true });
+});
+
 test('damaged: a document with missing or malformed parts is treated as absent', async () => {
   const factory = new FakeIndexedDbFactory();
   const storage = await openIndexedDbStorage(factory);

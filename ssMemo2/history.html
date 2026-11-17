@@ -13,6 +13,15 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 12:10] 문서에 원본 파일 정보 저장 (4.3 준비)</h2>
+<ul>
+<li><b>기획:</b> 파일에서 연 문서는 메타데이터에 <code>source</code>(파일 이름·인코딩·줄바꿈·BOM)를 갖는다. 메모에는 이 키가 없다. 레코드에 필드만 늘어나므로 DB 버전은 그대로.</li>
+<li><b>TC:</b> 정상 — 저장·조회·목록에서 source 유지, 저장·이름 변경·충돌 사본에서도 유지. 경계 — source 변경·제거, 반환값 수정이 저장본에 영향 없음, 손상된 source는 버리고 본문은 읽힘.</li>
+<li><b>개발:</b> <code>src/storage/storagePort.ts</code>, <code>memoryStorage.ts</code>, <code>indexedDbStorage.ts</code>, <code>src/app/documentStore.ts</code>, 테스트 4개 파일</li>
+<li><b>검증:</b> 단위 450 passed, 빌드 28 passed, 0 failed</li>
+<li><b>비고:</b> 계획의 <code>kind</code> 필드는 source 유무로 알 수 있어 두지 않음.</li>
+</ul>
+
 <h2>[2026-11-17 12:08] BOM·줄바꿈 감지와 보존 (4.2)</h2>
 <ul>
 <li><b>기획:</b> 파일을 열 때 인코딩·BOM·줄바꿈(LF/CRLF/CR)을 기록하고, 저장할 때 그대로 되살린다. 쓸 수 없는 CP949·조합형은 UTF-8(BOM 없음)로 바꾸되 줄바꿈은 유지.</li>
