@@ -20,6 +20,7 @@ const fullSnapshot: EnvironmentSnapshot = {
   isSecureContext: true,
   hasIndexedDb: true,
   storage: 'persistent',
+  storageDurability: 'best-effort, 3.0 MB of 2.0 GB used',
   hasFileSystemAccess: false,
 };
 
@@ -43,6 +44,7 @@ test('describeEnvironment lists every fact in a stable order', () => {
     { label: 'secure context', value: 'yes' },
     { label: 'IndexedDB', value: 'available' },
     { label: 'storage', value: 'persistent' },
+    { label: 'storage durability', value: 'best-effort, 3.0 MB of 2.0 GB used' },
     { label: 'File System Access', value: 'missing' },
     { label: 'languages', value: 'ko-KR, en-US' },
     { label: 'user agent', value: 'TestBrowser/1.0' },

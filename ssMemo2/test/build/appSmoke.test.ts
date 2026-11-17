@@ -50,7 +50,7 @@ function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function openPage(options: { factory?: IDBFactory; url?: string } = {}): Promise<Page> {
+async function openPage(options: { factory?: IDBFactory; url?: string; storageManager?: object } = {}): Promise<Page> {
   const errors: string[] = [];
   const downloadNames: string[] = [];
   const opened: unknown[][] = [];
@@ -80,6 +80,9 @@ async function openPage(options: { factory?: IDBFactory; url?: string } = {}): P
       });
       if (options.factory) {
         Object.defineProperty(window, 'indexedDB', { value: options.factory, configurable: true });
+      }
+      if (options.storageManager) {
+        Object.defineProperty(window.navigator, 'storage', { value: options.storageManager, configurable: true });
       }
     },
   });
@@ -1018,6 +1021,61 @@ test('the parts of the page are named for screen readers', async () => {
   assert.equal(activeTab.getAttribute('aria-controls'), panel.id);
   // One heading for the page, even where it is not shown.
   assert.equal(document.querySelectorAll('h1').length, 1);
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
+test('after the first save the browser is asked to keep the memos, and the diagnostics show its answer', async () => {
+  const calls: string[] = [];
+  let persisted = false;
+  const storageManager = {
+    persisted: async () => persisted,
+    persist: async () => {
+      calls.push('persist');
+      persisted = true;
+      return true;
+    },
+    estimate: async () => ({ usage: 3 * 1024 * 1024, quota: 2 * 1024 * 1024 * 1024 }),
+  };
+  const page = await openPage({ factory: await seededFactory(), storageManager });
+  const durability = async (): Promise<string> => {
+    await pressKey(page, { key: 'F1', code: 'F1' });
+    await wait(100);
+    const rows = [...topDialog(page).querySelectorAll('.diagnostics-row')];
+    const value = rows.find((row) => row.querySelector('dt')?.textContent === 'storage durability')?.querySelector('dd')?.textContent ?? '';
+    topDialog(page).close();
+    await wait(50);
+    return value;
+  };
+
+  // Merely opening the page asks for nothing.
+  assert.deepEqual(calls, []);
+  assert.equal(await durability(), 'best-effort, 3.0 MB of 2.0 GB used');
+
+  await typeLine(page, 'milk and eggs');
+  await wait(AUTOSAVE_WAIT_MS);
+  assert.deepEqual(calls, ['persist']);
+  assert.equal(await durability(), 'persistent, 3.0 MB of 2.0 GB used');
+
+  // Asked once per visit, not after every save.
+  await typeLine(page, 'milk, eggs and bread');
+  await wait(AUTOSAVE_WAIT_MS);
+  assert.deepEqual(calls, ['persist']);
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
+test('in temporary mode the browser is not asked to keep anything', async () => {
+  const calls: string[] = [];
+  const storageManager = {
+    persisted: async () => (calls.push('persisted'), false),
+    persist: async () => (calls.push('persist'), true),
+    estimate: async () => (calls.push('estimate'), {}),
+  };
+  const page = await openPage({ factory: await seededFactory(), url: `${PAGE_URL}?safe`, storageManager });
+  await typeLine(page, 'typed in safe mode');
+  await wait(AUTOSAVE_WAIT_MS);
+  assert.deepEqual(calls, []);
   assert.deepEqual(page.errors, []);
   page.close();
 });

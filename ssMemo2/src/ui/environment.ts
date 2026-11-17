@@ -37,6 +37,7 @@ export function isApplePlatform(win: Window): boolean {
 export interface AppFacts {
   buildId: string;
   storage: string;
+  storageDurability: string;
 }
 
 export function readEnvironment(win: Window, facts: AppFacts): EnvironmentSnapshot {
@@ -57,6 +58,7 @@ export function readEnvironment(win: Window, facts: AppFacts): EnvironmentSnapsh
     isSecureContext: win.isSecureContext,
     hasIndexedDb: hasIndexedDb(win),
     storage: facts.storage,
+    storageDurability: facts.storageDurability,
     hasFileSystemAccess: FILE_PICKER_API in win,
   };
 }

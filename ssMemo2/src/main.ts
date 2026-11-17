@@ -31,6 +31,8 @@ import {
 import { createRandomId } from './app/randomId.ts';
 import { createSessionStore } from './app/session.ts';
 import { createSettingsStore, stepEditorFontSize } from './app/settings.ts';
+import { describeStorageFacts, readStorageFacts, requestPersistence } from './app/storageDurability.ts';
+import type { StorageFacts } from './app/storageDurability.ts';
 import { formatShortcut } from './app/shortcut.ts';
 import type { LanguageSetting, Settings } from './app/settings.ts';
 import { adjacentTabId, createTabManager } from './app/tabManager.ts';
@@ -89,6 +91,8 @@ const INFO_NOTICE_DURATION_MS = 4000;
 const BACKUP_FILE_TYPES = '.json,application/json';
 // Set on the main area while the Markdown preview is on (see styles/layout.css).
 const PREVIEWING_CLASS = 'is-previewing';
+// Shown in the diagnostics until the browser has answered, and for good where it cannot be asked.
+const UNKNOWN_STORAGE_FACTS: StorageFacts = { durability: 'unknown', usageBytes: undefined, quotaBytes: undefined };
 // A page opened from a memo gets no handle on this page and is not told where it was opened from.
 const NEW_TAB_FEATURES = 'noopener,noreferrer';
 const FINE_POINTER_QUERY = '(pointer: fine)';
@@ -174,7 +178,7 @@ async function start(win: Window): Promise<void> {
   }
 
   const statusBar = createStatusBar(doc);
-  const facts = { buildId: readBuildId(doc), storage: describeStorage(opened) };
+  const facts = { buildId: readBuildId(doc), storage: describeStorage(opened), storageDurability: describeStorageFacts(UNKNOWN_STORAGE_FACTS) };
   const diagnostics = createDiagnosticsPanel(doc, t, (text) => copyToClipboard(win, text));
   const refreshDiagnostics = (): void => diagnostics.update(describeEnvironment(readEnvironment(win, facts)));
   // Folding or unfolding the device and opening the on-screen keyboard both change the values.
@@ -237,6 +241,22 @@ async function start(win: Window): Promise<void> {
     timers,
   });
 
+  // In temporary mode nothing is stored in the browser, so there is nothing to ask about.
+  const storageManager = opened.mode === 'persistent' ? win.navigator.storage : undefined;
+  const refreshStorageFacts = async (): Promise<void> => {
+    facts.storageDurability = describeStorageFacts(await readStorageFacts(storageManager));
+    refreshDiagnostics();
+  };
+  let persistenceRequested = false;
+  // Once something of the user's is stored, the browser is asked not to evict it. Whether it
+  // agrees is its decision (see storageDurability.ts); the answer shows up in the diagnostics.
+  const protectStoredMemos = (): void => {
+    if (persistenceRequested) return;
+    persistenceRequested = true;
+    void requestPersistence(storageManager).then(refreshStorageFacts);
+  };
+  void refreshStorageFacts();
+
   const refreshStatusBar = (): void => {
     statusBar.setText(formatEditorStats(editor.getStats(), t, workspace.getActiveDocument()?.source));
   };
@@ -257,7 +277,10 @@ async function start(win: Window): Promise<void> {
     maxWaitMs: AUTOSAVE_MAX_WAIT_MS,
     timers,
     onNotice: (notice) => notices.show(describeNotice(notice, t)),
-    onSaveStateChange: (state) => status.setSaveState(state === undefined ? '' : t(SAVE_STATE_KEYS[state])),
+    onSaveStateChange: (state) => {
+      status.setSaveState(state === undefined ? '' : t(SAVE_STATE_KEYS[state]));
+      if (state === 'saved') protectStoredMemos();
+    },
   });
 
   const fileIo = createFileIo(win);
@@ -506,6 +529,8 @@ async function start(win: Window): Promise<void> {
 
   const showHelp = (): void => {
     refreshDiagnostics();
+    // The usage may have grown since the page was opened; the panel updates when the answer is in.
+    void refreshStorageFacts();
     void modals.open(() => ({
       title: t('command.help'),
       content: createHelpContent(doc, {

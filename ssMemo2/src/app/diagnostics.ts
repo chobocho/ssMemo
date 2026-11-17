@@ -38,6 +38,8 @@ export interface EnvironmentSnapshot {
   hasIndexedDb: boolean;
   /** Which storage the app is actually using, e.g. "persistent" or "temporary (safe-mode)". */
   storage: string;
+  /** Whether the browser may evict the stored data, and how much is used (see storageDurability.ts). */
+  storageDurability: string;
   hasFileSystemAccess: boolean;
 }
 
@@ -91,6 +93,7 @@ export function describeEnvironment(snapshot: EnvironmentSnapshot): DiagnosticEn
     { label: 'secure context', value: yesNo(snapshot.isSecureContext) },
     { label: 'IndexedDB', value: availability(snapshot.hasIndexedDb) },
     { label: 'storage', value: snapshot.storage },
+    { label: 'storage durability', value: snapshot.storageDurability },
     { label: 'File System Access', value: availability(snapshot.hasFileSystemAccess) },
     { label: 'languages', value: snapshot.languages.length > 0 ? snapshot.languages.join(', ') : UNKNOWN },
     { label: 'user agent', value: snapshot.userAgent || UNKNOWN },
