@@ -169,6 +169,38 @@ export function defineStorageContract(label: string, createStorage: () => Promis
     assert.equal((await storage.listDocuments()).documents[0]?.source?.fileName, 'notes.txt');
   });
 
+  test(`${label}: getAllDocuments of an empty storage is empty`, async () => {
+    const storage = await createStorage();
+    assert.deepEqual(await storage.getAllDocuments(), { documents: [], corruptCount: 0 });
+  });
+
+  test(`${label}: getAllDocuments returns every document with its content and metadata`, async () => {
+    const storage = await createStorage();
+    const first = await storage.saveDocument(draft('a', 'first'), NEW_DOCUMENT_REV);
+    const second = await storage.saveDocument(draft('b', 'second', { source: SOURCE }), NEW_DOCUMENT_REV);
+    const snapshot = await storage.getAllDocuments();
+    assert.equal(snapshot.corruptCount, 0);
+    assert.deepEqual(
+      snapshot.documents.sort((left, right) => left.meta.id.localeCompare(right.meta.id)),
+      [
+        { meta: first, content: 'first' },
+        { meta: second, content: 'second' },
+      ],
+    );
+  });
+
+  test(`${label}: what getAllDocuments returns are copies`, async () => {
+    const storage = await createStorage();
+    await storage.saveDocument(draft('a', 'text', { source: { ...SOURCE } }), NEW_DOCUMENT_REV);
+    const [document] = (await storage.getAllDocuments()).documents;
+    assert.ok(document?.meta.source);
+    document.meta.title = 'changed by the caller';
+    document.meta.source.fileName = 'changed by the caller';
+    const again = (await storage.getDocument('a'))?.meta;
+    assert.equal(again?.title, 'title of a');
+    assert.equal(again?.source?.fileName, 'notes.txt');
+  });
+
   test(`${label}: a value that was never set is undefined`, async () => {
     const storage = await createStorage();
     assert.equal(await storage.getValue('settings'), undefined);

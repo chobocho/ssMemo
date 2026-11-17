@@ -18,6 +18,11 @@ export function createMemoryStorage(): StoragePort {
       return document ? { meta: copyMeta(document.meta), content: document.content } : undefined;
     },
 
+    async getAllDocuments() {
+      const all = [...documents.values()].map((document) => ({ meta: copyMeta(document.meta), content: document.content }));
+      return { documents: all, corruptCount: 0 };
+    },
+
     async saveDocument(draft, expectedRev) {
       const meta = createNextMeta(draft, documents.get(draft.id)?.meta.rev, expectedRev);
       documents.set(draft.id, { meta, content: draft.content });

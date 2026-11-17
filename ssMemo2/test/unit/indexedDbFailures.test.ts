@@ -261,6 +261,21 @@ test('damaged: a document with missing or malformed parts is treated as absent',
   }
 });
 
+test('damaged: getAllDocuments leaves out what cannot be read and says how much that was', async () => {
+  const factory = new FakeIndexedDbFactory();
+  const storage = await openIndexedDbStorage(factory);
+  const good = await storage.saveDocument(draft('good', 'fine'), NEW_DOCUMENT_REV);
+  const meta = (id: string): unknown => ({ id, title: 't', createdAt: TIMESTAMP, updatedAt: TIMESTAMP, length: 1, rev: 1 });
+  await plantRecords(factory, {
+    docMeta: [meta('no-body'), meta('bad-body'), { id: 'bad-meta', title: null }],
+    docBody: [{ id: 'bad-body', content: 123 }, { id: 'bad-meta', content: 'text' }, { id: 'no-meta', content: 'orphaned text' }],
+  });
+  const snapshot = await storage.getAllDocuments();
+  assert.deepEqual(snapshot.documents, [{ meta: good, content: 'fine' }]);
+  // Text without usable metadata counts too: it exists but will be missing from a backup.
+  assert.equal(snapshot.corruptCount, 4);
+});
+
 test('damaged: a malformed record can be replaced by creating the document anew', async () => {
   const factory = new FakeIndexedDbFactory();
   const storage = await openIndexedDbStorage(factory);

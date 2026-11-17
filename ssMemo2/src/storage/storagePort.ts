@@ -47,6 +47,13 @@ export interface DocumentListing {
   corruptCount: number;
 }
 
+/** Everything that can be read from the storage, for a backup. */
+export interface DocumentSnapshot {
+  documents: StoredDocument[];
+  /** Stored items that could not be turned into a document and are therefore missing here. */
+  corruptCount: number;
+}
+
 /** The `expectedRev` to pass to saveDocument when the document must not exist yet. */
 export const NEW_DOCUMENT_REV = 0;
 
@@ -122,6 +129,9 @@ export interface StoragePort {
   listDocuments(): Promise<DocumentListing>;
 
   getDocument(id: string): Promise<StoredDocument | undefined>;
+
+  /** Every document with its content, read at one point in time, in no particular order. */
+  getAllDocuments(): Promise<DocumentSnapshot>;
 
   /**
    * Stores the draft if the stored revision equals `expectedRev` (NEW_DOCUMENT_REV: the document

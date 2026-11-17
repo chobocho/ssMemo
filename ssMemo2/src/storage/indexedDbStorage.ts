@@ -19,7 +19,7 @@
 //   conflict         another tab saved first            -> see storagePort.ts
 //   connection-lost  the connection is gone             -> the page has to be reloaded
 import { StorageError, copyMeta, createNextMeta, parseDocumentSource } from './storagePort.ts';
-import type { DocumentListing, DocumentMeta, StoragePort, StoredDocument } from './storagePort.ts';
+import type { DocumentListing, DocumentMeta, DocumentSnapshot, StoragePort, StoredDocument } from './storagePort.ts';
 
 export const DATABASE_NAME = 'ssMemo2';
 const DATABASE_VERSION = 1;
@@ -224,6 +224,33 @@ function createStorage(database: IDBDatabase, onConnectionLost: () => void): Ind
           const meta = parseMeta(metaRequest.result);
           const content = parseContent(bodyRequest.result);
           return meta && content !== undefined ? { meta, content } : undefined;
+        };
+      });
+    },
+
+    getAllDocuments() {
+      // One transaction, so the snapshot is consistent even while another tab is saving.
+      return run(DOCUMENT_STORES, 'readonly', (transaction) => {
+        const metaRequest = transaction.objectStore(META_STORE).getAll();
+        const bodyRequest = transaction.objectStore(BODY_STORE).getAll();
+        // O(n) time and space in the number of stored records.
+        return (): DocumentSnapshot => {
+          const bodies = new Map<unknown, unknown>();
+          for (const record of bodyRequest.result) {
+            if (isRecord(record)) bodies.set(record.id, record);
+          }
+          const documents: StoredDocument[] = [];
+          let corruptCount = 0;
+          for (const record of metaRequest.result) {
+            const meta = parseMeta(record);
+            const key: unknown = isRecord(record) ? record.id : undefined;
+            const content = parseContent(bodies.get(key));
+            bodies.delete(key);
+            if (meta && content !== undefined) documents.push({ meta, content });
+            else corruptCount += 1;
+          }
+          // Whatever is left is text without metadata: it exists but cannot be exported.
+          return { documents, corruptCount: corruptCount + bodies.size };
         };
       });
     },

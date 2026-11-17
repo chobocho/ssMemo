@@ -13,6 +13,15 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 12:42] 백업 내보내기 형식 (4.6)</h2>
+<ul>
+<li><b>기획:</b> 모든 문서와 설정을 JSON 하나로 만든다. 사람이 읽고 고칠 수 있게 들여쓰고, 저장소가 계산하는 값(rev, 길이)은 빼며, 문서는 만든 순서로 정렬. 저장소에는 한 트랜잭션으로 전부 읽는 <code>getAllDocuments</code>를 추가.</li>
+<li><b>TC:</b> 정상 — 본문·source·설정 포함, 직렬화 후 다시 읽으면 동일, 파일 이름은 로컬 시각. 경계 — 빈 저장소, 따옴표·탭·이모지·짝 없는 서러게이트, 한글은 이스케이프 없이, 읽지 못한 레코드 수 집계(메타 없는 본문 포함).</li>
+<li><b>개발:</b> <code>src/app/backup.ts</code>, <code>src/storage/storagePort.ts</code>, <code>memoryStorage.ts</code>, <code>indexedDbStorage.ts</code>, 테스트 4개 파일</li>
+<li><b>검증:</b> 단위 590 passed, 빌드 37 passed, 0 failed</li>
+<li><b>비고:</b> 화면 연결은 4.8.</li>
+</ul>
+
 <h2>[2026-11-17 12:38] 로컬 파일로 저장 (4.5)</h2>
 <ul>
 <li><b>기획:</b> 💾(Ctrl+S)로 보이는 탭을 파일로 저장. File System Access API가 있으면 고른 파일에 쓰고 다음부터 제자리 저장, 없으면 다운로드. 인코딩·BOM·줄바꿈을 유지하며, CP949·조합형은 확인을 받은 뒤 UTF-8로 저장.</li>
