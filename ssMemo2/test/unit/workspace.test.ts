@@ -8,6 +8,7 @@ import { createTabManager } from '../../src/app/tabManager.ts';
 import type { TabManager } from '../../src/app/tabManager.ts';
 import { createWorkspace } from '../../src/app/workspace.ts';
 import type { Workspace, WorkspaceNotice } from '../../src/app/workspace.ts';
+import type { WritableFile } from '../../src/app/localFiles.ts';
 import { createMemoryStorage } from '../../src/storage/memoryStorage.ts';
 import { NEW_DOCUMENT_REV, StorageError } from '../../src/storage/storagePort.ts';
 import type { DocumentDraft, DocumentSource, StoragePort } from '../../src/storage/storagePort.ts';
@@ -714,6 +715,7 @@ test('getActiveDocument describes a memo tab as having no file', async () => {
     title: 'newer memo',
     source: undefined,
     originalBytes: undefined,
+    localFile: undefined,
   });
 });
 
@@ -802,4 +804,133 @@ test('redecode is refused for a memo, a file without bytes and an unknown tab', 
   assert.equal(harness.workspace.redecode(harness.visibleTab() ?? '', 'text', FILE_SOURCE), false);
   assert.equal(harness.visibleText(), 'file text');
   assert.equal(harness.workspace.redecode('no-such-tab', 'text', FILE_SOURCE), false);
+});
+
+// --- saving to a local file -------------------------------------------------
+
+const WRITABLE: WritableFile = { name: 'notes.txt', write: async () => undefined };
+const UTF8_SOURCE: DocumentSource = { ...FILE_SOURCE, encoding: 'UTF-8' };
+
+test('getText returns the current text of a tab and undefined for an unknown one', async () => {
+  const harness = createHarness();
+  await harness.workspace.start();
+  harness.type('typed');
+  assert.equal(harness.workspace.getText(harness.visibleTab() ?? ''), 'typed');
+  assert.equal(harness.workspace.getText('no-such-tab'), undefined);
+});
+
+test('a file opened with write access can be written back without asking', async () => {
+  const harness = createHarness();
+  await harness.workspace.start();
+  harness.workspace.openFile({ text: 'file text', source: FILE_SOURCE, writable: WRITABLE });
+  assert.equal(harness.workspace.getActiveDocument()?.localFile, WRITABLE);
+  // Unlike the bytes, the link to the file survives editing: that is when it is needed.
+  harness.type('edited');
+  assert.equal(harness.workspace.getActiveDocument()?.localFile, WRITABLE);
+});
+
+test('markSavedToFile on a file that was never stored updates what its first save will record', async () => {
+  const harness = createHarness();
+  await harness.workspace.start();
+  harness.workspace.openFile({ text: 'file text', source: FILE_SOURCE, bytes: FILE_BYTES });
+  const tabId = harness.visibleTab() ?? '';
+  await harness.workspace.markSavedToFile(tabId, { source: UTF8_SOURCE, localFile: WRITABLE });
+
+  const active = harness.workspace.getActiveDocument();
+  assert.deepEqual(active?.source, UTF8_SOURCE);
+  assert.equal(active?.localFile, WRITABLE);
+  // The bytes describe the file as it was before it was rewritten.
+  assert.equal(active?.originalBytes, undefined);
+  assert.deepEqual((await harness.storage.listDocuments()).documents, []);
+
+  harness.type('edited');
+  await harness.workspace.flushAll();
+  assert.deepEqual((await harness.storage.listDocuments()).documents[0]?.source, UTF8_SOURCE);
+});
+
+test('markSavedToFile on a stored file document stores the new source at once', async () => {
+  const harness = createHarness();
+  await harness.workspace.start();
+  harness.workspace.openFile({ text: 'v1', source: FILE_SOURCE });
+  harness.type('v2');
+  await harness.workspace.flushAll();
+  await harness.workspace.markSavedToFile(harness.visibleTab() ?? '', { source: UTF8_SOURCE });
+
+  const { documents } = await harness.storage.listDocuments();
+  assert.equal(documents.length, 1);
+  assert.deepEqual(documents[0]?.source, UTF8_SOURCE);
+  assert.deepEqual(await stored(harness.storage), [['notes.txt', 'v2']]);
+
+  // Later edits build on the new revision instead of colliding with it.
+  harness.type('v3');
+  await harness.workspace.flushAll();
+  assert.deepEqual(await stored(harness.storage), [['notes.txt', 'v3']]);
+  assert.deepEqual(harness.notices, []);
+});
+
+test('markSavedToFile writes pending edits first, so no conflict copy appears', async () => {
+  const harness = createHarness();
+  await harness.workspace.start();
+  harness.workspace.openFile({ text: 'v1', source: FILE_SOURCE });
+  harness.type('v2');
+  await harness.workspace.flushAll();
+  harness.type('v3, not saved yet');
+  await harness.workspace.markSavedToFile(harness.visibleTab() ?? '', { source: UTF8_SOURCE });
+  await harness.workspace.flushAll();
+  assert.deepEqual(await stored(harness.storage), [['notes.txt', 'v3, not saved yet']]);
+  assert.deepEqual((await harness.storage.listDocuments()).documents[0]?.source, UTF8_SOURCE);
+  assert.deepEqual(harness.notices, []);
+});
+
+test('markSavedToFile with an unchanged source writes nothing', async () => {
+  const harness = createHarness();
+  await harness.workspace.start();
+  harness.workspace.openFile({ text: 'v1', source: FILE_SOURCE });
+  harness.type('v2');
+  await harness.workspace.flushAll();
+  const before = (await harness.storage.listDocuments()).documents[0]?.rev;
+  await harness.workspace.markSavedToFile(harness.visibleTab() ?? '', { source: { ...FILE_SOURCE } });
+  assert.equal((await harness.storage.listDocuments()).documents[0]?.rev, before);
+});
+
+test('a memo saved to a file remembers the file but stays a memo', async () => {
+  const harness = createHarness(await storageWithTwoMemos());
+  await harness.workspace.start();
+  await harness.workspace.markSavedToFile(harness.visibleTab() ?? '', { localFile: WRITABLE });
+  const active = harness.workspace.getActiveDocument();
+  assert.equal(active?.localFile, WRITABLE);
+  assert.equal(active?.source, undefined);
+  const newer = (await harness.storage.getDocument('newer'))?.meta;
+  assert.ok(newer);
+  assert.equal('source' in newer, false);
+});
+
+test('markSavedToFile keeps the known file when the text was merely downloaded', async () => {
+  const harness = createHarness();
+  await harness.workspace.start();
+  harness.workspace.openFile({ text: 'file text', source: FILE_SOURCE, writable: WRITABLE });
+  await harness.workspace.markSavedToFile(harness.visibleTab() ?? '', { source: FILE_SOURCE });
+  assert.equal(harness.workspace.getActiveDocument()?.localFile, WRITABLE);
+});
+
+test('markSavedToFile ignores an unknown tab and survives a storage failure', async () => {
+  const storage = createMemoryStorage();
+  let failing = false;
+  const harness = createHarness({
+    ...storage,
+    saveDocument: async (draft, expectedRev) => {
+      if (failing) throw new StorageError('write-failed', 'disk error');
+      return storage.saveDocument(draft, expectedRev);
+    },
+  });
+  await harness.workspace.start();
+  await harness.workspace.markSavedToFile('no-such-tab', { source: UTF8_SOURCE });
+
+  harness.workspace.openFile({ text: 'v1', source: FILE_SOURCE });
+  harness.type('v2');
+  await harness.workspace.flushAll();
+  failing = true;
+  // The file on disk was written; failing to note its new form must not look like a failed save.
+  await harness.workspace.markSavedToFile(harness.visibleTab() ?? '', { source: UTF8_SOURCE, localFile: WRITABLE });
+  assert.equal(harness.workspace.getActiveDocument()?.localFile, WRITABLE);
 });

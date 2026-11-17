@@ -63,6 +63,10 @@ export function describeFileNotice(notice: FileNotice, t: Translate): string {
       return t('notice.encodingNotFile');
     case 'encoding-locked':
       return t('notice.encodingLocked');
+    case 'file-saved':
+      return t('notice.fileSaved', { name: notice.fileName });
+    case 'file-save-failed':
+      return t('notice.fileSaveFailed', { name: notice.fileName });
   }
 }
 

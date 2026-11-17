@@ -66,6 +66,11 @@ export interface DocumentStore {
   save(current: DocumentMeta, content: string): Promise<SaveOutcome>;
   /** Rejects with StorageError 'conflict' if the document changed since `current` was read. */
   rename(current: DocumentMeta, title: string): Promise<DocumentMeta>;
+  /**
+   * Records a new form of the local file a document belongs to, e.g. after it was written to disk
+   * in another encoding. Content and modification time stay. Rejects like rename.
+   */
+  setSource(current: DocumentMeta, source: DocumentSource): Promise<DocumentMeta>;
   remove(id: string): Promise<boolean>;
 }
 
@@ -102,6 +107,24 @@ function isConflict(error: unknown): boolean {
 
 export function createDocumentStore(options: DocumentStoreOptions): DocumentStore {
   const { storage, now, createId, conflictCopyTitle } = options;
+
+  /** Changes what describes a document (title, source) while leaving its content alone. */
+  async function rewriteDescription(current: DocumentMeta, title: string, source: DocumentSource | undefined): Promise<DocumentMeta> {
+    const stored = await storage.getDocument(current.id);
+    if (!stored) {
+      throw new StorageError('conflict', `Document ${current.id} no longer exists`);
+    }
+    // One write, guarded by the revision: if the document changed after `current` was read the
+    // write is refused, so stale content is never written back under the new description.
+    // The modification time is kept because the content did not change.
+    return storage.saveDocument(
+      toDraft(
+        { id: current.id, title, content: stored.content, createdAt: current.createdAt, updatedAt: current.updatedAt },
+        source,
+      ),
+      current.rev,
+    );
+  }
 
   return {
     async list() {
@@ -154,28 +177,13 @@ export function createDocumentStore(options: DocumentStoreOptions): DocumentStor
       }
     },
 
+    // async, so that an invalid title rejects like every other failure instead of throwing.
     async rename(current, title) {
-      const normalizedTitle = normalizeTitle(title);
-      const stored = await storage.getDocument(current.id);
-      if (!stored) {
-        throw new StorageError('conflict', `Document ${current.id} no longer exists`);
-      }
-      // One write, guarded by the revision: if the document changed after `current` was read the
-      // write is refused, so stale content is never written back under the new title.
-      // The modification time is kept because the content did not change.
-      return storage.saveDocument(
-        toDraft(
-          {
-            id: current.id,
-            title: normalizedTitle,
-            content: stored.content,
-            createdAt: current.createdAt,
-            updatedAt: current.updatedAt,
-          },
-          current.source,
-        ),
-        current.rev,
-      );
+      return rewriteDescription(current, normalizeTitle(title), current.source);
+    },
+
+    setSource(current, source) {
+      return rewriteDescription(current, current.title, source);
     },
 
     remove(id) {

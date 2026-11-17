@@ -16,6 +16,8 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'command.newMemo': '새 메모',
   'command.manageMemos': '메모 목록',
   'command.openFile': '파일 열기',
+  'command.saveFile': '파일로 저장',
+  'command.saveFileAs': '다른 이름으로 저장…',
   'command.encoding': '인코딩',
   'command.closeTab': '탭 닫기',
   'command.nextTab': '다음 탭',
@@ -74,7 +76,12 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'notice.encodingNotFile': '인코딩은 이 기기에서 연 파일에서만 바꿀 수 있습니다.',
   'notice.encodingLocked': '인코딩은 파일을 연 직후, 편집하기 전에만 바꿀 수 있습니다. 다르게 읽으려면 파일을 다시 여세요.',
 
+  'notice.fileSaved': '{name} 파일로 저장했습니다.',
+  'notice.fileSaveFailed': '{name} 파일로 저장하지 못했습니다. "다른 이름으로 저장…"으로 다른 위치를 골라 보세요.',
+
   'file.loading': '{name} 여는 중…',
+  'file.convertConfirm': '{name} 파일은 {from} 인코딩입니다. 이 앱은 {to}로만 저장할 수 있고, {from}을 기대하는 프로그램에서는 글자가 깨져 보일 수 있습니다. {to}로 저장할까요?',
+  'file.convertAccept': '{to}로 저장',
 
   'memo.defaultTitle': '새 메모',
   'memo.conflictCopyTitle': '{title} (충돌 사본)',

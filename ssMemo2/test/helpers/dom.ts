@@ -25,11 +25,16 @@ function installDialogStandIn(window: JSDOM['window']): void {
   };
 }
 
+export interface BrowserStandIns {
+  /** Every blob the page asked an object URL for, in order: what it offered as downloads. */
+  objectUrlBlobs: Blob[];
+}
+
 /**
  * Stand-ins for browser features jsdom lacks, for tests that run the built page. jsdom has no
  * layout engine, so these only let the code run; they say nothing about how the page looks.
  */
-export function installBrowserStandIns(window: JSDOM['window']): void {
+export function installBrowserStandIns(window: JSDOM['window']): BrowserStandIns {
   installDialogStandIn(window);
   // CodeMirror measures text with these; it only needs them to exist.
   window.Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
@@ -38,6 +43,11 @@ export function installBrowserStandIns(window: JSDOM['window']): void {
   window.TextDecoder ??= TextDecoder;
   window.TextEncoder ??= TextEncoder;
   window.matchMedia ??= ((query: string) => ({ matches: false, media: query, addEventListener: () => undefined, removeEventListener: () => undefined })) as unknown as typeof window.matchMedia;
+  // jsdom cannot hand out object URLs, which is how the page starts a download.
+  const objectUrlBlobs: Blob[] = [];
+  window.URL.createObjectURL = (blob: Blob) => `blob:stand-in/${objectUrlBlobs.push(blob)}`;
+  window.URL.revokeObjectURL = () => undefined;
+  return { objectUrlBlobs };
 }
 
 export interface TestDom {

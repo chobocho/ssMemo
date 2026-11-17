@@ -34,7 +34,7 @@ import { createCommandMenu } from './ui/commandMenu.ts';
 import { createDiagnosticsPanel } from './ui/diagnosticsPanel.ts';
 import { isApplePlatform, readEnvironment } from './ui/environment.ts';
 import { installFileDrop } from './ui/fileDrop.ts';
-import { pickFiles } from './ui/fileIo.ts';
+import { createFileIo } from './ui/fileIo.ts';
 import { createMemoManager } from './ui/memoManager.ts';
 import { createModals } from './ui/modal.ts';
 import { nextPaint } from './ui/nextPaint.ts';
@@ -53,11 +53,14 @@ const AUTOSAVE_MAX_WAIT_MS = 10_000;
 const EDITOR_FONT_SIZE_VARIABLE = '--editor-font-size';
 // Set on the page while files are dragged over it (see styles/layout.css).
 const DROP_TARGET_CLASS = 'is-drop-target';
+// How long a message that merely confirms something stays on screen.
+const INFO_NOTICE_DURATION_MS = 4000;
 const MENU_COMMAND_ID = 'app.menu';
 // Commands that get a button in the header, in display order. Tabs have their own controls.
 const TOOLBAR_COMMAND_IDS: readonly string[] = [
   'memo.manage',
   'file.open',
+  'file.save',
   'view.toggleWrap',
   'view.fontSmaller',
   'view.fontLarger',
@@ -106,7 +109,7 @@ async function start(win: Window): Promise<void> {
 
   const shell = createAppShell(doc, APP_NAME);
   const status = createStatusIndicator(doc);
-  const notices = createNoticeBar(doc, t('notice.dismiss'));
+  const notices = createNoticeBar(doc, t('notice.dismiss'), (remove) => win.setTimeout(remove, INFO_NOTICE_DURATION_MS));
   const modals = createModals(doc, { confirm: t('modal.confirm'), cancel: t('modal.cancel') });
   shell.header.append(status.element);
   shell.noticeHost.append(notices.element);
@@ -148,10 +151,14 @@ async function start(win: Window): Promise<void> {
         editedSinceStart = true;
         workspace.handleEdit(tabId);
       },
-      onViewUpdate: () => statusBar.setText(formatEditorStats(editor.getStats(), t, workspace.getActiveDocument()?.source)),
+      onViewUpdate: () => refreshStatusBar(),
     },
     settings.lineWrapping,
   );
+
+  const refreshStatusBar = (): void => {
+    statusBar.setText(formatEditorStats(editor.getStats(), t, workspace.getActiveDocument()?.source));
+  };
 
   const workspace = createWorkspace({
     store: createDocumentStore({
@@ -175,9 +182,19 @@ async function start(win: Window): Promise<void> {
     onSaveStateChange: (state) => status.setSaveState(state === undefined ? '' : t(SAVE_STATE_KEYS[state])),
   });
 
+  const fileIo = createFileIo(win);
   const localFiles = createLocalFiles({
     openFile: (file) => workspace.openFile(file),
-    onNotice: (notice) => notices.show(describeFileNotice(notice, t)),
+    onNotice: (notice) => notices.show(describeFileNotice(notice, t), notice.kind === 'file-saved' ? 'info' : 'warning'),
+    getText: (tabId) => workspace.getText(tabId),
+    saveAs: (suggestedName, bytes) => fileIo.saveAs(suggestedName, bytes),
+    confirmConversion: (name, from, to) =>
+      modals.confirm(t('file.convertConfirm', { name, from, to }), t('file.convertAccept', { to })),
+    markSaved: async (tabId, saved) => {
+      await workspace.markSavedToFile(tabId, saved);
+      // The encoding shown for the file may have changed, and the editor saw no change to report.
+      refreshStatusBar();
+    },
     getActiveDocument: () => workspace.getActiveDocument(),
     redecode: (tabId, text, source) => workspace.redecode(tabId, text, source),
     chooseEncoding: (current) =>
@@ -213,7 +230,7 @@ async function start(win: Window): Promise<void> {
   };
 
   const openLocalFiles = async (): Promise<void> => {
-    await localFiles.openFiles(await pickFiles(doc, { multiple: true }));
+    await localFiles.openFiles(await fileIo.pickFiles({ multiple: true }));
   };
 
   const renameMemo = async (meta: DocumentMeta): Promise<void> => {
@@ -314,6 +331,14 @@ async function start(win: Window): Promise<void> {
   const commands = createCommandRegistry([
     { id: 'memo.manage', labelKey: 'command.manageMemos', icon: '📋', shortcuts: ['Alt-o'], run: showMemoManager },
     { id: 'file.open', labelKey: 'command.openFile', icon: '📂', shortcuts: ['Mod-o'], run: () => void openLocalFiles() },
+    { id: 'file.save', labelKey: 'command.saveFile', icon: '💾', shortcuts: ['Mod-s'], run: () => void localFiles.saveToFile(false) },
+    {
+      id: 'file.saveAs',
+      labelKey: 'command.saveFileAs',
+      icon: '📑',
+      shortcuts: ['Mod-Shift-s'],
+      run: () => void localFiles.saveToFile(true),
+    },
     { id: 'file.encoding', labelKey: 'command.encoding', icon: '🔤', shortcuts: [], run: () => void localFiles.changeEncoding() },
     { id: 'memo.new', labelKey: 'command.newMemo', icon: '➕', shortcuts: ['Alt-n'], run: () => workspace.newMemo() },
     { id: 'tab.close', labelKey: 'command.closeTab', icon: '✕', shortcuts: ['Alt-w'], run: closeActiveTab },

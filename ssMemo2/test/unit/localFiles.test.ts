@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { LOADING_INDICATOR_BYTES, MAX_FILE_BYTES, createLocalFiles } from '../../src/app/localFiles.ts';
-import type { FileNotice, LocalFiles, PickedFile } from '../../src/app/localFiles.ts';
-import type { ActiveDocument, OpenedFile } from '../../src/app/workspace.ts';
+import { LOADING_INDICATOR_BYTES, MAX_FILE_BYTES, createLocalFiles, toFileName } from '../../src/app/localFiles.ts';
+import type { FileNotice, LocalFiles, PickedFile, SaveTarget, WritableFile } from '../../src/app/localFiles.ts';
+import type { ActiveDocument, OpenedFile, SavedToFile } from '../../src/app/workspace.ts';
 import type { TextEncoding } from '../../src/lib/encoding.ts';
 import type { DocumentSource } from '../../src/storage/storagePort.ts';
 
@@ -26,6 +26,18 @@ interface Harness {
   redecoded: { tabId: string; text: string; source: DocumentSource }[];
   /** Whether the workspace accepts a new decoding. */
   redecodeAllowed: { value: boolean };
+  /** Text of the visible tab. */
+  text: { value: string | undefined };
+  /** Requests to choose a place to save: the suggested name and the bytes. */
+  saveRequests: { name: string; bytes: number[] }[];
+  /** What the next such request leads to; an Error makes it fail. */
+  saveOutcome: { value: SaveTarget | Error };
+  /** Questions about rewriting a file in another encoding, and the answer given. */
+  conversionQuestions: string[];
+  allowConversion: { value: boolean };
+  marked: { tabId: string; saved: SavedToFile }[];
+  /** A file that records what is written to it; with `broken` every write fails. */
+  writable(name: string, broken?: boolean): WritableFile & { written: number[][] };
   /** A file whose declared size can differ from its content, as for a file changed after it was picked. */
   file(name: string, content: readonly number[] | string, declaredSize?: number): PickedFile;
   /** A file that cannot be read. */
@@ -41,7 +53,26 @@ function createHarness(tabLimit = Number.POSITIVE_INFINITY): Harness {
   const asked: TextEncoding[] = [];
   const redecoded: Harness['redecoded'] = [];
   const redecodeAllowed = { value: true };
+  const text: Harness['text'] = { value: 'memo text' };
+  const saveRequests: Harness['saveRequests'] = [];
+  const saveOutcome: Harness['saveOutcome'] = { value: { kind: 'downloaded' } };
+  const conversionQuestions: string[] = [];
+  const allowConversion = { value: true };
+  const marked: Harness['marked'] = [];
   const files = createLocalFiles({
+    getText: () => text.value,
+    async saveAs(name, bytes) {
+      saveRequests.push({ name, bytes: [...bytes] });
+      if (saveOutcome.value instanceof Error) throw saveOutcome.value;
+      return saveOutcome.value;
+    },
+    async confirmConversion(fileName, from, to) {
+      conversionQuestions.push(`${fileName}: ${from} -> ${to}`);
+      return allowConversion.value;
+    },
+    async markSaved(tabId, saved) {
+      marked.push({ tabId, saved });
+    },
     getActiveDocument: () => active.document,
     redecode(tabId, text, source) {
       if (!redecodeAllowed.value) return false;
@@ -77,6 +108,23 @@ function createHarness(tabLimit = Number.POSITIVE_INFINITY): Harness {
     asked,
     redecoded,
     redecodeAllowed,
+    text,
+    saveRequests,
+    saveOutcome,
+    conversionQuestions,
+    allowConversion,
+    marked,
+    writable(name, broken = false) {
+      const written: number[][] = [];
+      return {
+        name,
+        written,
+        async write(bytes) {
+          if (broken) throw new Error('permission denied');
+          written.push([...bytes]);
+        },
+      };
+    },
     file(name, content, declaredSize) {
       const bytes = typeof content === 'string' ? new TextEncoder().encode(content) : new Uint8Array(content);
       return {
@@ -234,8 +282,12 @@ test('an opened file comes with its bytes, so it can be decoded again', async ()
 
 const CP949_SOURCE: DocumentSource = { fileName: 'legacy.txt', encoding: 'CP949', eol: 'lf', hasBom: false };
 
-function fileTab(bytes: readonly number[] | undefined, source: DocumentSource = CP949_SOURCE): ActiveDocument {
-  return { tabId: 'tab-1', title: source.fileName, source, originalBytes: bytes ? new Uint8Array(bytes) : undefined };
+function fileTab(bytes: readonly number[] | undefined, source: DocumentSource = CP949_SOURCE, localFile?: WritableFile): ActiveDocument {
+  return { tabId: 'tab-1', title: source.fileName, source, originalBytes: bytes ? new Uint8Array(bytes) : undefined, localFile };
+}
+
+function memoTab(title: string, localFile?: WritableFile): ActiveDocument {
+  return { tabId: 'tab-1', title, source: undefined, originalBytes: undefined, localFile };
 }
 
 test('changeEncoding reads the same bytes again with the chosen encoding', async () => {
@@ -263,7 +315,7 @@ test('changeEncoding does nothing when the user backs out or picks the encoding 
 
 test('changeEncoding explains that a memo has no encoding to change', async () => {
   const harness = createHarness();
-  harness.active.document = { tabId: 'tab-1', title: 'memo', source: undefined, originalBytes: undefined };
+  harness.active.document = memoTab('memo');
   await harness.files.changeEncoding();
   assert.deepEqual(harness.notices, [{ kind: 'encoding-not-a-file' }]);
   assert.deepEqual(harness.asked, []);
@@ -320,4 +372,153 @@ test('changeEncoding of a small file shows no indicator', async () => {
   harness.answer.encoding = 'Johab';
   await harness.files.changeEncoding();
   assert.deepEqual(harness.events, []);
+});
+
+test('a file opened with write access keeps it', async () => {
+  const harness = createHarness();
+  const writable = harness.writable('notes.txt');
+  await harness.files.openFiles([{ ...harness.file('notes.txt', 'text'), writable }]);
+  assert.equal(harness.opened[0]?.writable, writable);
+});
+
+// --- saving to a local file -------------------------------------------------
+
+const ascii = (text: string): number[] => [...text].map((character) => character.charCodeAt(0));
+const CRLF_SOURCE: DocumentSource = { fileName: 'windows.txt', encoding: 'UTF-8', eol: 'crlf', hasBom: true };
+
+test('toFileName turns a memo title into a name every system accepts', () => {
+  assert.equal(toFileName('Shopping list'), 'Shopping list.txt');
+  assert.equal(toFileName('a/b\\c:d*e?f"g<h>i|j'), 'a_b_c_d_e_f_g_h_i_j.txt');
+  assert.equal(toFileName('tab\there'), 'tab_here.txt');
+  // Windows refuses names that end in a dot or a space.
+  assert.equal(toFileName(' report. '), 'report.txt');
+  assert.equal(toFileName('...'), 'memo.txt');
+  assert.equal(toFileName(''), 'memo.txt');
+});
+
+test('saving a memo asks where to put it and writes plain UTF-8', async () => {
+  const harness = createHarness();
+  harness.active.document = memoTab('Shopping: list');
+  harness.text.value = 'milk\neggs';
+  await harness.files.saveToFile(false);
+  assert.deepEqual(harness.saveRequests, [{ name: 'Shopping_ list.txt', bytes: ascii('milk\neggs') }]);
+  // A memo stays a memo: no source is recorded for it.
+  assert.deepEqual(harness.marked, [{ tabId: 'tab-1', saved: {} }]);
+  assert.deepEqual(harness.conversionQuestions, []);
+});
+
+test('saving a file keeps its name, line ending and byte order mark', async () => {
+  const harness = createHarness();
+  harness.active.document = fileTab(undefined, CRLF_SOURCE);
+  harness.text.value = 'a\nb';
+  await harness.files.saveToFile(false);
+  assert.deepEqual(harness.saveRequests, [{ name: 'windows.txt', bytes: [0xef, 0xbb, 0xbf, ...ascii('a\r\nb')] }]);
+  assert.deepEqual(harness.marked, [{ tabId: 'tab-1', saved: { source: CRLF_SOURCE } }]);
+});
+
+test('a file with a known location is written in place without asking', async () => {
+  const harness = createHarness();
+  const writable = harness.writable('windows.txt');
+  harness.active.document = fileTab(undefined, CRLF_SOURCE, writable);
+  harness.text.value = 'a';
+  await harness.files.saveToFile(false);
+  assert.deepEqual(writable.written, [[0xef, 0xbb, 0xbf, 0x61]]);
+  assert.deepEqual(harness.saveRequests, []);
+  assert.deepEqual(harness.marked, [{ tabId: 'tab-1', saved: { source: CRLF_SOURCE, localFile: writable } }]);
+  assert.deepEqual(harness.notices, [{ kind: 'file-saved', fileName: 'windows.txt' }]);
+});
+
+test('"save as" asks for a place even when one is known, and follows the new file', async () => {
+  const harness = createHarness();
+  const old = harness.writable('windows.txt');
+  const chosen = harness.writable('copy.txt');
+  harness.active.document = fileTab(undefined, CRLF_SOURCE, old);
+  harness.text.value = 'a';
+  harness.saveOutcome.value = { kind: 'written', file: chosen };
+  await harness.files.saveToFile(true);
+  assert.deepEqual(old.written, []);
+  assert.equal(harness.saveRequests[0]?.name, 'windows.txt');
+  assert.deepEqual(harness.marked, [{ tabId: 'tab-1', saved: { source: { ...CRLF_SOURCE, fileName: 'copy.txt' }, localFile: chosen } }]);
+  assert.deepEqual(harness.notices, [{ kind: 'file-saved', fileName: 'copy.txt' }]);
+});
+
+test('a download is recorded without a location, and the browser reports it itself', async () => {
+  const harness = createHarness();
+  harness.active.document = fileTab(undefined, CRLF_SOURCE);
+  harness.saveOutcome.value = { kind: 'downloaded' };
+  await harness.files.saveToFile(false);
+  assert.deepEqual(harness.marked, [{ tabId: 'tab-1', saved: { source: CRLF_SOURCE } }]);
+  assert.deepEqual(harness.notices, []);
+});
+
+test('closing the save dialog changes nothing', async () => {
+  const harness = createHarness();
+  harness.active.document = fileTab(undefined, CRLF_SOURCE);
+  harness.saveOutcome.value = { kind: 'cancelled' };
+  await harness.files.saveToFile(false);
+  assert.deepEqual(harness.marked, []);
+  assert.deepEqual(harness.notices, []);
+});
+
+test('a CP949 file is saved as UTF-8 only after the user agreed', async () => {
+  const harness = createHarness();
+  const writable = harness.writable('legacy.txt');
+  harness.active.document = fileTab(undefined, { ...CP949_SOURCE, eol: 'crlf' }, writable);
+  harness.text.value = 'a\nb';
+
+  harness.allowConversion.value = false;
+  await harness.files.saveToFile(false);
+  assert.deepEqual(harness.conversionQuestions, ['legacy.txt: CP949 -> UTF-8']);
+  assert.deepEqual(writable.written, []);
+  assert.deepEqual(harness.marked, []);
+
+  harness.allowConversion.value = true;
+  await harness.files.saveToFile(false);
+  assert.deepEqual(writable.written, [ascii('a\r\nb')]);
+  assert.deepEqual(harness.marked, [
+    { tabId: 'tab-1', saved: { source: { fileName: 'legacy.txt', encoding: 'UTF-8', eol: 'crlf', hasBom: false }, localFile: writable } },
+  ]);
+});
+
+test('a UTF-16 file is written back as UTF-16 without any question', async () => {
+  const harness = createHarness();
+  const source: DocumentSource = { fileName: 'wide.txt', encoding: 'UTF-16LE', eol: 'lf', hasBom: true };
+  harness.active.document = fileTab(undefined, source);
+  harness.text.value = 'a';
+  await harness.files.saveToFile(false);
+  assert.deepEqual(harness.saveRequests[0]?.bytes, [0xff, 0xfe, 0x61, 0x00]);
+  assert.deepEqual(harness.conversionQuestions, []);
+});
+
+test('a failed write is reported and nothing is recorded as saved', async () => {
+  const harness = createHarness();
+  harness.active.document = fileTab(undefined, CRLF_SOURCE, harness.writable('windows.txt', true));
+  await harness.files.saveToFile(false);
+  assert.deepEqual(harness.notices, [{ kind: 'file-save-failed', fileName: 'windows.txt' }]);
+  assert.deepEqual(harness.marked, []);
+
+  harness.notices.length = 0;
+  harness.active.document = memoTab('memo');
+  harness.saveOutcome.value = new Error('disk full');
+  await harness.files.saveToFile(false);
+  assert.deepEqual(harness.notices, [{ kind: 'file-save-failed', fileName: 'memo.txt' }]);
+  assert.deepEqual(harness.marked, []);
+});
+
+test('saving does nothing when there is no tab or no text to save', async () => {
+  const harness = createHarness();
+  await harness.files.saveToFile(false);
+  harness.active.document = memoTab('memo');
+  harness.text.value = undefined;
+  await harness.files.saveToFile(false);
+  assert.deepEqual(harness.saveRequests, []);
+  assert.deepEqual(harness.notices, []);
+});
+
+test('an empty memo can be saved as an empty file', async () => {
+  const harness = createHarness();
+  harness.active.document = memoTab('memo');
+  harness.text.value = '';
+  await harness.files.saveToFile(false);
+  assert.deepEqual(harness.saveRequests, [{ name: 'memo.txt', bytes: [] }]);
 });

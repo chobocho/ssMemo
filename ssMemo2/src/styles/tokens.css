@@ -34,6 +34,9 @@
   /* Messages about data that may not be kept. */
   --color-warning-surface: #fff8c5;
   --color-warning-border: #d4a72c;
+  /* Messages that merely confirm something. */
+  --color-info-surface: #ddf4ff;
+  --color-info-border: #54aeff;
 
   /* Horizontal page margin; grows with the width class below. */
   --page-gutter: var(--space-2);

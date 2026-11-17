@@ -7,6 +7,7 @@ import { createAutosave } from './autosave.ts';
 import type { Autosave, AutosaveState, AutosaveTimers } from './autosave.ts';
 import { toValidTitle } from './documentStore.ts';
 import type { DocumentStore } from './documentStore.ts';
+import type { WritableFile } from './localFiles.ts';
 import type { SessionStore, SessionTab } from './session.ts';
 import type { TabManager } from './tabManager.ts';
 
@@ -58,6 +59,16 @@ export interface OpenedFile {
   source: DocumentSource;
   /** The file as it was read, so it can be decoded again if the encoding was guessed wrong. */
   bytes?: Uint8Array;
+  /** Present when the file can be written back in place. */
+  writable?: WritableFile;
+}
+
+/** Where and in which form a tab's text was written to a local file. */
+export interface SavedToFile {
+  /** The file's new description; given for tabs that show a file, left out for memos. */
+  source?: DocumentSource;
+  /** The file that was written, if it can be written again without asking. */
+  localFile?: WritableFile;
 }
 
 /** What the visible tab holds, for the commands that deal with files. */
@@ -68,6 +79,8 @@ export interface ActiveDocument {
   source: DocumentSource | undefined;
   /** The file's bytes; only for as long as the text is exactly what was decoded from them. */
   originalBytes: Uint8Array | undefined;
+  /** The local file this tab can be written back to without asking; not kept across visits. */
+  localFile: WritableFile | undefined;
 }
 
 export type CloseResult =
@@ -88,6 +101,13 @@ export interface Workspace {
    */
   openFile(file: OpenedFile): boolean;
   getActiveDocument(): ActiveDocument | undefined;
+  /** Current text of a tab; undefined for an unknown tab. */
+  getText(tabId: string): string | undefined;
+  /**
+   * Call after a tab's text was written to a local file. Remembers the file for the next save
+   * and, for a file document, stores its new description. Never rejects.
+   */
+  markSavedToFile(tabId: string, saved: SavedToFile): Promise<void>;
   /**
    * Replaces the text of a file tab with another decoding of the same bytes. Refused (false) once
    * the tab was edited, because the edits would be lost, and for tabs that are not fresh files.
@@ -123,6 +143,8 @@ interface OpenMemo {
   source: DocumentSource | undefined;
   /** The opened file's bytes, kept until the first edit so another encoding can be tried. */
   originalBytes: Uint8Array | undefined;
+  /** The local file this tab was opened from or last saved to, if it can be written again. */
+  localFile: WritableFile | undefined;
   /** Text and cursor the editor starts from when the tab is shown for the first time. */
   initialText: string;
   initialCursor: number;
@@ -139,7 +161,18 @@ interface TabContent {
   meta?: DocumentMeta;
   source?: DocumentSource;
   originalBytes?: Uint8Array;
+  localFile?: WritableFile;
   cursor?: number;
+}
+
+function isSameSource(left: DocumentSource | undefined, right: DocumentSource): boolean {
+  return (
+    left !== undefined &&
+    left.fileName === right.fileName &&
+    left.encoding === right.encoding &&
+    left.eol === right.eol &&
+    left.hasBom === right.hasBom
+  );
 }
 
 function saveFailureReason(error: unknown): SaveFailureReason {
@@ -223,6 +256,7 @@ export function createWorkspace(options: WorkspaceOptions): Workspace {
       title,
       source: content.source,
       originalBytes: content.originalBytes,
+      localFile: content.localFile,
       initialText: content.text,
       initialCursor: content.cursor ?? 0,
       saveState: undefined,
@@ -345,7 +379,10 @@ export function createWorkspace(options: WorkspaceOptions): Workspace {
     openFile(file) {
       saveActiveTab();
       const title = toValidTitle(file.source.fileName, options.defaultTitle);
-      if (!addTab({ title, text: file.text, source: file.source, originalBytes: file.bytes })) return false;
+      const content: TabContent = { title, text: file.text, source: file.source };
+      if (file.bytes) content.originalBytes = file.bytes;
+      if (file.writable) content.localFile = file.writable;
+      if (!addTab(content)) return false;
       showActiveTab();
       persistSession();
       return true;
@@ -360,7 +397,34 @@ export function createWorkspace(options: WorkspaceOptions): Workspace {
         // Once the document is stored, its metadata is what the next save writes.
         source: memo.meta ? memo.meta.source : memo.source,
         originalBytes: memo.originalBytes,
+        localFile: memo.localFile,
       };
+    },
+
+    getText: (tabId) => (memos.has(tabId) ? editor.getText(tabId) : undefined),
+
+    async markSavedToFile(tabId, saved) {
+      const memo = memos.get(tabId);
+      if (!memo) return;
+      if (saved.localFile) memo.localFile = saved.localFile;
+      // The bytes describe the file as it was before it was written.
+      memo.originalBytes = undefined;
+      if (!saved.source) return;
+
+      // Pending edits are written first, so the change below is based on the latest revision and
+      // the next save does not mistake it for another window's change.
+      await memo.autosave.flush();
+      if (!memo.meta) {
+        memo.source = saved.source;
+        return;
+      }
+      if (isSameSource(memo.meta.source, saved.source)) return;
+      try {
+        memo.meta = await store.setSource(memo.meta, saved.source);
+      } catch {
+        // The file itself was written. Failing to note its new form is not worth a message of
+        // its own: a storage that is broken reports that through the next save of the text.
+      }
     },
 
     redecode(tabId, text, source) {

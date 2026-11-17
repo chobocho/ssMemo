@@ -15,6 +15,8 @@ export const en = {
   'command.newMemo': 'New memo',
   'command.manageMemos': 'Memo list',
   'command.openFile': 'Open file',
+  'command.saveFile': 'Save to file',
+  'command.saveFileAs': 'Save to file as…',
   'command.encoding': 'Encoding',
   'command.closeTab': 'Close tab',
   'command.nextTab': 'Next tab',
@@ -76,7 +78,12 @@ export const en = {
   'notice.encodingLocked':
     'The encoding can be changed only right after opening a file, before editing it. Open the file again to read it differently.',
 
+  'notice.fileSaved': 'Saved to {name}.',
+  'notice.fileSaveFailed': 'Could not save to {name}. "Save to file as…" lets you choose another place.',
+
   'file.loading': 'Opening {name}…',
+  'file.convertConfirm': '{name} is a {from} file. This app can only save it as {to}, and programs that expect {from} may then show it garbled. Save as {to}?',
+  'file.convertAccept': 'Save as {to}',
 
   'memo.defaultTitle': 'New memo',
   'memo.conflictCopyTitle': '{title} (conflict copy)',

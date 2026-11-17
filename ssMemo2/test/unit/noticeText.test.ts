@@ -117,6 +117,13 @@ test('formatEditorStats ends with the encoding and line ending of a file', () =>
   assert.equal(formatEditorStats(undefined, t, { encoding: 'UTF-8', eol: 'lf', hasBom: false }), '');
 });
 
+test('describeFileNotice confirms a save and reports a failed one, naming the file', () => {
+  const saved = describeFileNotice({ kind: 'file-saved', fileName: 'notes.txt' }, t);
+  const failed = describeFileNotice({ kind: 'file-save-failed', fileName: 'notes.txt' }, t);
+  assert.ok(saved.includes('notes.txt') && failed.includes('notes.txt'));
+  assert.notEqual(saved, failed);
+});
+
 test('describeFileNotice explains why an encoding cannot be changed', () => {
   const notAFile = describeFileNotice({ kind: 'encoding-not-a-file' }, t);
   const locked = describeFileNotice({ kind: 'encoding-locked' }, t);

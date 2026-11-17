@@ -27,6 +27,8 @@ interface Page {
   activeTabTitle(): string | undefined;
   editorText(): string | undefined;
   noticeTexts(): string[];
+  /** Files the page offered as downloads, in order. */
+  downloads(): Promise<{ name: string; bytes: number[] }[]>;
   click(selector: string, index?: number): Promise<void>;
   close(): void;
 }
@@ -43,6 +45,8 @@ function wait(ms: number): Promise<void> {
 
 async function openPage(options: { factory?: IDBFactory; url?: string } = {}): Promise<Page> {
   const errors: string[] = [];
+  const downloadNames: string[] = [];
+  let objectUrlBlobs: Blob[] = [];
   const virtualConsole = new VirtualConsole();
   virtualConsole.on('jsdomError', (error) => errors.push(`jsdomError: ${error.message}`));
   virtualConsole.on('error', (...args) => errors.push(`console.error: ${args.join(' ')}`));
@@ -52,7 +56,15 @@ async function openPage(options: { factory?: IDBFactory; url?: string } = {}): P
     url: options.url ?? PAGE_URL,
     virtualConsole,
     beforeParse(window) {
-      installBrowserStandIns(window);
+      objectUrlBlobs = installBrowserStandIns(window).objectUrlBlobs;
+      // A download is a click on a link with a "download" attribute. jsdom cannot follow it.
+      window.document.addEventListener('click', (event) => {
+        const link = event.target as HTMLAnchorElement;
+        if (link.tagName === 'A' && link.hasAttribute('download')) {
+          downloadNames.push(link.download);
+          event.preventDefault();
+        }
+      });
       if (options.factory) {
         Object.defineProperty(window, 'indexedDB', { value: options.factory, configurable: true });
       }
@@ -69,6 +81,8 @@ async function openPage(options: { factory?: IDBFactory; url?: string } = {}): P
     activeTabTitle: () => document.querySelector('.tab-active .tab-title')?.textContent ?? undefined,
     editorText: () => document.querySelector('.cm-content')?.textContent ?? undefined,
     noticeTexts: () => [...document.querySelectorAll('.notice-text')].map(text),
+    downloads: () =>
+      Promise.all(downloadNames.map(async (name, index) => ({ name, bytes: [...new Uint8Array((await objectUrlBlobs[index]?.arrayBuffer()) ?? [])] }))),
     async click(selector, index = 0) {
       const target = document.querySelectorAll<HTMLElement>(selector)[index];
       assert.ok(target, `nothing matches ${selector} [${index}]`);
@@ -415,6 +429,56 @@ test('the encoding of a memo cannot be changed, and the user is told why', async
   await pickFromMenu(page, 'Encoding');
   assert.equal(page.document.querySelector('dialog[open]'), null);
   assert.equal(page.noticeTexts().length, 1);
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
+const asciiBytes = (value: string): number[] => [...value].map((character) => character.charCodeAt(0));
+
+test('the save button offers the visible memo as a text file', async () => {
+  const page = await openPage({ factory: await seededFactory() });
+  toolbarButton(page, 'Save to file').click();
+  await wait(100);
+  assert.deepEqual(await page.downloads(), [{ name: 'Shopping.txt', bytes: asciiBytes('milk') }]);
+  assert.deepEqual(page.errors, []);
+  assert.deepEqual(page.noticeTexts(), []);
+  page.close();
+});
+
+test('Ctrl+S saves to a file instead of letting the browser save the page', async () => {
+  const page = await openPage({ factory: await seededFactory() });
+  const press = new page.window.KeyboardEvent('keydown', { key: 's', code: 'KeyS', ctrlKey: true, bubbles: true, cancelable: true });
+  page.document.querySelector('.cm-content')?.dispatchEvent(press);
+  await wait(100);
+  assert.equal(press.defaultPrevented, true);
+  assert.deepEqual((await page.downloads()).map((download) => download.name), ['Shopping.txt']);
+  page.close();
+});
+
+test('a CP949 file is written as UTF-8 only after the user agreed, and keeps its line endings', async () => {
+  const page = await openPage({ factory: new FakeIndexedDbFactory() });
+  const statusBar = (): string => page.document.querySelector('.status-bar')?.textContent ?? '';
+  toolbarButton(page, 'Open file').click();
+  await chooseFiles(page, [new page.window.File([new Uint8Array([0xbe, 0xc8, 0xb3, 0xe7, 0x0d, 0x0a, 0x61])], 'legacy.txt')]);
+
+  // Declined: nothing is written.
+  toolbarButton(page, 'Save to file').click();
+  await wait(50);
+  assert.match(topDialog(page).textContent ?? '', /legacy\.txt.*CP949.*UTF-8/);
+  topDialog(page).querySelector('button')?.click();
+  await wait(50);
+  assert.deepEqual(await page.downloads(), []);
+  assert.match(statusBar(), /CP949 · CRLF$/);
+
+  // Agreed: "an-nyeong" in UTF-8, CR LF, "a".
+  toolbarButton(page, 'Save to file').click();
+  await wait(50);
+  [...topDialog(page).querySelectorAll('button')].at(-1)?.click();
+  await wait(100);
+  assert.deepEqual(await page.downloads(), [
+    { name: 'legacy.txt', bytes: [0xec, 0x95, 0x88, 0xeb, 0x85, 0x95, 0x0d, 0x0a, 0x61] },
+  ]);
+  assert.match(statusBar(), /UTF-8 · CRLF$/);
   assert.deepEqual(page.errors, []);
   page.close();
 });

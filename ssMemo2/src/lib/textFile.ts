@@ -81,7 +81,11 @@ export function readTextFile(bytes: Uint8Array, encoding?: TextEncoding): TextFi
  * UTF-8; the caller is expected to tell the user before overwriting such a file.
  */
 export function getSaveFormat(format: TextFormat): TextFormat {
-  if (isWritableEncoding(format.encoding)) return format;
+  // Always a new object with just these fields: callers pass richer objects (a document source
+  // with its file name) and spread the result into new ones.
+  if (isWritableEncoding(format.encoding)) {
+    return { encoding: format.encoding, eol: format.eol, hasBom: format.hasBom };
+  }
   return { encoding: 'UTF-8', eol: format.eol, hasBom: false };
 }
 

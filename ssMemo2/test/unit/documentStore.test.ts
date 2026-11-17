@@ -218,6 +218,26 @@ test('rename changes only the title and counts as one revision', async () => {
   assert.deepEqual(await store.load('id-1'), { meta: renamed, content: 'content stays' });
 });
 
+test('setSource changes only the source and counts as one revision', async () => {
+  const { store, advance } = createHarness();
+  const created = await store.create('notes.txt', 'content stays', FILE_SOURCE);
+  advance(ONE_MINUTE_MS);
+  const converted: DocumentSource = { ...FILE_SOURCE, encoding: 'UTF-8' };
+  const updated = await store.setSource(created, converted);
+  assert.deepEqual(updated, { ...created, source: converted, rev: 2 });
+  assert.deepEqual(await store.load('id-1'), { meta: updated, content: 'content stays' });
+});
+
+test('setSource with stale metadata or for a missing document is a conflict', async () => {
+  const { store } = createHarness();
+  const created = await store.create('notes.txt', 'v1', FILE_SOURCE);
+  await store.save(created, 'v2');
+  await assert.rejects(store.setSource(created, FILE_SOURCE), (error) => error instanceof StorageError && error.kind === 'conflict');
+  assert.equal((await store.list()).documents.length, 1);
+  await store.remove('id-1');
+  await assert.rejects(store.setSource(created, FILE_SOURCE), (error) => error instanceof StorageError && error.kind === 'conflict');
+});
+
 test('rename refuses an invalid title and leaves the document as it was', async () => {
   const { store } = createHarness();
   const created = await store.create('memo', 'text');

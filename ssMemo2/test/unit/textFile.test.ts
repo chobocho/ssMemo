@@ -115,6 +115,11 @@ test('getSaveFormat keeps formats that can be written', () => {
   }
 });
 
+test('getSaveFormat returns the format alone, without other fields of what it was given', () => {
+  const source = { fileName: 'old-name.txt', encoding: 'UTF-8', eol: 'lf', hasBom: false } as const;
+  assert.deepEqual(getSaveFormat(source), { encoding: 'UTF-8', eol: 'lf', hasBom: false });
+});
+
 test('getSaveFormat turns legacy Korean encodings into UTF-8 without a mark, keeping the line ending', () => {
   for (const encoding of ['CP949', 'Johab'] as const) {
     assert.deepEqual(getSaveFormat({ encoding, eol: 'crlf', hasBom: false }), { encoding: 'UTF-8', eol: 'crlf', hasBom: false });
