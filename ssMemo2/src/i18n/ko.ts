@@ -35,6 +35,7 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'command.insertGreen': '초록 사각형',
   'command.chunks': '절취선으로 나누기 / 다시 합치기',
   'command.runCode': '계산',
+  'command.openUrl': '웹 주소 열기',
   'command.closeTab': '탭 닫기',
   'command.nextTab': '다음 탭',
   'command.previousTab': '이전 탭',
@@ -154,6 +155,7 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'file.convertAccept': '{to}로 저장',
 
   'notice.chunksNotNeeded': '메모가 {count}자 이하라 나눌 필요가 없습니다.',
+  'notice.noUrl': '웹 주소를 선택하거나 주소 안에 커서를 두세요.',
   'notice.calcNothingToRun': '계산할 내용을 선택하거나, 계산식이 있는 줄에 커서를 두세요.',
   'notice.calcMemoryNotSaved': '변수를 저장하지 못했습니다. 이 페이지를 닫을 때까지만 유지됩니다.',
   'notice.backupExported': '메모 {count}개를 백업 파일로 저장했습니다.',

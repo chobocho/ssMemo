@@ -32,6 +32,8 @@ interface Page {
   activeTabTitle(): string | undefined;
   editorText(): string | undefined;
   noticeTexts(): string[];
+  /** Every call the page made to window.open. */
+  opened: unknown[][];
   /** Files the page offered as downloads, in order. */
   downloads(): Promise<{ name: string; bytes: number[] }[]>;
   click(selector: string, index?: number): Promise<void>;
@@ -51,6 +53,7 @@ function wait(ms: number): Promise<void> {
 async function openPage(options: { factory?: IDBFactory; url?: string } = {}): Promise<Page> {
   const errors: string[] = [];
   const downloadNames: string[] = [];
+  const opened: unknown[][] = [];
   let objectUrlBlobs: Blob[] = [];
   const virtualConsole = new VirtualConsole();
   virtualConsole.on('jsdomError', (error) => errors.push(`jsdomError: ${error.message}`));
@@ -62,6 +65,11 @@ async function openPage(options: { factory?: IDBFactory; url?: string } = {}): P
     virtualConsole,
     beforeParse(window) {
       objectUrlBlobs = installBrowserStandIns(window).objectUrlBlobs;
+      // jsdom cannot open windows; the calls are recorded instead.
+      window.open = (...args: unknown[]) => {
+        opened.push(args);
+        return null;
+      };
       // A download is a click on a link with a "download" attribute. jsdom cannot follow it.
       window.document.addEventListener('click', (event) => {
         const link = event.target as HTMLAnchorElement;
@@ -89,6 +97,7 @@ async function openPage(options: { factory?: IDBFactory; url?: string } = {}): P
     activeTabTitle: () => document.querySelector('.tab-active .tab-title')?.textContent ?? undefined,
     editorText: () => document.querySelector('.cm-content')?.textContent ?? undefined,
     noticeTexts: () => [...document.querySelectorAll('.notice-text')].map(text),
+    opened,
     downloads: () =>
       Promise.all(downloadNames.map(async (name, index) => ({ name, bytes: [...new Uint8Array((await objectUrlBlobs[index]?.arrayBuffer()) ?? [])] }))),
     async click(selector, index = 0) {
@@ -888,6 +897,59 @@ test('a calculation that cannot be done is explained, and an empty line gives a 
   assert.equal(page.document.querySelector('dialog[open]'), null);
   assert.equal(page.noticeTexts().length, 1);
   assert.deepEqual(page.errors, []);
+  page.close();
+});
+
+test('the address under the cursor is opened in a new tab that gets no handle on this page', async () => {
+  const page = await openPage({ factory: await seededFactory() });
+  await typeLine(page, 'https://example.com/docs?q=1 is where it is');
+  await pickFromMenu(page, 'Open the web address');
+  assert.deepEqual(page.opened, [['https://example.com/docs?q=1', '_blank', 'noopener,noreferrer']]);
+
+  await typeLine(page, 'no address on this line');
+  await pickFromMenu(page, 'Open the web address');
+  assert.equal(page.opened.length, 1);
+  assert.equal(page.noticeTexts().length, 1);
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
+test('a right click on a selected address opens it, with a mouse but not by touch', async () => {
+  const page = await openPage({ factory: await seededFactory() });
+  await typeLine(page, 'see www.example.com/a for more');
+  // Selecting through the search: "find next" selects the match.
+  await pressKey(page, { key: 'f', code: 'KeyF', ctrlKey: true });
+  await searchFor(page, 'www.example.com/a');
+  page.document.querySelector<HTMLElement>('.cm-search button[name="next"]')?.click();
+  await wait(100);
+
+  const rightClick = (pointerType: string): Event => {
+    const event = new page.window.MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'pointerType', { value: pointerType });
+    page.document.querySelector('.cm-content')?.dispatchEvent(event);
+    return event;
+  };
+  // A long press on a touch screen: the browser's own menu (copy, paste) must stay.
+  assert.equal(rightClick('touch').defaultPrevented, false);
+  assert.deepEqual(page.opened, []);
+
+  assert.equal(rightClick('mouse').defaultPrevented, true);
+  assert.deepEqual(page.opened, [['https://www.example.com/a', '_blank', 'noopener,noreferrer']]);
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
+test('a right click on text that is not an address is left to the browser', async () => {
+  const page = await openPage({ factory: await seededFactory() });
+  await pressKey(page, { key: 'f', code: 'KeyF', ctrlKey: true });
+  await searchFor(page, 'milk');
+  page.document.querySelector<HTMLElement>('.cm-search button[name="next"]')?.click();
+  await wait(100);
+  const event = new page.window.MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'pointerType', { value: 'mouse' });
+  page.document.querySelector('.cm-content')?.dispatchEvent(event);
+  assert.equal(event.defaultPrevented, false);
+  assert.deepEqual(page.opened, []);
   page.close();
 });
 

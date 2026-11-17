@@ -56,6 +56,7 @@ export const COMMAND_DEFINITIONS = [
 
   { id: 'tools.calc', group: 'tools', labelKey: 'command.runCode', icon: '🧮', shortcuts: ['Mod-Enter'] },
   { id: 'tools.chunks', group: 'tools', labelKey: 'command.chunks', icon: '➗', shortcuts: [] },
+  { id: 'tools.openUrl', group: 'tools', labelKey: 'command.openUrl', icon: '🔗', shortcuts: [] },
 
   { id: 'view.preview', group: 'view', labelKey: 'command.preview', icon: '📖', shortcuts: ['Alt-p'] },
   { id: 'view.toggleWrap', group: 'view', labelKey: 'command.toggleWrap', icon: '↩️', shortcuts: ['Alt-z'] },

@@ -33,7 +33,15 @@ import { formatShortcut } from './app/shortcut.ts';
 import type { LanguageSetting, Settings } from './app/settings.ts';
 import { adjacentTabId, createTabManager } from './app/tabManager.ts';
 import { createWorkspace } from './app/workspace.ts';
-import { getCodeToRun, insertDivider, insertResultLines, insertText, toggleChunks } from './editor/editorActions.ts';
+import {
+  getCodeToRun,
+  getSelectedUrl,
+  getUrlToOpen,
+  insertDivider,
+  insertResultLines,
+  insertText,
+  toggleChunks,
+} from './editor/editorActions.ts';
 import { mountEditorTabs } from './editor/editorTabs.ts';
 import { createSearchPhrases } from './editor/searchPhrases.ts';
 import type { MessageKey } from './i18n/en.ts';
@@ -77,6 +85,9 @@ const INFO_NOTICE_DURATION_MS = 4000;
 const BACKUP_FILE_TYPES = '.json,application/json';
 // Set on the main area while the Markdown preview is on (see styles/layout.css).
 const PREVIEWING_CLASS = 'is-previewing';
+// A page opened from a memo gets no handle on this page and is not told where it was opened from.
+const NEW_TAB_FEATURES = 'noopener,noreferrer';
+const FINE_POINTER_QUERY = '(pointer: fine)';
 // The preview follows typing after this pause, and gives up on memos longer than this: rendering
 // them would stall a phone at every pause.
 const PREVIEW_DELAY_MS = 300;
@@ -429,6 +440,25 @@ async function start(win: Window): Promise<void> {
     if (action === 'split') editor.searchFor(CHUNK_LABEL);
   };
 
+  const openUrl = (url: string): void => {
+    win.open(url, '_blank', NEW_TAB_FEATURES);
+  };
+  const openUrlAtCursor = (): void => {
+    const url = editor.read(getUrlToOpen);
+    if (url === undefined) notices.show(t('notice.noUrl'), 'info');
+    else openUrl(url);
+  };
+  // As in ssMemoWeb, a right click on a selected address opens it. Only with a mouse: on a touch
+  // screen this event is the long press that selects text, and opening a page would get in its way.
+  shell.editorHost.addEventListener('contextmenu', (event) => {
+    const pointerType = (event as PointerEvent).pointerType as string | undefined;
+    const isMouse = pointerType ? pointerType === 'mouse' : win.matchMedia(FINE_POINTER_QUERY).matches;
+    const url = isMouse ? editor.read(getSelectedUrl) : undefined;
+    if (url === undefined) return;
+    event.preventDefault();
+    openUrl(url);
+  });
+
   const calc = createCalcActions({
     storage: opened.storage,
     getCode: () => editor.read(getCodeToRun),
@@ -500,6 +530,7 @@ async function start(win: Window): Promise<void> {
       ...symbolCommands,
       'tools.calc': () => void calc.run(),
       'tools.chunks': { run: toggleCutLines, isOn: hasCutLines },
+      'tools.openUrl': openUrlAtCursor,
       'view.preview': { run: togglePreview, isOn: () => preview.isEnabled() },
       'view.toggleWrap': { run: toggleLineWrapping, isOn: () => settings.lineWrapping },
       'view.fontSmaller': () => stepFontSize(-1),

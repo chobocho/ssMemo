@@ -4,6 +4,7 @@
 // replaced the whole text area and wiped the undo history.)
 import { CHUNK_DELIMITER, decideChunkAction, planJoin, planSplit } from '../lib/chunks.ts';
 import type { ChunkAction } from '../lib/chunks.ts';
+import { findUrlAt, toWebUrl } from '../lib/url.ts';
 import { isolateHistory } from './cm6.ts';
 import type { EditorState, TransactionSpec } from './cm6.ts';
 
@@ -97,4 +98,21 @@ export function insertResultLines(state: EditorState, end: number, lines: readon
     userEvent: INPUT_EVENT,
     annotations: OWN_UNDO_STEP,
   };
+}
+
+// No web address is longer than this; a larger selection is not even looked at.
+const MAX_URL_LENGTH = 2048;
+
+/** The web address that is selected, if the selection is exactly one. */
+export function getSelectedUrl(state: EditorState): string | undefined {
+  const { from, to } = state.selection.main;
+  return from === to || to - from > MAX_URL_LENGTH ? undefined : toWebUrl(state.sliceDoc(from, to));
+}
+
+/** The web address to open: the selected one, or without a selection the one the cursor is in. */
+export function getUrlToOpen(state: EditorState): string | undefined {
+  const { empty, head } = state.selection.main;
+  if (!empty) return getSelectedUrl(state);
+  const line = state.doc.lineAt(head);
+  return findUrlAt(line.text, head - line.from);
 }

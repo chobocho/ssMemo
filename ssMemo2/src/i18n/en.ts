@@ -34,6 +34,7 @@ export const en = {
   'command.insertGreen': 'Green square',
   'command.chunks': 'Split with cut lines / join again',
   'command.runCode': 'Calculate',
+  'command.openUrl': 'Open the web address',
   'command.closeTab': 'Close tab',
   'command.nextTab': 'Next tab',
   'command.previousTab': 'Previous tab',
@@ -158,6 +159,7 @@ export const en = {
   'file.convertAccept': 'Save as {to}',
 
   'notice.chunksNotNeeded': 'The memo has {count} characters or fewer, so there is nothing to split.',
+  'notice.noUrl': 'Select a web address, or put the cursor inside one.',
   'notice.calcNothingToRun': 'Select what to calculate, or put the cursor on a line with a calculation.',
   'notice.calcMemoryNotSaved': 'The variables could not be stored. They apply until this page is closed.',
   'notice.backupExported': 'Backup saved with {count} memo(s).',

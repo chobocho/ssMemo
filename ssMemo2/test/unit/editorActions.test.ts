@@ -5,6 +5,8 @@ import type { EditorState, TransactionSpec } from '@codemirror/state';
 import {
   DIVIDER_LENGTH,
   getCodeToRun,
+  getSelectedUrl,
+  getUrlToOpen,
   insertDivider,
   insertResultLines,
   insertText,
@@ -235,4 +237,32 @@ test('a position beyond the document is treated as its end, and no lines change 
 test('an inserted result is one step for undo', () => {
   const before = stateWith('1 + 2', 0);
   assert.equal(undone(applied(before, insertResultLines(before, 5, ['# 3']))).doc.toString(), '1 + 2');
+});
+
+// --- web addresses ----------------------------------------------------------
+
+test('a selected web address is the one to open', () => {
+  const text = 'see www.example.com/a now';
+  const selected = stateWith(text, 4, 21);
+  assert.equal(getUrlToOpen(selected), 'https://www.example.com/a');
+  assert.equal(getSelectedUrl(selected), 'https://www.example.com/a');
+});
+
+test('a selection that is not exactly one web address opens nothing', () => {
+  const text = 'see www.example.com/a now';
+  assert.equal(getUrlToOpen(stateWith(text, 0, 21)), undefined);
+  assert.equal(getSelectedUrl(stateWith(text, 0, 3)), undefined);
+});
+
+test('without a selection the address under the cursor is taken, but only by the command', () => {
+  const state = stateWith('see https://example.com/a now', 10);
+  assert.equal(getUrlToOpen(state), 'https://example.com/a');
+  // A right click needs a selection: the cursor alone must not turn it into "open".
+  assert.equal(getSelectedUrl(state), undefined);
+  assert.equal(getUrlToOpen(stateWith('see https://example.com/a now', 1)), undefined);
+});
+
+test('the cursor on the second line finds the address on that line', () => {
+  const text = 'first line\nsee https://example.com/b';
+  assert.equal(getUrlToOpen(stateWith(text, text.length - 3)), 'https://example.com/b');
 });
