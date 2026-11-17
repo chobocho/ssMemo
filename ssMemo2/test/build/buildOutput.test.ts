@@ -16,6 +16,7 @@ const CHARSET_SNIFF_BYTES = 1024;
 const NOT_YET_WIRED: readonly string[] = [
   'src/storage/indexedDbStorage.ts',
   'src/storage/memoryStorage.ts',
+  'src/storage/openStorage.ts',
   'src/storage/storagePort.ts',
 ];
 

@@ -13,6 +13,15 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 09:18] 저장소 열기 폴백과 임시 모드 (2.5)</h2>
+<ul>
+<li><b>기획:</b> 시작할 때 한 번만 저장소를 결정: IndexedDB가 열리면 영구 모드, 아니면 메모리 저장소로 임시 모드. 주소에 <code>?safe</code>를 붙이면 IndexedDB를 건드리지 않고 임시 모드로 시작.</li>
+<li><b>TC:</b> 정상 — 영구 모드에서 다시 열어도 유지, <code>?safe</code>·<code>?safe=1</code> 인식. 경계 — IndexedDB 없음, 속성 접근 자체가 예외, 열기 타임아웃, 임시 저장소가 열 때마다 비어 있는지, <code>?unsafe</code>·<code>?safe=0</code>은 꺼짐, 연결 끊김 알림 전달.</li>
+<li><b>개발:</b> <code>src/storage/openStorage.ts</code>, <code>test/unit/openStorage.test.ts</code>, <code>test/build/buildOutput.test.ts</code></li>
+<li><b>검증:</b> 단위 164 passed, 0 failed · 빌드 16 passed, 0 failed · tsc 오류 없음</li>
+<li><b>비고:</b> 세션 도중에는 저장소를 바꾸지 않음(ssMemoWeb은 오류 시 빈 메모리 저장소로 바뀌어 메모가 사라진 것처럼 보였음).</li>
+</ul>
+
 <h2>[2026-11-17 09:17] IndexedDB 실패 처리 (2.4)</h2>
 <ul>
 <li><b>기획:</b> DB가 고장 나도 앱이 멈추지 않도록 모든 실패를 종류가 있는 <code>StorageError</code>로 변환: 열기 불가, 쓰기 실패, 용량 초과, 연결 끊김. 손상 레코드는 건너뛰고 개수만 보고.</li>
