@@ -1,0 +1,22 @@
+/* Stylesheet entry point; the build inlines everything imported here into the page. */
+@import "./tokens.css";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  /* Stay clear of display cutouts and rounded corners while keeping a minimum gutter. */
+  padding:
+    max(var(--space-4), env(safe-area-inset-top))
+    max(var(--space-4), env(safe-area-inset-right))
+    max(var(--space-4), env(safe-area-inset-bottom))
+    max(var(--space-4), env(safe-area-inset-left));
+  /* Generic families only: the app must not depend on any font that is not already on the device. */
+  font-family: system-ui, sans-serif;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+}

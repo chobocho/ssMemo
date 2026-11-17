@@ -13,6 +13,15 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 03:40] 단일 파일 빌드 파이프라인과 산출물 가드 (0.3)</h2>
+<ul>
+<li><b>기획:</b> esbuild로 TS·CSS를 묶어 템플릿에 인라인하고, 외부 참조가 하나라도 있으면 빌드가 실패하도록 설계. 빌드 ID는 버전 + 내용 해시.</li>
+<li><b>TC:</b> 정상 — 자리표시자 치환, 단일 script/style, 파비콘 data URI, 두 번 빌드 동일. 경계 — <code>$&amp;</code> 포함 값, 누락·미사용·중복 자리표시자, <code>&lt;!--</code>·<code>&lt;/script</code> 포함 코드, 허용 목록 밖 URL, 크기 상한.</li>
+<li><b>개발:</b> <code>scripts/htmlTemplate.ts</code>, <code>scripts/selfContained.ts</code>, <code>scripts/buildHtml.ts</code>, <code>scripts/build.ts</code>, <code>src/main.ts</code>, <code>src/app/buildInfo.ts</code>, <code>src/index.template.html</code>, <code>src/styles/index.css</code> 외 9개 파일</li>
+<li><b>검증:</b> 단위 40 passed, 0 failed · 산출물 가드 10 passed, 0 failed · tsc 오류 없음</li>
+<li><b>비고:</b> npm이 esbuild의 postinstall 스크립트를 차단했으나 JS API 빌드는 정상 동작함을 확인.</li>
+</ul>
+
 <h2>[2026-11-17 03:35] 툴체인 설정: TypeScript 6 + Node 내장 테스트 (0.2)</h2>
 <ul>
 <li><b>기획:</b> 같은 <code>.ts</code> 소스를 tsc(타입 검사)와 Node(테스트 실행)가 함께 쓰도록 tsconfig를 src용·test용 2종으로 분리.</li>
