@@ -13,6 +13,15 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 15:42] 계산기 이식 (5.8)</h2>
+<ul>
+<li><b>기획:</b> ssMemoWeb의 <code>calc.js</code>(큰 정수 산술, 변수, sin·cos·tan·factorial, # 주석)를 옮긴다. 변수와 함수는 Map에 두고, 오류는 한글 문장 대신 코드로 던져 두 언어로 표시할 수 있게 한다.</li>
+<li><b>TC:</b> 정상 — 원본 테스트 전부(사칙연산, 우선순위, 5000자리 정수, 지수 표기, 변수, 함수, 주석, 메모리 저장·복원). 경계 — <code>constructor</code>·<code>toString</code> 같은 이름, 0 나눗셈, 10만 자 초과, 깊은 중첩, 손상된 저장값, 실패한 실행은 메모리를 바꾸지 않음.</li>
+<li><b>개발:</b> <code>src/lib/calc.ts</code>, <code>test/unit/calc.test.ts</code>, <code>test/build/buildOutput.test.ts</code></li>
+<li><b>검증:</b> 단위 778 passed, 빌드 52 passed, 0 failed</li>
+<li><b>비고:</b> 원본은 <code>constructor</code>를 정의된 변수로, <code>toString(1)</code>을 함수 호출로 처리했다.</li>
+</ul>
+
 <h2>[2026-11-17 15:38] 마크다운 미리보기 패널 (5.7)</h2>
 <ul>
 <li><b>기획:</b> 📖(Alt+P)로 보이는 메모를 마크다운으로 렌더링. 넓은 화면은 편집기와 나란히, 좁은 화면은 편집기 대신 표시하며 배치는 CSS 토큰이 정한다. 입력을 멈추면 0.3초 뒤 갱신하고 50만 자가 넘으면 렌더링하지 않는다.</li>
