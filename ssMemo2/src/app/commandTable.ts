@@ -34,10 +34,11 @@ export const COMMAND_DEFINITIONS = [
   { id: 'file.saveAs', group: 'file', labelKey: 'command.saveFileAs', icon: '📑', shortcuts: ['Mod-Shift-s'] },
   { id: 'file.encoding', group: 'file', labelKey: 'command.encoding', icon: '🔤', shortcuts: [] },
 
-  // Ctrl+I, Ctrl+< and Ctrl+> are the search keys of ssMemoWeb; the others are what editors use.
+  // Ctrl+I, Ctrl+<, Ctrl+> and Ctrl+B are the search keys of ssMemoWeb; the others are what editors
+  // use. Its Ctrl+N for "next" is missing on purpose: browsers keep that key for a new window.
   { id: 'search.open', group: 'search', labelKey: 'command.search', icon: '🔍', shortcuts: ['Mod-f', 'Mod-i'] },
   { id: 'search.next', group: 'search', labelKey: 'command.findNext', icon: '🔽', shortcuts: ['F3', 'Mod-.', 'Mod->'] },
-  { id: 'search.previous', group: 'search', labelKey: 'command.findPrevious', icon: '🔼', shortcuts: ['Shift-F3', 'Mod-,', 'Mod-<'] },
+  { id: 'search.previous', group: 'search', labelKey: 'command.findPrevious', icon: '🔼', shortcuts: ['Shift-F3', 'Mod-,', 'Mod-<', 'Mod-b'] },
 
   // The keys of ssMemoWeb. Home, End and the page keys work as in any editor besides these.
   { id: 'move.start', group: 'move', labelKey: 'command.goToStart', icon: '⏫', shortcuts: ['Mod-6', 'Mod-h'] },

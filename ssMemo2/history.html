@@ -13,6 +13,14 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-17 16:15] 이전 찾기에 Ctrl+B 추가 (5.2 보완)</h2>
+<ul>
+<li><b>기획:</b> ssMemoWeb은 도움말에 없지만 Ctrl+B도 "이전 찾기"로 받았다. 기존 사용자가 쓰던 키가 빠지지 않게 추가한다. Ctrl+N(다음 찾기)은 브라우저가 새 창에 쓰는 키라 넣지 않는다.</li>
+<li><b>TC:</b> ssMemoWeb 단축키 목록 테스트에 Ctrl+B 추가(추가 전 실패). 편집기 키·브라우저 예약 키와의 충돌 검사 통과.</li>
+<li><b>개발:</b> <code>src/app/commandTable.ts</code>, <code>test/unit/keymapCollisions.test.ts</code></li>
+<li><b>검증:</b> 단위 840 passed, 빌드 64 passed, 0 failed</li>
+</ul>
+
 <h2>[2026-11-17 16:13] 로드맵 5.2~5.10 줄의 띄어쓰기 복구</h2>
 <ul>
 <li><b>기획:</b> 로드맵 항목을 체크하는 보조 스크립트가 5.2~5.10의 번호와 제목 사이 공백을 지웠다. 공백을 되살린다.</li>

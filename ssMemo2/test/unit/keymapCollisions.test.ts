@@ -103,6 +103,7 @@ test('the shortcuts ssMemoWeb users know are all there', () => {
     'Mod-i': 'search.open',
     'Mod-<': 'search.previous',
     'Mod-,': 'search.previous',
+    'Mod-b': 'search.previous',
     'Mod->': 'search.next',
     'Mod-.': 'search.next',
     'Mod-6': 'move.start',
