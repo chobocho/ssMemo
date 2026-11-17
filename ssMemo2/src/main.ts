@@ -3,8 +3,10 @@ import { readBuildId } from './app/buildInfo.ts';
 import { createCommandRegistry } from './app/commands.ts';
 import { describeEnvironment } from './app/diagnostics.ts';
 import { createDocumentStore, findTitleProblem } from './app/documentStore.ts';
+import { createLocalFiles } from './app/localFiles.ts';
 import {
   SAVE_STATE_KEYS,
+  describeFileNotice,
   describeNotice,
   describeStorage,
   describeTitleProblem,
@@ -26,8 +28,11 @@ import { createAppShell } from './ui/appShell.ts';
 import { copyToClipboard } from './ui/clipboard.ts';
 import { createDiagnosticsPanel } from './ui/diagnosticsPanel.ts';
 import { isApplePlatform, readEnvironment } from './ui/environment.ts';
+import { installFileDrop } from './ui/fileDrop.ts';
+import { pickFiles } from './ui/fileIo.ts';
 import { createMemoManager } from './ui/memoManager.ts';
 import { createModals } from './ui/modal.ts';
+import { nextPaint } from './ui/nextPaint.ts';
 import { createNoticeBar } from './ui/noticeBar.ts';
 import { createStatusBar } from './ui/statusBar.ts';
 import { createStatusIndicator } from './ui/statusIndicator.ts';
@@ -41,9 +46,12 @@ const AUTOSAVE_IDLE_DELAY_MS = 1500;
 const AUTOSAVE_MAX_WAIT_MS = 10_000;
 // The CSS variable the editor theme reads its text size from (see styles/tokens.css).
 const EDITOR_FONT_SIZE_VARIABLE = '--editor-font-size';
+// Set on the page while files are dragged over it (see styles/layout.css).
+const DROP_TARGET_CLASS = 'is-drop-target';
 // Commands that get a button in the header, in display order. Tabs have their own controls.
 const TOOLBAR_COMMAND_IDS: readonly string[] = [
   'memo.manage',
+  'file.open',
   'view.toggleWrap',
   'view.fontSmaller',
   'view.fontLarger',
@@ -150,6 +158,17 @@ async function start(win: Window): Promise<void> {
     onSaveStateChange: (state) => status.setSaveState(state === undefined ? '' : t(SAVE_STATE_KEYS[state])),
   });
 
+  const localFiles = createLocalFiles({
+    openFile: (file) => workspace.openFile(file),
+    onNotice: (notice) => notices.show(describeFileNotice(notice, t)),
+    showLoading: (fileName) => modals.busy(t('file.loading', { name: fileName })),
+    yieldToUi: () => nextPaint(win),
+  });
+  installFileDrop(shell.element, {
+    activeClass: DROP_TARGET_CLASS,
+    onDrop: (files) => void localFiles.openFiles(files),
+  });
+
   // --- what the commands do ---------------------------------------------------
 
   // A tab whose changes cannot be saved is closed only after the user agrees to lose them.
@@ -166,6 +185,10 @@ async function start(win: Window): Promise<void> {
   const stepTab = (step: 1 | -1): void => {
     const tabId = adjacentTabId(tabs, step);
     if (tabId !== undefined) workspace.activateTab(tabId);
+  };
+
+  const openLocalFiles = async (): Promise<void> => {
+    await localFiles.openFiles(await pickFiles(doc, { multiple: true }));
   };
 
   const renameMemo = async (meta: DocumentMeta): Promise<void> => {
@@ -245,9 +268,10 @@ async function start(win: Window): Promise<void> {
     win.location.reload();
   };
 
-  // Browsers keep Ctrl+T/W/N/Tab for themselves, so these shortcuts use Alt.
+  // Browsers keep Ctrl+T/W/N/Tab for themselves, so those shortcuts use Alt. Ctrl+O can be taken over.
   const commands = createCommandRegistry([
     { id: 'memo.manage', labelKey: 'command.manageMemos', icon: '📋', shortcuts: ['Alt-o'], run: showMemoManager },
+    { id: 'file.open', labelKey: 'command.openFile', icon: '📂', shortcuts: ['Mod-o'], run: () => void openLocalFiles() },
     { id: 'memo.new', labelKey: 'command.newMemo', icon: '➕', shortcuts: ['Alt-n'], run: () => workspace.newMemo() },
     { id: 'tab.close', labelKey: 'command.closeTab', icon: '✕', shortcuts: ['Alt-w'], run: closeActiveTab },
     { id: 'tab.next', labelKey: 'command.nextTab', icon: '▶', shortcuts: ['Alt-PageDown'], run: () => stepTab(1) },

@@ -34,6 +34,9 @@ export function installBrowserStandIns(window: JSDOM['window']): void {
   // CodeMirror measures text with these; it only needs them to exist.
   window.Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
   window.Range.prototype.getBoundingClientRect = () => ({ left: 0, right: 0, top: 0, bottom: 0, width: 0, height: 0 }) as DOMRect;
+  // The text codecs exist in every browser, but jsdom leaves them out.
+  window.TextDecoder ??= TextDecoder;
+  window.TextEncoder ??= TextEncoder;
   window.matchMedia ??= ((query: string) => ({ matches: false, media: query, addEventListener: () => undefined, removeEventListener: () => undefined })) as unknown as typeof window.matchMedia;
 }
 

@@ -4,6 +4,7 @@ import type { AutosaveState } from '../../src/app/autosave.ts';
 import { MAX_TITLE_LENGTH } from '../../src/app/documentStore.ts';
 import {
   SAVE_STATE_KEYS,
+  describeFileNotice,
   describeNotice,
   describeStorage,
   describeTitleProblem,
@@ -100,4 +101,26 @@ test('formatEditorStats adds the selection size only while something is selected
 
 test('formatEditorStats shows nothing when there is no document', () => {
   assert.equal(formatEditorStats(undefined, t), '');
+});
+
+test('describeFileNotice names the file in every message', () => {
+  const notices = [
+    { kind: 'file-too-large', fileName: 'big.log', maxBytes: 10 * 1024 * 1024 },
+    { kind: 'file-not-text', fileName: 'photo.png' },
+    { kind: 'file-unreadable', fileName: 'gone.txt' },
+    { kind: 'file-garbled', fileName: 'odd.txt', encoding: 'CP949' },
+  ] as const;
+  const texts = notices.map((notice) => describeFileNotice(notice, t));
+  notices.forEach((notice, index) => assert.equal(texts[index]?.includes(notice.fileName), true, notice.kind));
+  assert.equal(new Set(texts).size, notices.length);
+});
+
+test('describeFileNotice states the size limit in megabytes', () => {
+  const text = describeFileNotice({ kind: 'file-too-large', fileName: 'big.log', maxBytes: 10 * 1024 * 1024 }, t);
+  assert.match(text, /\b10 MB\b/);
+});
+
+test('describeFileNotice names the encoding a doubtful file was read with', () => {
+  const text = describeFileNotice({ kind: 'file-garbled', fileName: 'odd.txt', encoding: 'CP949' }, t);
+  assert.equal(text.includes('CP949'), true);
 });

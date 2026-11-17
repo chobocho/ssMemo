@@ -35,6 +35,12 @@
   overflow: hidden;
 }
 
+/* Shows where dragged files will land. Drawn inside the area so it is not clipped. */
+.app-shell.is-drop-target .app-main {
+  outline: var(--drop-outline-width) dashed var(--color-accent);
+  outline-offset: calc(-1 * var(--drop-outline-width));
+}
+
 .app-footer {
   border-block-start: var(--border-width) solid var(--color-border);
 }

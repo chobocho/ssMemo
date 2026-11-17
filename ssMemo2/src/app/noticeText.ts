@@ -6,6 +6,7 @@ import type { StorageMode, TemporaryReason } from '../storage/openStorage.ts';
 import type { AutosaveState } from './autosave.ts';
 import { MAX_TITLE_LENGTH } from './documentStore.ts';
 import type { TitleProblem } from './documentStore.ts';
+import type { FileNotice } from './localFiles.ts';
 import type { EditorStats } from '../editor/editorSetup.ts';
 import { MAX_TABS } from './tabManager.ts';
 import type { SaveFailureReason, WorkspaceNotice } from './workspace.ts';
@@ -42,6 +43,21 @@ export function describeNotice(notice: WorkspaceNotice, t: Translate): string {
       return t('notice.tabLimit', { max: MAX_TABS });
     case 'memo-missing':
       return t('notice.memoMissing');
+  }
+}
+
+const BYTES_PER_MEGABYTE = 1024 * 1024;
+
+export function describeFileNotice(notice: FileNotice, t: Translate): string {
+  switch (notice.kind) {
+    case 'file-too-large':
+      return t('notice.fileTooLarge', { name: notice.fileName, max: notice.maxBytes / BYTES_PER_MEGABYTE });
+    case 'file-not-text':
+      return t('notice.fileNotText', { name: notice.fileName });
+    case 'file-unreadable':
+      return t('notice.fileUnreadable', { name: notice.fileName });
+    case 'file-garbled':
+      return t('notice.fileGarbled', { name: notice.fileName, encoding: notice.encoding });
   }
 }
 

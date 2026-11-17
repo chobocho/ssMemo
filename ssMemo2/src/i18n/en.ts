@@ -14,6 +14,7 @@ export const en = {
 
   'command.newMemo': 'New memo',
   'command.manageMemos': 'Memo list',
+  'command.openFile': 'Open file',
   'command.closeTab': 'Close tab',
   'command.nextTab': 'Next tab',
   'command.previousTab': 'Previous tab',
@@ -65,6 +66,12 @@ export const en = {
   'notice.connectionLost': 'The storage connection was closed. Reload the page to save again.',
   'notice.tabLimit': 'No more than {max} tabs can be open. Close a tab first.',
   'notice.memoMissing': 'That memo no longer exists.',
+  'notice.fileTooLarge': 'Files larger than {max} MB cannot be opened: {name}',
+  'notice.fileNotText': 'Not a text file, so it was not opened: {name}',
+  'notice.fileUnreadable': 'The file could not be read: {name}',
+  'notice.fileGarbled': '{name} was read as {encoding}, but the text looks garbled.',
+
+  'file.loading': 'Opening {name}…',
 
   'memo.defaultTitle': 'New memo',
   'memo.conflictCopyTitle': '{title} (conflict copy)',

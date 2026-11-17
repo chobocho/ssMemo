@@ -273,6 +273,80 @@ test('a memo can be renamed and deleted from the memo list', async () => {
   page.close();
 });
 
+/** Simulates choosing files in the dialog that the open-file button brought up. */
+async function chooseFiles(page: Page, files: File[]): Promise<void> {
+  const input = page.document.querySelector<HTMLInputElement>('input[type="file"]');
+  assert.ok(input, 'the file dialog was not requested');
+  Object.defineProperty(input, 'files', { value: files, configurable: true });
+  input.dispatchEvent(new page.window.Event('change'));
+  await wait(200);
+}
+
+test('the open-file button opens every chosen file in a tab of its own', async () => {
+  const page = await openPage({ factory: new FakeIndexedDbFactory() });
+  toolbarButton(page, 'Open file').click();
+  await chooseFiles(page, [
+    new page.window.File(['plain text'], 'plain.txt'),
+    // "an-nyeong" in CP949, with a Windows line ending.
+    new page.window.File([new Uint8Array([0xbe, 0xc8, 0xb3, 0xe7, 0x0d, 0x0a])], 'legacy.txt'),
+  ]);
+  assert.deepEqual(page.errors, []);
+  assert.deepEqual(page.noticeTexts(), []);
+  assert.deepEqual(page.tabTitles(), ['New memo', 'plain.txt', 'legacy.txt']);
+  assert.equal(page.activeTabTitle(), 'legacy.txt');
+  assert.equal(page.editorText(), String.fromCharCode(0xc548, 0xb155));
+  assert.equal(page.document.querySelector('input[type="file"]'), null);
+  page.close();
+});
+
+test('a file dropped on the page opens too, and a file that is not text is refused', async () => {
+  const page = await openPage({ factory: new FakeIndexedDbFactory() });
+  const drop = new page.window.Event('drop', { bubbles: true, cancelable: true });
+  Object.defineProperty(drop, 'dataTransfer', {
+    value: {
+      types: ['Files'],
+      files: [new page.window.File(['dropped text'], 'dropped.md'), new page.window.File([new Uint8Array([0x89, 0x50, 0x00, 0x00])], 'photo.png')],
+    },
+  });
+  page.document.querySelector('.cm-content')?.dispatchEvent(drop);
+  await wait(200);
+  assert.deepEqual(page.errors, []);
+  assert.deepEqual(page.tabTitles(), ['New memo', 'dropped.md']);
+  assert.equal(page.editorText(), 'dropped text');
+  assert.equal(page.noticeTexts().length, 1);
+  assert.match(page.noticeTexts()[0] ?? '', /photo\.png/);
+  page.close();
+});
+
+test('an opened file is stored once it is edited and comes back after a reload', async () => {
+  const factory = new FakeIndexedDbFactory();
+  const page = await openPage({ factory });
+  toolbarButton(page, 'Open file').click();
+  await chooseFiles(page, [new page.window.File(['first line\r\n'], 'notes.txt')]);
+
+  const storageBefore = await openIndexedDbStorage(factory);
+  assert.deepEqual((await storageBefore.listDocuments()).documents, []);
+  storageBefore.close();
+
+  const line = page.document.querySelector('.cm-line');
+  assert.ok(line);
+  line.textContent = 'first line, edited';
+  await wait(AUTOSAVE_WAIT_MS);
+  const storage = await openIndexedDbStorage(factory);
+  const { documents } = await storage.listDocuments();
+  storage.close();
+  assert.equal(documents.length, 1);
+  assert.equal(documents[0]?.title, 'notes.txt');
+  assert.deepEqual(documents[0]?.source, { fileName: 'notes.txt', encoding: 'UTF-8', eol: 'crlf', hasBom: false });
+  assert.deepEqual(page.errors, []);
+  page.close();
+
+  const reloaded = await openPage({ factory });
+  assert.deepEqual(reloaded.tabTitles(), ['notes.txt']);
+  assert.match(reloaded.editorText() ?? '', /^first line, edited/);
+  reloaded.close();
+});
+
 test('?safe starts in temporary mode without loading the stored memos', async () => {
   const page = await openPage({ factory: await seededFactory(), url: `${PAGE_URL}?safe` });
   assert.deepEqual(page.errors, []);

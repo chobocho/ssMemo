@@ -25,6 +25,11 @@
   overflow-wrap: anywhere;
 }
 
+/* The "please wait" dialog has only its message. */
+.modal-busy {
+  text-align: center;
+}
+
 .modal-input {
   display: block;
   inline-size: 100%;

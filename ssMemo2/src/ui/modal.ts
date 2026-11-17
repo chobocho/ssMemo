@@ -40,6 +40,11 @@ export interface Modals {
    * a result; the promise resolves that result, or undefined if the user dismissed the dialog.
    */
   open<T>(build: (close: (result?: T) => void) => CustomDialog): Promise<T | undefined>;
+  /**
+   * Shows a message while something slow is running. It cannot be answered or dismissed and it
+   * blocks the page underneath. Returns the function that removes it.
+   */
+  busy(message: string): () => void;
 }
 
 function createButton(doc: Document, label: string, className: string): HTMLButtonElement {
@@ -170,6 +175,26 @@ export function createModals(doc: Document, labels: ModalLabels): Modals {
         }
         dialog.append(heading, list);
       });
+    },
+
+    busy(message) {
+      const dialog = doc.createElement('dialog');
+      dialog.className = 'modal modal-busy';
+      const text = doc.createElement('p');
+      text.className = 'modal-message';
+      // Nothing else on the page changes meanwhile, so screen readers are told what is going on.
+      text.setAttribute('role', 'status');
+      text.textContent = message;
+      dialog.append(text);
+
+      // Escape must not hide the indicator while the work is still running.
+      dialog.addEventListener('cancel', (event) => event.preventDefault());
+      // Also reached if the browser closes the dialog regardless (a second Escape does that).
+      dialog.addEventListener('close', () => dialog.remove());
+      doc.body.append(dialog);
+      dialog.showModal();
+      // Closing a dialog that is already closed does nothing.
+      return () => dialog.close();
     },
 
     open<T>(build: (close: (result?: T) => void) => CustomDialog) {

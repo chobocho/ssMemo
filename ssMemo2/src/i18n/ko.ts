@@ -15,6 +15,7 @@ export const ko: Readonly<Record<MessageKey, string>> = {
 
   'command.newMemo': '새 메모',
   'command.manageMemos': '메모 목록',
+  'command.openFile': '파일 열기',
   'command.closeTab': '탭 닫기',
   'command.nextTab': '다음 탭',
   'command.previousTab': '이전 탭',
@@ -64,6 +65,12 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'notice.connectionLost': '저장소 연결이 끊어졌습니다. 다시 저장하려면 페이지를 새로고침하세요.',
   'notice.tabLimit': '탭은 {max}개까지 열 수 있습니다. 먼저 탭을 하나 닫아 주세요.',
   'notice.memoMissing': '그 메모는 더 이상 존재하지 않습니다.',
+  'notice.fileTooLarge': '{max}MB보다 큰 파일은 열 수 없습니다: {name}',
+  'notice.fileNotText': '텍스트 파일이 아니어서 열지 않았습니다: {name}',
+  'notice.fileUnreadable': '파일을 읽지 못했습니다: {name}',
+  'notice.fileGarbled': '{name} 파일을 {encoding} 인코딩으로 읽었는데 글자가 깨져 보입니다.',
+
+  'file.loading': '{name} 여는 중…',
 
   'memo.defaultTitle': '새 메모',
   'memo.conflictCopyTitle': '{title} (충돌 사본)',

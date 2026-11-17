@@ -236,3 +236,43 @@ test('choose resolves undefined when dismissed, which is not the same as picking
   harness.button('Automatic').click();
   assert.equal(await repicked, 'auto');
 });
+
+// --- busy -------------------------------------------------------------------
+
+test('busy shows its message in a modal dialog until it is told to stop', () => {
+  const harness = createHarness();
+  const done = harness.modals.busy('Opening notes.txt');
+  assert.equal(harness.openDialogCount(), 1);
+  assert.equal(harness.topDialog().textContent, 'Opening notes.txt');
+  // Announced to screen readers, since nothing else on the page changes meanwhile.
+  assert.ok(harness.topDialog().querySelector('[role="status"]'));
+  done();
+  assert.equal(harness.openDialogCount(), 0);
+  assert.equal(harness.document.querySelector('dialog'), null);
+});
+
+test('busy offers nothing to press and ignores Escape', () => {
+  const harness = createHarness();
+  const done = harness.modals.busy('Working');
+  assert.equal(harness.topDialog().querySelector('button'), null);
+  harness.pressEscape();
+  assert.equal(harness.openDialogCount(), 1);
+  done();
+});
+
+test('telling busy to stop twice is harmless', () => {
+  const harness = createHarness();
+  const done = harness.modals.busy('Working');
+  done();
+  done();
+  assert.equal(harness.openDialogCount(), 0);
+});
+
+test('busy cleans up when the browser closes its dialog anyway', () => {
+  // Browsers let a second Escape close a dialog even if the first was refused.
+  const harness = createHarness();
+  const done = harness.modals.busy('Working');
+  harness.topDialog().close();
+  assert.equal(harness.document.querySelector('dialog'), null);
+  done();
+});
