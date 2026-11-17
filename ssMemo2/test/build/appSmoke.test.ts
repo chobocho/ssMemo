@@ -740,6 +740,36 @@ test('a symbol picked from the menu is inserted too', async () => {
   page.close();
 });
 
+test('a long memo is split with cut lines and joined again, a short one is left alone', async () => {
+  const factory = await seededFactory();
+  const storage = await openIndexedDbStorage(factory);
+  await storage.saveDocument({ id: 'long', title: 'Long', content: 'x'.repeat(4500), createdAt: TIMESTAMP, updatedAt: TIMESTAMP }, NEW_DOCUMENT_REV);
+  await createSessionStore(storage).save({ tabs: [{ documentId: 'long', cursor: 0 }, { documentId: 'a', cursor: 0 }], activeDocumentId: 'long' });
+  storage.close();
+  const cutLine = String.fromCharCode(0xc808, 0xcde8, 0xc120);
+  const countCutLines = (text: string): number => text.split(`[${cutLine}]`).length - 1;
+
+  const page = await openPage({ factory });
+  await pickFromMenu(page, 'Split with cut lines / join again');
+  await wait(AUTOSAVE_WAIT_MS);
+  const split = (await storedContent(factory, 'long')) ?? '';
+  assert.equal(countCutLines(split), 2);
+  assert.equal(split.replaceAll('x', '').length, split.length - 4500);
+  // The search is set to the cut line, so "find next" walks from part to part.
+  assert.equal(searchField(page).value, cutLine);
+
+  await pickFromMenu(page, 'Split with cut lines / join again');
+  await wait(AUTOSAVE_WAIT_MS);
+  assert.equal(await storedContent(factory, 'long'), 'x'.repeat(4500));
+
+  await page.click('.tab [role="tab"]', 1);
+  await pickFromMenu(page, 'Split with cut lines / join again');
+  assert.equal(page.noticeTexts().length, 1);
+  assert.equal(page.editorText(), 'milk');
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
 test('the search panel speaks the language of the app', async () => {
   const factory = await seededFactory();
   const storage = await openIndexedDbStorage(factory);

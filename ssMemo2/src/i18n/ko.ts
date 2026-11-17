@@ -33,6 +33,7 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'command.insertNote': '참고표',
   'command.insertCross': '엑스 표시',
   'command.insertGreen': '초록 사각형',
+  'command.chunks': '절취선으로 나누기 / 다시 합치기',
   'command.closeTab': '탭 닫기',
   'command.nextTab': '다음 탭',
   'command.previousTab': '이전 탭',
@@ -49,6 +50,7 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'group.search': '검색',
   'group.move': '이동',
   'group.insert': '넣기',
+  'group.tools': '도구',
   'group.view': '보기',
   'group.backup': '백업',
   'group.app': '앱',
@@ -124,6 +126,7 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'file.convertConfirm': '{name} 파일은 {from} 인코딩입니다. 이 앱은 {to}로만 저장할 수 있고, {from}을 기대하는 프로그램에서는 글자가 깨져 보일 수 있습니다. {to}로 저장할까요?',
   'file.convertAccept': '{to}로 저장',
 
+  'notice.chunksNotNeeded': '메모가 {count}자 이하라 나눌 필요가 없습니다.',
   'notice.backupExported': '메모 {count}개를 백업 파일로 저장했습니다.',
   'notice.backupUnreadableRecords': '손상된 기록 {count}개는 넣지 못했습니다.',
   'notice.backupExportFailed': '백업을 저장하지 못했습니다.',

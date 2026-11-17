@@ -13,8 +13,10 @@ export {
   defaultKeymap,
   history,
   historyKeymap,
+  isolateHistory,
 } from '@codemirror/commands';
 export {
+  SearchQuery,
   closeSearchPanel,
   findNext,
   findPrevious,

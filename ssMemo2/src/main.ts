@@ -28,11 +28,12 @@ import { formatShortcut } from './app/shortcut.ts';
 import type { LanguageSetting, Settings } from './app/settings.ts';
 import { adjacentTabId, createTabManager } from './app/tabManager.ts';
 import { createWorkspace } from './app/workspace.ts';
-import { insertDivider, insertText } from './editor/editorActions.ts';
+import { insertDivider, insertText, toggleChunks } from './editor/editorActions.ts';
 import { mountEditorTabs } from './editor/editorTabs.ts';
 import { createSearchPhrases } from './editor/searchPhrases.ts';
 import type { MessageKey } from './i18n/en.ts';
 import { createTranslator, resolveLocale } from './i18n/i18n.ts';
+import { CHUNK_DELIMITER, CHUNK_LABEL, DEFAULT_CHUNK_LENGTH } from './lib/chunks.ts';
 import { TEXT_ENCODINGS } from './lib/encoding.ts';
 import type { TextEncoding } from './lib/encoding.ts';
 import { isSafeModeRequested, openStorage } from './storage/openStorage.ts';
@@ -366,6 +367,22 @@ async function start(win: Window): Promise<void> {
     SYMBOL_COMMAND_IDS.map((id) => [id, () => editInPlace((state) => insertText(state, iconOf(id)))]),
   ) as Record<(typeof SYMBOL_COMMAND_IDS)[number], () => void>;
 
+  const hasCutLines = (): boolean => {
+    const tabId = editor.getActiveTabId();
+    return tabId !== undefined && (editor.getText(tabId) ?? '').includes(CHUNK_DELIMITER);
+  };
+  const toggleCutLines = (): void => {
+    let action = 'none';
+    editor.apply((state) => {
+      const toggle = toggleChunks(state, DEFAULT_CHUNK_LENGTH);
+      action = toggle.action;
+      return toggle.spec;
+    });
+    if (action === 'none') notices.show(t('notice.chunksNotNeeded', { count: DEFAULT_CHUNK_LENGTH }), 'info');
+    // With the cut line as the search text, "find next" jumps from part to part.
+    if (action === 'split') editor.searchFor(CHUNK_LABEL);
+  };
+
   const groupLabelKeys = new Map<string, MessageKey>(COMMAND_GROUPS.map((group) => [group.id, group.labelKey]));
   // Every command except the menu itself, for narrow screens where the toolbar shows only a few.
   const showMenu = (): void => {
@@ -405,6 +422,7 @@ async function start(win: Window): Promise<void> {
       'move.pageDown': () => editor.pageDown(),
       'insert.divider': () => editInPlace(insertDivider),
       ...symbolCommands,
+      'tools.chunks': { run: toggleCutLines, isOn: hasCutLines },
       'view.toggleWrap': { run: toggleLineWrapping, isOn: () => settings.lineWrapping },
       'view.fontSmaller': () => stepFontSize(-1),
       'view.fontLarger': () => stepFontSize(1),

@@ -3,6 +3,7 @@
 // tab is first shown, not when it is opened, so many restored tabs cost nothing until visited.
 import {
   EditorView,
+  SearchQuery,
   closeSearchPanel,
   cursorDocEnd,
   cursorDocStart,
@@ -188,6 +189,8 @@ export interface EditorActions {
   /** Selects the next or previous match; opens the search panel if nothing is being searched for. */
   findNext(): void;
   findPrevious(): void;
+  /** Opens the search panel with `text` as what is searched for. */
+  searchFor(text: string): void;
   /** Moves the cursor, and with it the view, to the start or the end of the document. */
   goToStart(): void;
   goToEnd(): void;
@@ -236,6 +239,11 @@ export function mountEditorTabs(parent: HTMLElement, callbacks: EditorCallbacks,
     openSearch: () => void openSearchPanel(view),
     findNext: () => void findNext(view),
     findPrevious: () => void findPrevious(view),
+    searchFor: (text) => {
+      openSearchPanel(view);
+      // After opening, which may put selected text into the search field.
+      view.dispatch({ effects: setSearchQuery.of(new SearchQuery({ search: text })) });
+    },
     goToStart: () => void cursorDocStart(view),
     goToEnd: () => void cursorDocEnd(view),
     pageUp: () => void cursorPageUp(view),

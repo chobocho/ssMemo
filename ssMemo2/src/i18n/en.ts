@@ -32,6 +32,7 @@ export const en = {
   'command.insertNote': 'Reference mark',
   'command.insertCross': 'Cross mark',
   'command.insertGreen': 'Green square',
+  'command.chunks': 'Split with cut lines / join again',
   'command.closeTab': 'Close tab',
   'command.nextTab': 'Next tab',
   'command.previousTab': 'Previous tab',
@@ -48,6 +49,7 @@ export const en = {
   'group.search': 'Search',
   'group.move': 'Move',
   'group.insert': 'Insert',
+  'group.tools': 'Tools',
   'group.view': 'View',
   'group.backup': 'Backup',
   'group.app': 'App',
@@ -128,6 +130,7 @@ export const en = {
   'file.convertConfirm': '{name} is a {from} file. This app can only save it as {to}, and programs that expect {from} may then show it garbled. Save as {to}?',
   'file.convertAccept': 'Save as {to}',
 
+  'notice.chunksNotNeeded': 'The memo has {count} characters or fewer, so there is nothing to split.',
   'notice.backupExported': 'Backup saved with {count} memo(s).',
   'notice.backupUnreadableRecords': '{count} damaged record(s) could not be included.',
   'notice.backupExportFailed': 'The backup could not be saved.',

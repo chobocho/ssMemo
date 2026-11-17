@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { undo } from '@codemirror/commands';
 import type { EditorState, TransactionSpec } from '@codemirror/state';
-import { DIVIDER_LENGTH, insertDivider, insertText } from '../../src/editor/editorActions.ts';
+import { DIVIDER_LENGTH, insertDivider, insertText, joinChunks, splitIntoChunks, toggleChunks } from '../../src/editor/editorActions.ts';
+import { CHUNK_DELIMITER } from '../../src/lib/chunks.ts';
 import { createEditorState } from '../../src/editor/editorSetup.ts';
 
 const DIVIDER = String.fromCharCode(0x2500).repeat(DIVIDER_LENGTH);
@@ -100,4 +101,79 @@ test('the divider replaces the selection', () => {
 test('inserting a divider is one step for undo', () => {
   const before = stateWith('ab', 1);
   assert.equal(undone(applied(before, insertDivider(before))).doc.toString(), 'ab');
+});
+
+// --- chunks -----------------------------------------------------------------
+
+test('splitIntoChunks puts a delimiter after every full part', () => {
+  const before = stateWith('abcdef', 0);
+  const spec = splitIntoChunks(before, 2);
+  assert.ok(spec);
+  assert.equal(applied(before, spec).doc.toString(), `ab${CHUNK_DELIMITER}cd${CHUNK_DELIMITER}ef`);
+});
+
+test('splitIntoChunks leaves a text alone that fits into one part', () => {
+  assert.equal(splitIntoChunks(stateWith('abc', 0), 3), undefined);
+});
+
+test('joinChunks removes the delimiters, and reports when there are none', () => {
+  const before = stateWith(`ab${CHUNK_DELIMITER}cd${CHUNK_DELIMITER}ef`, 0);
+  const spec = joinChunks(before);
+  assert.ok(spec);
+  assert.equal(applied(before, spec).doc.toString(), 'abcdef');
+  assert.equal(joinChunks(stateWith('abcdef', 0)), undefined);
+});
+
+test('splitting and joining are each one step for undo', () => {
+  const original = stateWith('abcdef', 0);
+  const splitSpec = splitIntoChunks(original, 2);
+  assert.ok(splitSpec);
+  const wasSplit = applied(original, splitSpec);
+  assert.equal(undone(wasSplit).doc.toString(), 'abcdef');
+
+  const joinSpec = joinChunks(wasSplit);
+  assert.ok(joinSpec);
+  const wasJoined = applied(wasSplit, joinSpec);
+  assert.equal(undone(wasJoined).doc.toString(), wasSplit.doc.toString());
+});
+
+test('the cursor stays with the text it was in when delimiters come and go', () => {
+  // The cursor sits between "e" and "f"; two delimiters are inserted before it.
+  const before = stateWith('abcdef', 5);
+  const spec = splitIntoChunks(before, 2);
+  assert.ok(spec);
+  const after = applied(before, spec);
+  const cursor = after.selection.main.head;
+  assert.equal(after.doc.sliceString(cursor - 1, cursor + 1), 'ef');
+
+  const joinSpec = joinChunks(after);
+  assert.ok(joinSpec);
+  assert.equal(applied(after, joinSpec).selection.main.head, 5);
+});
+
+test('a cursor exactly where a cut line goes stays in front of it', () => {
+  const before = stateWith('abcdef', 4);
+  const spec = splitIntoChunks(before, 2);
+  assert.ok(spec);
+  const after = applied(before, spec);
+  const cursor = after.selection.main.head;
+  assert.equal(after.doc.sliceString(cursor - 1, cursor), 'd');
+  assert.equal(after.doc.sliceString(cursor, cursor + CHUNK_DELIMITER.length), CHUNK_DELIMITER);
+});
+
+test('toggleChunks splits a long text, joins a split one and leaves a short one alone', () => {
+  const long = stateWith('abcdef', 0);
+  const split = toggleChunks(long, 2);
+  assert.equal(split.action, 'split');
+  const wasSplit = applied(long, split.spec);
+  assert.equal(wasSplit.doc.toString(), `ab${CHUNK_DELIMITER}cd${CHUNK_DELIMITER}ef`);
+
+  const joined = toggleChunks(wasSplit, 2);
+  assert.equal(joined.action, 'join');
+  assert.equal(applied(wasSplit, joined.spec).doc.toString(), 'abcdef');
+
+  const short = stateWith('ab', 0);
+  const nothing = toggleChunks(short, 2);
+  assert.equal(nothing.action, 'none');
+  assert.equal(applied(short, nothing.spec).doc.toString(), 'ab');
 });

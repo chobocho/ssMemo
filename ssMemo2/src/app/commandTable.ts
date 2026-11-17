@@ -12,6 +12,7 @@ export const COMMAND_GROUPS = [
   { id: 'search', labelKey: 'group.search' },
   { id: 'move', labelKey: 'group.move' },
   { id: 'insert', labelKey: 'group.insert' },
+  { id: 'tools', labelKey: 'group.tools' },
   { id: 'view', labelKey: 'group.view' },
   { id: 'backup', labelKey: 'group.backup' },
   { id: 'app', labelKey: 'group.app' },
@@ -52,6 +53,8 @@ export const COMMAND_DEFINITIONS = [
   { id: 'insert.note', group: 'insert', labelKey: 'command.insertNote', icon: '※', shortcuts: ['Mod-Shift-r'] },
   { id: 'insert.cross', group: 'insert', labelKey: 'command.insertCross', icon: '❎', shortcuts: ['Mod-Shift-x'] },
   { id: 'insert.green', group: 'insert', labelKey: 'command.insertGreen', icon: '🟩', shortcuts: ['Mod-Shift-z'] },
+
+  { id: 'tools.chunks', group: 'tools', labelKey: 'command.chunks', icon: '➗', shortcuts: [] },
 
   { id: 'view.toggleWrap', group: 'view', labelKey: 'command.toggleWrap', icon: '↩️', shortcuts: ['Alt-z'] },
   { id: 'view.fontSmaller', group: 'view', labelKey: 'command.fontSmaller', icon: 'A−', shortcuts: [] },
