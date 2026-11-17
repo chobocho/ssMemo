@@ -1,6 +1,13 @@
 /* Design tokens. Every dimension is defined here so no other stylesheet or script hard-codes one. */
 :root {
+  --space-2: 0.5rem;
   --space-4: 1rem;
   --font-size-base: 1rem;
+  --font-size-title: 1.5rem;
   --line-height-base: 1.5;
+  /* Smallest comfortable touch target (44 CSS px at the default font size). */
+  --touch-target: 2.75rem;
+  /* Diagnostics list: label column width, and the width below which a value wraps under its label. */
+  --diagnostics-label-width: 13rem;
+  --diagnostics-value-min-width: 10rem;
 }
