@@ -23,6 +23,7 @@ import {
   describeCalcNotice,
   describeFileNotice,
   describeNotice,
+  describeShareNotice,
   describeStorage,
   describeTitleProblem,
   formatEditorStats,
@@ -31,6 +32,7 @@ import {
 } from './app/noticeText.ts';
 import { createRandomId } from './app/randomId.ts';
 import { createSessionStore } from './app/session.ts';
+import { createShareActions } from './app/shareActions.ts';
 import { createSettingsStore, stepEditorFontSize } from './app/settings.ts';
 import { describeStorageFacts, readStorageFacts, requestPersistence } from './app/storageDurability.ts';
 import type { StorageFacts } from './app/storageDurability.ts';
@@ -80,6 +82,8 @@ import { createTrashList } from './ui/trashList.ts';
 import type { ToolbarTier } from './ui/toolbar.ts';
 
 const APP_NAME = 'ssMemo2';
+// What a memo is shared as when it is too long to be handed over as text.
+const SHARED_FILE_MIME_TYPE = 'text/plain';
 const MOUNT_POINT_ID = 'app';
 // The page's built-in message for a failed start (see index.template.html and styles/boot.css).
 const BOOT_MESSAGE_ID = 'boot-message';
@@ -594,6 +598,16 @@ async function start(win: Window): Promise<void> {
     openUrl(url);
   });
 
+  const shareActions = createShareActions({
+    port: win.navigator,
+    getMemo: () => {
+      const active = workspace.getActiveDocument();
+      return active ? { title: active.title, text: workspace.getText(active.tabId) ?? '' } : undefined;
+    },
+    createFile: (name, text) => new File([text], name, { type: SHARED_FILE_MIME_TYPE }),
+    onNotice: (notice) => notices.show(describeShareNotice(notice, t), notice.kind === 'share-nothing' ? 'info' : 'warning'),
+  });
+
   const calc = createCalcActions({
     storage: opened.storage,
     getCode: () => editor.read(getCodeToRun),
@@ -681,6 +695,7 @@ async function start(win: Window): Promise<void> {
       'file.open': () => void openLocalFiles(),
       'file.save': () => void localFiles.saveToFile(false),
       'file.saveAs': () => void localFiles.saveToFile(true),
+      'file.share': () => void shareActions.share(),
       'file.encoding': () => void localFiles.changeEncoding(),
       'search.open': () => editor.openSearch(),
       'search.next': () => editor.findNext(),

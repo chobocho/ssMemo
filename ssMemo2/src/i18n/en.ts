@@ -21,6 +21,7 @@ export const en = {
   'command.openFile': 'Open file',
   'command.saveFile': 'Save to file',
   'command.saveFileAs': 'Save to file as…',
+  'command.share': 'Share',
   'command.encoding': 'Encoding',
   'command.search': 'Find',
   'command.findNext': 'Find next',
@@ -155,6 +156,10 @@ export const en = {
 
   'notice.fileSaved': 'Saved to {name}.',
   'notice.fileSaveFailed': 'Could not save to {name}. "Save to file as…" lets you choose another place.',
+  'notice.shareUnsupported': 'This browser cannot share. Save the memo to a file instead.',
+  'notice.shareNothing': 'There is nothing to share: the memo is empty.',
+  'notice.shareTooLong': 'The memo is too long to share from this browser. Save it to a file instead.',
+  'notice.shareFailed': 'Sharing did not work.',
 
   'calc.title': 'Result',
   'calc.errorTitle': 'Could not calculate',

@@ -21,6 +21,7 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'command.openFile': '파일 열기',
   'command.saveFile': '파일로 저장',
   'command.saveFileAs': '다른 이름으로 저장…',
+  'command.share': '공유',
   'command.encoding': '인코딩',
   'command.search': '찾기',
   'command.findNext': '다음 찾기',
@@ -150,6 +151,10 @@ export const ko: Readonly<Record<MessageKey, string>> = {
 
   'notice.fileSaved': '{name} 파일로 저장했습니다.',
   'notice.fileSaveFailed': '{name} 파일로 저장하지 못했습니다. "다른 이름으로 저장…"으로 다른 위치를 골라 보세요.',
+  'notice.shareUnsupported': '이 브라우저에서는 공유할 수 없습니다. 대신 메모를 파일로 저장해 주세요.',
+  'notice.shareNothing': '공유할 내용이 없습니다. 메모가 비어 있습니다.',
+  'notice.shareTooLong': '메모가 너무 길어 이 브라우저에서는 공유할 수 없습니다. 대신 파일로 저장해 주세요.',
+  'notice.shareFailed': '공유하지 못했습니다.',
 
   'calc.title': '계산 결과',
   'calc.errorTitle': '계산할 수 없습니다',

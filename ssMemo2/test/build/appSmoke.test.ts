@@ -54,6 +54,8 @@ interface OpenOptions {
   factory?: IDBFactory;
   url?: string;
   storageManager?: object;
+  /** Stands in for navigator.share; without it the page is in a browser that cannot share. */
+  share?: (content: unknown) => Promise<void>;
   /** Makes start-up fail part-way, as a browser quirk the app does not know about would. */
   breakStartUp?: boolean;
 }
@@ -96,6 +98,9 @@ async function openPage(options: OpenOptions = {}): Promise<Page> {
       }
       if (options.storageManager) {
         Object.defineProperty(window.navigator, 'storage', { value: options.storageManager, configurable: true });
+      }
+      if (options.share) {
+        Object.defineProperty(window.navigator, 'share', { value: options.share, configurable: true });
       }
     },
   });
@@ -319,6 +324,41 @@ test('a memo can be renamed and deleted from the memo list', async () => {
   assert.equal(await storedContent(factory, 'b'), undefined);
   assert.deepEqual(page.errors, []);
   page.close();
+});
+
+test('the share command hands the memo on screen to the system', async () => {
+  const shared: unknown[] = [];
+  const page = await openPage({ factory: await seededFactory(), share: async (content) => void shared.push(content) });
+  await typeLine(page, 'milk and eggs');
+  await pickFromMenu(page, 'Share');
+  await wait(50);
+  // The text as it is on screen, not as it was last stored. Compared as JSON because the object
+  // was made inside the page, whose Object is not the one of this test.
+  assert.equal(JSON.stringify(shared), JSON.stringify([{ title: 'Shopping', text: 'milk and eggs' }]));
+  assert.deepEqual(page.noticeTexts(), []);
+  assert.deepEqual(page.errors, []);
+  page.close();
+});
+
+test('the share command says so where the browser cannot share, or the user backs out', async () => {
+  const without = await openPage({ factory: await seededFactory() });
+  await pickFromMenu(without, 'Share');
+  await wait(50);
+  assert.equal(without.noticeTexts().some((text) => text.includes('cannot share')), true);
+  assert.deepEqual(without.errors, []);
+  without.close();
+
+  const cancelled = await openPage({
+    factory: await seededFactory(),
+    share: async () => {
+      throw Object.assign(new Error('cancelled'), { name: 'AbortError' });
+    },
+  });
+  await pickFromMenu(cancelled, 'Share');
+  await wait(50);
+  assert.deepEqual(cancelled.noticeTexts(), []);
+  assert.deepEqual(cancelled.errors, []);
+  cancelled.close();
 });
 
 async function searchMemoList(page: Page, query: string): Promise<void> {

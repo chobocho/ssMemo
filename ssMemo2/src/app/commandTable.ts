@@ -33,6 +33,7 @@ export const COMMAND_DEFINITIONS = [
   { id: 'file.open', group: 'file', labelKey: 'command.openFile', icon: '📂', shortcuts: ['Mod-o'] },
   { id: 'file.save', group: 'file', labelKey: 'command.saveFile', icon: '💾', shortcuts: ['Mod-s'] },
   { id: 'file.saveAs', group: 'file', labelKey: 'command.saveFileAs', icon: '📑', shortcuts: ['Mod-Shift-s'] },
+  { id: 'file.share', group: 'file', labelKey: 'command.share', icon: '📨', shortcuts: [] },
   { id: 'file.encoding', group: 'file', labelKey: 'command.encoding', icon: '🔤', shortcuts: [] },
 
   // Ctrl+I, Ctrl+<, Ctrl+> and Ctrl+B are the search keys of ssMemoWeb; the others are what editors

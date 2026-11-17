@@ -8,6 +8,7 @@ import type { AutosaveState } from './autosave.ts';
 import type { CalcErrorCode } from '../lib/calc.ts';
 import type { BackupProblem } from './backup.ts';
 import type { CalcNotice } from './calcActions.ts';
+import type { ShareNotice } from './shareActions.ts';
 import type { BackupNotice, BackupSummary } from './backupActions.ts';
 import { MAX_TITLE_LENGTH } from './documentStore.ts';
 import type { TitleProblem } from './documentStore.ts';
@@ -145,6 +146,19 @@ export function describeCalcError(code: CalcErrorCode, detail: string, t: Transl
   // An "unexpected token" without a token means the input ended in the middle of an expression.
   if (code === 'unexpected-token' && detail === '') return t('calc.error.incomplete');
   return t(CALC_ERROR_KEYS[code], { detail });
+}
+
+export function describeShareNotice(notice: ShareNotice, t: Translate): string {
+  switch (notice.kind) {
+    case 'share-unsupported':
+      return t('notice.shareUnsupported');
+    case 'share-nothing':
+      return t('notice.shareNothing');
+    case 'share-too-long':
+      return t('notice.shareTooLong');
+    case 'share-failed':
+      return t('notice.shareFailed');
+  }
 }
 
 export function describeCalcNotice(notice: CalcNotice, t: Translate): string {

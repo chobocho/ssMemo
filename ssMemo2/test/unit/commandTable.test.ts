@@ -20,6 +20,13 @@ test('the table defines the commands the app has had so far', () => {
   }
 });
 
+test('no two commands look the same in the menu', () => {
+  // The icon is what the eye finds first; two entries with the same one are told apart only by reading.
+  const byIcon = new Map<string, string[]>();
+  for (const definition of COMMAND_DEFINITIONS) byIcon.set(definition.icon, [...(byIcon.get(definition.icon) ?? []), definition.id]);
+  assert.deepEqual([...byIcon.values()].filter((ids) => ids.length > 1), []);
+});
+
 test('every command has a unique id, a label that exists, an icon and well-formed shortcuts', () => {
   const ids = new Set<string>();
   for (const definition of COMMAND_DEFINITIONS) {

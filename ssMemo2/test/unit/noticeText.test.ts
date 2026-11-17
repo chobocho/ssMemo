@@ -10,6 +10,7 @@ import {
   describeBackupSummary,
   describeFileNotice,
   describeNotice,
+  describeShareNotice,
   describeStorage,
   describeTitleProblem,
   formatEditorStats,
@@ -237,4 +238,14 @@ test('describeCalcNotice explains how to run something and what a failed store m
   const notSaved = describeCalcNotice({ kind: 'calc-memory-not-saved' }, t);
   assert.ok(nothing.length > 0 && notSaved.length > 0);
   assert.notEqual(nothing, notSaved);
+});
+
+test('describeShareNotice has words of its own for every way sharing can end badly', () => {
+  const kinds = ['share-unsupported', 'share-nothing', 'share-too-long', 'share-failed'] as const;
+  const messages = kinds.map((kind) => describeShareNotice({ kind }, t));
+  for (const message of messages) assert.ok(message.length > 0);
+  assert.equal(new Set(messages).size, kinds.length);
+  // Where sharing is impossible the user is pointed to what works instead.
+  assert.match(describeShareNotice({ kind: 'share-unsupported' }, t), /file/i);
+  assert.match(describeShareNotice({ kind: 'share-too-long' }, t), /file/i);
 });
