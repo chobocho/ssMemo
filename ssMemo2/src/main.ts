@@ -2,6 +2,7 @@
 import { readBuildId } from './app/buildInfo.ts';
 import { describeEnvironment } from './app/diagnostics.ts';
 import { mountEditor } from './editor/editorSetup.ts';
+import { createTranslator, resolveLocale } from './i18n/i18n.ts';
 import { createAppShell } from './ui/appShell.ts';
 import { copyToClipboard } from './ui/clipboard.ts';
 import { createDiagnosticsPanel } from './ui/diagnosticsPanel.ts';
@@ -19,10 +20,15 @@ function start(win: Window): void {
     throw new Error(`Mount point #${MOUNT_POINT_ID} is missing`);
   }
 
+  const locale = resolveLocale(win.navigator.languages);
+  // Tells the browser which language the page is in (hyphenation, screen readers, spell check).
+  doc.documentElement.lang = locale;
+  const t = createTranslator(locale);
+
   const shell = createAppShell(doc, APP_NAME);
 
   const buildId = readBuildId(doc);
-  const diagnostics = createDiagnosticsPanel(doc, (text) => copyToClipboard(win, text));
+  const diagnostics = createDiagnosticsPanel(doc, t, (text) => copyToClipboard(win, text));
   const refresh = (): void => diagnostics.update(describeEnvironment(readEnvironment(win, buildId)));
 
   // Folding or unfolding the device and opening the on-screen keyboard both change the values.

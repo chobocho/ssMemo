@@ -1,12 +1,7 @@
 // Renders the diagnostics as a collapsible definition list with a copy button.
 import { formatDiagnostics } from '../app/diagnostics.ts';
 import type { DiagnosticEntry } from '../app/diagnostics.ts';
-
-// English until the message catalog exists (roadmap item 2.1).
-const SUMMARY_LABEL = 'ℹ️ Diagnostics';
-const COPY_LABEL = '📋 Copy';
-const COPIED_STATUS = 'Copied.';
-const SELECTED_STATUS = 'Could not copy automatically. The list is selected: copy it from the system menu.';
+import type { Translate } from '../i18n/i18n.ts';
 
 export interface DiagnosticsPanel {
   element: HTMLElement;
@@ -32,6 +27,7 @@ function createRow(doc: Document, entry: DiagnosticEntry): HTMLElement {
  */
 export function createDiagnosticsPanel(
   doc: Document,
+  t: Translate,
   copyText: (text: string) => Promise<boolean>,
 ): DiagnosticsPanel {
   // <details> gives open/close behaviour and keyboard support without any script.
@@ -39,7 +35,7 @@ export function createDiagnosticsPanel(
   element.className = 'diagnostics';
 
   const summary = doc.createElement('summary');
-  summary.textContent = SUMMARY_LABEL;
+  summary.textContent = t('diagnostics.title');
 
   const list = doc.createElement('dl');
   list.className = 'diagnostics-list';
@@ -47,7 +43,7 @@ export function createDiagnosticsPanel(
   const copyButton = doc.createElement('button');
   copyButton.type = 'button';
   copyButton.className = 'diagnostics-copy';
-  copyButton.textContent = COPY_LABEL;
+  copyButton.textContent = t('diagnostics.copy');
 
   const status = doc.createElement('span');
   status.className = 'diagnostics-status';
@@ -68,7 +64,7 @@ export function createDiagnosticsPanel(
   copyButton.addEventListener('click', () => {
     void copyText(formatDiagnostics(currentEntries)).then((copied) => {
       if (!copied) doc.getSelection()?.selectAllChildren(list);
-      status.textContent = copied ? COPIED_STATUS : SELECTED_STATUS;
+      status.textContent = t(copied ? 'diagnostics.copied' : 'diagnostics.copyFailed');
     });
   });
 

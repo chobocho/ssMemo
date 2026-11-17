@@ -94,7 +94,7 @@
 - [x] 1.2 CodeMirror 6 마운트(줄번호·실행 취소·기본 키맵)
 
 ### Phase 2 — 저장 (M2: 새로고침해도 유지)
-- [ ] 2.1 i18n(카탈로그, `t()`, 언어 결정, 키 일치 테스트)
+- [x] 2.1 i18n(카탈로그, `t()`, 언어 결정, 키 일치 테스트)
 - [ ] 2.2 StoragePort + MemoryStorage + 공용 계약 테스트
 - [ ] 2.3 IndexedDbStorage CRUD
 - [ ] 2.4 IndexedDB 실패 처리(abort, blocked, 손상 레코드, 용량, rev 충돌)
