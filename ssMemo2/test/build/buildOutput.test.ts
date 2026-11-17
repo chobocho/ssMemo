@@ -16,6 +16,7 @@ const CHARSET_SNIFF_BYTES = 1024;
 const NOT_YET_WIRED: readonly string[] = [
   'src/app/autosave.ts',
   'src/app/documentStore.ts',
+  'src/app/memoSession.ts',
   'src/app/randomId.ts',
   'src/storage/indexedDbStorage.ts',
   'src/storage/memoryStorage.ts',
