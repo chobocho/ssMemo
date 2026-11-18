@@ -6,7 +6,7 @@
 
 ## 현재 상태
 
-- 로드맵의 Phase 0~6(M6)과 Phase 7의 추가 기능 9가지를 마쳤습니다. 계획과 진행 기록은 [TODO.md](TODO.md) 10절과 [history.html](history.html)에 있습니다.
+- 로드맵의 Phase 0~6(M6)과 Phase 7의 추가 기능 9가지를 마쳤습니다. 계획과 진행 기록은 [TODO.md](TODO.md) 10절과 [history.html](history.html)에 있습니다. 구현 전에 승인된 설계 계획은 [plan.md](plan.md)에 있습니다.
 - 로직과 빌드 산출물은 자동 테스트로 검증합니다(`npm run verify`).
 - **화면 모양과 터치 동작은 실제 브라우저에서 아직 확인되지 않았습니다.** 개발 환경에 브라우저가 없어 [수동 점검표](test/manual/checklist.md)로 남겨 두었습니다. 점검 결과에 따라 화면 배치가 달라질 수 있습니다.
 - Phase 7에서 남겨 둔 것은 두 가지입니다: 새로고침 뒤에도 파일 연결 유지, 반쯤 접은 자세의 화면 배치. 둘 다 실제 브라우저·기기 없이는 만들 수 없어 미뤘습니다.
@@ -226,6 +226,7 @@ python -m http.server 8001
 ```
 ssMemo2/
 ├── TODO.md              요구사항과 로드맵
+├── plan.md              구현 전에 승인된 설계 계획 (배경 설명)
 ├── history.html         작업 이력
 ├── build.sh, build.bat  빌드 스크립트
 ├── scripts/             빌드 도구 (esbuild 번들, 템플릿 인라인, CSP 해시, build.bat 생성)
