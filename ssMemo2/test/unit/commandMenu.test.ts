@@ -98,3 +98,18 @@ test('commands are listed under a heading for their group, in the order the grou
     assert.equal(group.getAttribute('aria-labelledby'), headingId);
   }
 });
+
+test('the first command asks for the focus, so the keyboard starts in the list', () => {
+  const { document } = createTestDom();
+  const menu = createCommandMenu(document, {
+    commands: [
+      { id: 'a', group: 'memo', labelKey: 'command.newMemo', icon: 'A', shortcuts: [], run: () => undefined },
+      { id: 'b', group: 'file', labelKey: 'command.openFile', icon: 'B', shortcuts: [], run: () => undefined },
+    ],
+    t: (key) => key,
+    groupLabel: (group) => group,
+    formatShortcut: (shortcut) => shortcut,
+    onPick: () => undefined,
+  });
+  assert.deepEqual([...menu.querySelectorAll('button')].map((button) => button.autofocus), [true, false]);
+});

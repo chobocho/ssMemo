@@ -445,3 +445,30 @@ test('read looks at the visible document as it is now', () => {
   assert.equal(harness.tabs.read((state) => state.doc.toString()), 'new alpha');
   assert.equal(harness.tabs.read((state) => state.doc.lines), 1);
 });
+
+test('remeasuring redraws the visible tab as it is: same text, same undo history, same scroll position', () => {
+  const harness = createHarness();
+  harness.tabs.show('a', 'one');
+  harness.type('typed ');
+  const shown: EditorState[] = [];
+  const setState = harness.view.setState.bind(harness.view);
+  harness.view.setState = (state) => {
+    shown.push(state);
+    setState(state);
+  };
+  const stateBefore = harness.view.state;
+  harness.tabs.remeasure();
+  // The very same state is shown again: that makes the editor read its line heights anew.
+  assert.deepEqual(shown, [stateBefore]);
+  assert.equal(harness.tabs.getText('a'), 'typed one');
+  // The position the view was at when asked is the one it is sent back to.
+  assert.equal(harness.restoredScrolls.length, 1);
+  assert.equal(harness.undo(), true);
+  assert.equal(harness.tabs.getText('a'), 'one');
+});
+
+test('remeasuring does nothing while no tab is shown', () => {
+  const harness = createHarness();
+  harness.tabs.remeasure();
+  assert.deepEqual(harness.restoredScrolls, []);
+});

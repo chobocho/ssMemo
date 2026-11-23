@@ -1,18 +1,21 @@
 /* The list of all commands shown in the menu dialog. */
+/* As many columns as fit: one on a phone, several in the wide dialog of a desktop window. */
 .command-menu {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+  columns: var(--modal-column-width);
+  column-gap: var(--space-4);
 }
 
+/* A group stays in one column, under its heading. */
 .command-group {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+  margin-block-end: var(--space-3);
+  break-inside: avoid;
 }
 
 .command-group-title {
-  margin: var(--space-2) 0 0;
+  margin: 0;
   color: var(--color-text-muted);
   font-size: var(--font-size-small);
   font-weight: 600;
@@ -20,6 +23,7 @@
 
 .command-item {
   display: flex;
+  inline-size: 100%;
   align-items: center;
   gap: var(--space-3);
   padding-inline: var(--space-3);

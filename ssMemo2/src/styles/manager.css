@@ -131,3 +131,11 @@
   flex: none;
   padding-inline: 0;
 }
+
+/* Feedback where there is a pointer that can hover; on a touch screen it would stick after a tap. */
+@media (hover: hover) {
+  .toolbar-button:hover,
+  .memo-open:hover {
+    background: var(--color-surface-muted);
+  }
+}

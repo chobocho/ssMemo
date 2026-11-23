@@ -22,6 +22,8 @@ export interface TabBarOptions {
   onActivate(tabId: string): void;
   onClose(tabId: string): void;
   onNew(): void;
+  /** The user asked to rename the memo of this tab (a double click on it). */
+  onRename?(tabId: string): void;
 }
 
 const UNSAVED_MARKER = '●';
@@ -100,12 +102,22 @@ export function createTabBar(doc: Document, options: TabBarOptions): HTMLElement
     return entry;
   }
 
-  /** The id of the tab a key press went to, if it went to a tab. */
+  /** The id of the tab a key press or a click went to, if it went to a tab. */
   const focusedTabId = (target: EventTarget | null): string | undefined => {
     // Key presses inside the strip come from its buttons, which are elements.
     const button = (target as Element | null)?.closest(TAB_SELECTOR);
     return button?.id.startsWith(TAB_ELEMENT_ID_PREFIX) ? button.id.slice(TAB_ELEMENT_ID_PREFIX.length) : undefined;
   };
+
+  // As in the toolbar: switching tabs with the mouse leaves the focus in the memo, so typing can
+  // go on at once. With the keyboard the strip is reached and focused as before.
+  element.addEventListener('mousedown', (event) => event.preventDefault());
+
+  // On the list, not on a tab: the first click of the two activates the tab, which rebuilds the strip.
+  list.addEventListener('dblclick', (event) => {
+    const tabId = focusedTabId(event.target);
+    if (tabId !== undefined) options.onRename?.(tabId);
+  });
 
   list.addEventListener('keydown', (event) => {
     const fromId = focusedTabId(event.target);

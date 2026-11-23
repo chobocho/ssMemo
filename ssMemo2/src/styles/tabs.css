@@ -74,3 +74,16 @@
   min-inline-size: var(--touch-target);
   border-inline-start: var(--border-width) solid var(--color-border);
 }
+
+/* Feedback where there is a pointer that can hover; on a touch screen it would stick after a tap. */
+@media (hover: hover) {
+  .tab:not(.tab-active):hover,
+  .tab-new:hover {
+    background: var(--color-surface);
+  }
+
+  .tab-close:hover,
+  .tab-new:hover {
+    color: var(--color-text);
+  }
+}

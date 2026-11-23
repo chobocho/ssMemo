@@ -92,6 +92,12 @@
 
   /* Dialogs: preferred width (never wider than the screen) and how tall they may grow. */
   --modal-width: 28rem;
+  /* Dialogs with much to show (help, menu): as wide as this where the screen allows, with the
+     content in as many columns of the width below as fit. */
+  --modal-wide-width: 62rem;
+  --modal-column-width: 17rem;
+  /* Help: the least width the name of a command keeps next to its keys. */
+  --help-label-min-width: 7rem;
   --modal-max-height: 85dvh;
 
   /* Diagnostics list: label column width, and the width below which a value wraps under its label. */

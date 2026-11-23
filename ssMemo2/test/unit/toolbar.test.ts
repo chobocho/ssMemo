@@ -96,3 +96,17 @@ test('the toolbar is named, so a screen reader can tell it from other groups of 
   assert.equal(toolbar.element.getAttribute('role'), 'toolbar');
   assert.equal(toolbar.element.getAttribute('aria-label'), 'Tools');
 });
+
+test('pressing the mouse on a button does not take the focus out of the memo, and the click still runs it', () => {
+  const { toolbar, ran } = createHarness();
+  const button = toolbar.querySelector('button');
+  assert.ok(button);
+  const window = toolbar.ownerDocument.defaultView;
+  assert.ok(window);
+  // Preventing the default action of "mousedown" is what keeps the focus where it is.
+  const press = new window.MouseEvent('mousedown', { bubbles: true, cancelable: true });
+  button.dispatchEvent(press);
+  assert.equal(press.defaultPrevented, true);
+  button.click();
+  assert.deepEqual(ran, ['memo.manage']);
+});

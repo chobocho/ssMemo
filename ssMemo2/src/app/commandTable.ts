@@ -25,6 +25,7 @@ type GroupId = (typeof COMMAND_GROUPS)[number]['id'];
 export const COMMAND_DEFINITIONS = [
   { id: 'memo.manage', group: 'memo', labelKey: 'command.manageMemos', icon: '📋', shortcuts: ['Alt-o'] },
   { id: 'memo.new', group: 'memo', labelKey: 'command.newMemo', icon: '➕', shortcuts: ['Alt-n'] },
+  { id: 'memo.rename', group: 'memo', labelKey: 'command.renameMemo', icon: '✏️', shortcuts: ['F2'] },
   { id: 'memo.pin', group: 'memo', labelKey: 'command.pin', icon: '📌', shortcuts: [] },
   { id: 'memo.trash', group: 'memo', labelKey: 'command.trash', icon: '🗑️', shortcuts: [] },
   { id: 'tab.close', group: 'memo', labelKey: 'command.closeTab', icon: '✕', shortcuts: ['Alt-w'] },
@@ -78,6 +79,31 @@ export const COMMAND_DEFINITIONS = [
 ] as const satisfies readonly (CommandDefinition & { group: GroupId })[];
 
 export type CommandId = (typeof COMMAND_DEFINITIONS)[number]['id'];
+
+/**
+ * A line of explanation for the commands whose name does not say it all. Shown in the help only;
+ * buttons and menu entries stay short.
+ */
+export const COMMAND_HINT_KEYS: Readonly<Partial<Record<CommandId, MessageKey>>> = {
+  'memo.manage': 'hint.manageMemos',
+  'memo.rename': 'hint.renameMemo',
+  'memo.pin': 'hint.pin',
+  'memo.trash': 'hint.trash',
+  'tab.close': 'hint.closeTab',
+  'file.open': 'hint.openFile',
+  'file.save': 'hint.saveFile',
+  'file.share': 'hint.share',
+  'file.encoding': 'hint.encoding',
+  'search.open': 'hint.search',
+  'tools.calc': 'hint.runCode',
+  'tools.chunks': 'hint.chunks',
+  'tools.openUrl': 'hint.openUrl',
+  'view.preview': 'hint.preview',
+  'backup.export': 'hint.exportBackup',
+  'backup.import': 'hint.importBackup',
+  'backup.importLegacy': 'hint.importLegacy',
+  'app.menu': 'hint.menu',
+};
 
 /** The commands that insert the symbol shown as their icon. */
 export const SYMBOL_COMMAND_IDS = ['insert.arrow', 'insert.check', 'insert.box', 'insert.note', 'insert.cross', 'insert.green'] as const satisfies readonly CommandId[];

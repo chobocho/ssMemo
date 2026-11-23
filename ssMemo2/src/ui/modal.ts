@@ -7,6 +7,8 @@ export interface ModalLabels {
   /** Default label of the confirming button, e.g. "OK". */
   confirm: string;
   cancel: string;
+  /** Accessible name of the close button in the header of a custom dialog. */
+  close: string;
 }
 
 export interface PromptOptions {
@@ -23,6 +25,8 @@ export interface Choice<T> {
 export interface CustomDialog {
   title: string;
   content: HTMLElement;
+  /** Uses the wider layout: for content that arranges itself in columns where there is room. */
+  wide?: boolean;
 }
 
 export interface Modals {
@@ -91,6 +95,7 @@ function showDialog<T>(doc: Document, fill: (dialog: HTMLDialogElement, close: (
 }
 
 const LABEL_ID_PREFIX = 'modal-label-';
+const CLOSE_SYMBOL = '✕';
 
 export function createModals(doc: Document, labels: ModalLabels): Modals {
   let labelCount = 0;
@@ -140,8 +145,10 @@ export function createModals(doc: Document, labels: ModalLabels): Modals {
         input.type = 'text';
         input.className = 'modal-input';
         input.value = options.initialValue;
-        // Focused by the browser when the dialog opens.
+        // Focused by the browser when the dialog opens. What is in it is selected then, so typing
+        // replaces it and an arrow key keeps it; only once, or a click into the text would select again.
         input.autofocus = true;
+        input.addEventListener('focus', () => input.select(), { once: true });
         label.append(input);
 
         const problem = doc.createElement('p');
@@ -213,12 +220,33 @@ export function createModals(doc: Document, labels: ModalLabels): Modals {
 
     open<T>(build: (close: (result?: T) => void) => CustomDialog) {
       return showDialog<T>(doc, (dialog, close) => {
-        const { title, content } = build(close);
+        const { title, content, wide } = build(close);
+        dialog.classList.add('modal-framed');
+        if (wide) dialog.classList.add('modal-wide');
+
         const heading = doc.createElement('h2');
         heading.className = 'modal-title';
         heading.textContent = title;
+
+        // Always in sight, however far the content is scrolled: on a phone there is no Escape key
+        // and hardly any backdrop to tap. Being first, it also gets the focus when the dialog
+        // opens (unless the content asks for it), so a long dialog starts at its top.
+        const dismiss = createButton(doc, CLOSE_SYMBOL, 'modal-close');
+        dismiss.setAttribute('aria-label', labels.close);
+        dismiss.title = labels.close;
+        dismiss.addEventListener('click', () => close());
+
+        const header = doc.createElement('div');
+        header.className = 'modal-header';
+        header.append(heading, dismiss);
+
+        // The content scrolls in here, under the header.
+        const body = doc.createElement('div');
+        body.className = 'modal-body';
+        body.append(content);
+
         nameBy(dialog, heading);
-        dialog.append(heading, content);
+        dialog.append(header, body);
       });
     },
   };

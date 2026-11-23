@@ -1,7 +1,47 @@
-/* The help dialog: commands with their shortcuts, notes, and the folded-away notices. */
-.help-heading {
-  margin: var(--space-3) 0 var(--space-1);
+/* The help dialog: commands with their shortcuts, things worth knowing, and the folded-away notices. */
+
+/* Entries and sections the filter hides. Without this, their own "display" would keep them visible. */
+.help [hidden] {
+  display: none;
+}
+
+.help-filter {
+  margin-block: 0 var(--space-4);
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+
+.help-empty {
+  margin: 0 0 var(--space-4);
   color: var(--color-text-muted);
+}
+
+/* As many columns as fit: one on a phone, several in the wide dialog of a desktop window. */
+.help-groups,
+.help-note-list {
+  columns: var(--modal-column-width);
+  column-gap: var(--space-4);
+}
+
+/* A group stays in one column, under its heading. The space is below it: a margin above would
+   be kept at the top of the first column only, and the columns would start at different heights. */
+.help-group,
+.help-notes,
+.help-about {
+  margin-block-end: var(--space-4);
+  break-inside: avoid;
+}
+
+/* The notes are a list in columns of their own; only a single note must not be split. */
+.help-notes {
+  break-inside: auto;
+}
+
+.help-heading {
+  margin: 0 0 var(--space-1);
+  padding-block-end: var(--space-1);
+  border-block-end: var(--border-width) solid var(--color-border);
+  color: var(--color-accent);
   font-size: var(--font-size-small);
   font-weight: 600;
 }
@@ -13,12 +53,18 @@
   list-style: none;
 }
 
-.help-row {
+.help-row,
+.help-note {
   display: flex;
-  flex-wrap: wrap;
   align-items: baseline;
   gap: var(--space-1) var(--space-2);
   padding-block: var(--space-1);
+  break-inside: avoid;
+}
+
+/* The keys move under the name where one line is too narrow for both. */
+.help-row {
+  flex-wrap: wrap;
   border-block-end: var(--border-width) solid var(--color-surface-muted);
 }
 
@@ -28,16 +74,28 @@
   text-align: center;
 }
 
-.help-label {
-  flex: 1 1 auto;
+/* Name with its explanation underneath, or the title of a note with its text. In a row it keeps
+   a readable width: rather than squeezing the name, the keys move to a line of their own. */
+.help-body {
+  display: flex;
+  flex: 1 1 var(--help-label-min-width);
+  flex-direction: column;
   min-inline-size: 0;
   overflow-wrap: anywhere;
+}
+
+.help-hint,
+.help-note-text {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
 }
 
 .help-keys {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: var(--space-1);
+  margin-inline-start: auto;
 }
 
 .help-key {
@@ -50,18 +108,13 @@
   white-space: nowrap;
 }
 
-.help-note-list li {
-  padding-block: var(--space-1);
-  overflow-wrap: anywhere;
-}
-
 .help-text {
   margin: 0;
   overflow-wrap: anywhere;
 }
 
 .help-licenses {
-  margin-block-start: var(--space-3);
+  border-block-start: var(--border-width) solid var(--color-border);
 }
 
 /* One line of text plus padding makes the row a full touch target, like the diagnostics below. */

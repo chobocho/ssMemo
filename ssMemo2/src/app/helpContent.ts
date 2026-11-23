@@ -10,6 +10,8 @@ export interface HelpRow {
   label: string;
   /** Every shortcut of the command, as shown to the user. */
   shortcuts: string[];
+  /** A line of explanation; only on commands that have one. */
+  hint?: string;
 }
 
 export interface HelpGroup {
@@ -27,13 +29,18 @@ export function buildHelpGroups(
   groups: readonly { id: string; labelKey: MessageKey }[],
   t: Translate,
   formatShortcut: (shortcut: string) => string,
+  hintKeys: Readonly<Record<string, MessageKey | undefined>> = {},
 ): HelpGroup[] {
   const labels = new Map(groups.map((group) => [group.id, t(group.labelKey)]));
   const order = [...new Set([...groups.map((group) => group.id), ...definitions.map((definition) => definition.group)])];
   return order.flatMap((groupId) => {
     const rows = definitions
       .filter((definition) => definition.group === groupId)
-      .map((definition) => ({ icon: definition.icon, label: t(definition.labelKey), shortcuts: definition.shortcuts.map(formatShortcut) }));
+      .map((definition): HelpRow => {
+        const row: HelpRow = { icon: definition.icon, label: t(definition.labelKey), shortcuts: definition.shortcuts.map(formatShortcut) };
+        const hintKey = hintKeys[definition.id];
+        return hintKey === undefined ? row : { ...row, hint: t(hintKey) };
+      });
     return rows.length === 0 ? [] : [{ label: labels.get(groupId) ?? groupId, rows }];
   });
 }

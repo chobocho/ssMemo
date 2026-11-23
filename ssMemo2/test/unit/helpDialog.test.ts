@@ -9,18 +9,23 @@ function createHarness(overrides: Partial<HelpOptions> = {}): { content: HTMLEle
   const diagnostics = document.createElement('details');
   diagnostics.className = 'diagnostics';
   const content = createHelpContent(document, {
+    filterLabel: 'Find a command or a key',
+    noMatches: 'Nothing matches.',
     groups: [
       {
         label: 'Files',
         rows: [
-          { icon: '📂', label: 'Open file', shortcuts: ['Ctrl+O'] },
+          { icon: '📂', label: 'Open file', shortcuts: ['Ctrl+O'], hint: 'Several at once' },
           { icon: '🔤', label: 'Encoding', shortcuts: [] },
         ],
       },
       { label: 'Search', rows: [{ icon: '🔍', label: 'Find', shortcuts: ['Ctrl+F', 'Ctrl+I'] }] },
     ],
-    notesTitle: 'Good to know',
-    notes: ['Memos are saved automatically.', 'Redo is Ctrl+Y.'],
+    tipsTitle: 'Good to know',
+    tips: [
+      { icon: '💾', title: 'Saved by itself', text: 'Memos are saved automatically.' },
+      { icon: '↩️', title: 'Undo', text: 'Redo is Ctrl+Y.' },
+    ],
     aboutTitle: 'About',
     aboutText: 'ssMemo2, build 0.1.0+abc',
     licensesTitle: 'Open-source licenses',
@@ -54,7 +59,9 @@ test('the notes come as a list under their heading', () => {
   const { content } = createHarness();
   const notes = content.querySelector('.help-notes');
   assert.equal(notes?.querySelector('h3')?.textContent, 'Good to know');
-  assert.deepEqual([...(notes?.querySelectorAll('li') ?? [])].map((item) => item.textContent), ['Memos are saved automatically.', 'Redo is Ctrl+Y.']);
+  const items = [...(notes?.querySelectorAll('li') ?? [])];
+  assert.deepEqual(items.map((item) => item.querySelector('.help-note-title')?.textContent), ['Saved by itself', 'Undo']);
+  assert.deepEqual(items.map((item) => item.querySelector('.help-note-text')?.textContent), ['Memos are saved automatically.', 'Redo is Ctrl+Y.']);
 });
 
 test('the build is named, and the licenses are there in full but folded away', () => {
@@ -74,7 +81,68 @@ test('the diagnostics panel it is given is part of the help', () => {
 });
 
 test('texts are shown as text, whatever they contain', () => {
-  const { content } = createHarness({ notes: ['<img src=x onerror=alert(1)>'], licensesText: '<script>alert(1)</script>' });
+  const { content } = createHarness({ tips: [{ icon: '<b>', title: '<i>x</i>', text: '<img src=x onerror=alert(1)>' }], licensesText: '<script>alert(1)</script>' });
   assert.equal(content.querySelector('img'), null);
   assert.equal(content.querySelector('script'), null);
+  assert.equal(content.querySelector('.help-notes i, .help-notes b'), null);
+});
+
+test('a command that has an explanation shows it under its name, the others show none', () => {
+  const { content } = createHarness();
+  const rows = [...content.querySelectorAll('.help-row')];
+  assert.equal(rows[0]?.querySelector('.help-hint')?.textContent, 'Several at once');
+  assert.equal(rows[1]?.querySelector('.help-hint'), null);
+});
+
+// --- the filter -------------------------------------------------------------
+
+function typeIntoFilter(content: HTMLElement, text: string): void {
+  const filter = content.querySelector<HTMLInputElement>('.help-filter');
+  assert.ok(filter, 'expected the filter field');
+  filter.value = text;
+  filter.dispatchEvent(new (content.ownerDocument.defaultView as Window & typeof globalThis).Event('input', { bubbles: true }));
+}
+
+/** Texts of the matching elements that are neither hidden themselves nor inside something hidden. */
+const shownTexts = (content: HTMLElement, selector: string): string[] =>
+  [...content.querySelectorAll<HTMLElement>(selector)].filter((element) => !element.closest('[hidden]')).map((element) => element.textContent ?? '');
+
+test('the filter field is named, and comes before everything it filters', () => {
+  const { content } = createHarness();
+  const filter = content.querySelector('.help-filter');
+  assert.equal(filter?.getAttribute('aria-label'), 'Find a command or a key');
+  assert.equal(content.firstElementChild, filter);
+});
+
+test('typing leaves only the entries that contain every word, whatever the case', () => {
+  const { content } = createHarness();
+  typeIntoFilter(content, 'CTRL find');
+  assert.deepEqual(shownTexts(content, '.help-row .help-label'), ['Find']);
+  // A group without a match goes away with its heading; so do the notes.
+  assert.deepEqual(shownTexts(content, '.help-group').length, 1);
+  assert.equal(content.querySelector<HTMLElement>('.help-notes')?.hidden, true);
+});
+
+test('the filter looks at names, explanations, keys and notes alike', () => {
+  const { content } = createHarness();
+  typeIntoFilter(content, 'several');
+  assert.deepEqual(shownTexts(content, '.help-row .help-label'), ['Open file']);
+  typeIntoFilter(content, 'ctrl+i');
+  assert.deepEqual(shownTexts(content, '.help-row .help-label'), ['Find']);
+  typeIntoFilter(content, 'redo');
+  assert.deepEqual(shownTexts(content, '.help-row .help-label'), []);
+  assert.deepEqual(shownTexts(content, '.help-note .help-note-title'), ['Undo']);
+});
+
+test('when nothing matches the help says so, and an emptied field brings everything back', () => {
+  const { content } = createHarness();
+  const empty = content.querySelector<HTMLElement>('.help-empty');
+  assert.equal(empty?.hidden, true);
+  typeIntoFilter(content, 'zzz');
+  assert.equal(empty?.hidden, false);
+  assert.equal(empty?.textContent, 'Nothing matches.');
+  typeIntoFilter(content, '  ');
+  assert.equal(empty?.hidden, true);
+  assert.equal(shownTexts(content, '.help-row').length, 3);
+  assert.equal(shownTexts(content, '.help-note').length, 2);
 });

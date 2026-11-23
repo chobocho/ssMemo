@@ -38,6 +38,11 @@ export function createToolbar(doc: Document, commands: readonly Command[], t: Tr
   element.setAttribute('role', 'toolbar');
   if (options.label !== undefined) element.setAttribute('aria-label', options.label);
 
+  // A click with the mouse must not take the focus out of the memo: the cursor stays where it
+  // was, typing goes on, and a dialog opened from here returns there when it closes. The buttons
+  // are still reached and focused with the Tab key.
+  element.addEventListener('mousedown', (event) => event.preventDefault());
+
   const toggles: { button: HTMLButtonElement; isOn: () => boolean }[] = [];
 
   for (const command of commands) {

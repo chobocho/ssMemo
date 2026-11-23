@@ -32,6 +32,7 @@ function createHarness(): Harness {
     onActivate: (tabId) => calls.push(`activate:${tabId}`),
     onClose: (tabId) => calls.push(`close:${tabId}`),
     onNew: () => calls.push('new'),
+    onRename: (tabId) => calls.push(`rename:${tabId}`),
   });
   document.body.append(bar, panel);
   const entries = (): HTMLElement[] => [...bar.querySelectorAll<HTMLElement>('.tab')];
@@ -242,4 +243,32 @@ test('the wrappers around the tabs do not get in the way of the tab list', () =>
   const harness = threeTabs();
   assert.equal(harness.bar.querySelector('[role="tablist"]')?.getAttribute('aria-orientation'), 'horizontal');
   for (const entry of harness.entries()) assert.equal(entry.getAttribute('role'), 'presentation');
+});
+
+test('a double click on a tab asks to rename its memo, one beside the tabs does not', () => {
+  const harness = createHarness();
+  harness.tabs.open('a', 'Alpha');
+  const window = harness.document.defaultView;
+  assert.ok(window);
+  const doubleClick = (target: Element | null | undefined): void => {
+    assert.ok(target);
+    target.dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true }));
+  };
+  // On the title inside the tab, which is where the pointer usually is.
+  doubleClick(harness.bar.querySelector('.tab-title'));
+  assert.deepEqual(harness.calls, ['rename:a']);
+  doubleClick(harness.bar.querySelector('.tab-close'));
+  doubleClick(harness.bar.querySelector('.tab-list'));
+  assert.deepEqual(harness.calls, ['rename:a']);
+});
+
+test('pressing the mouse on the strip does not take the focus out of the memo', () => {
+  const harness = createHarness();
+  harness.tabs.open('a', 'Alpha');
+  const window = harness.document.defaultView;
+  assert.ok(window);
+  // Preventing the default action of "mousedown" is what keeps the focus where it is.
+  const press = new window.MouseEvent('mousedown', { bubbles: true, cancelable: true });
+  harness.bar.querySelector('.tab-select')?.dispatchEvent(press);
+  assert.equal(press.defaultPrevented, true);
 });

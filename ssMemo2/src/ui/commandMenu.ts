@@ -72,5 +72,8 @@ export function createCommandMenu(doc: Document, options: CommandMenuOptions): H
     item.addEventListener('click', () => onPick(command));
     sectionFor(command.group).append(item);
   }
+  // The keyboard starts in the list, not on the close button of the dialog.
+  const firstItem = element.querySelector('button');
+  if (firstItem) firstItem.autofocus = true;
   return element;
 }

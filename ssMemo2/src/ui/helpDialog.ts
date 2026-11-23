@@ -1,12 +1,24 @@
-// The content of the help dialog: every command with its shortcuts, a few things worth knowing,
-// which build this is, the open-source notices and the diagnostics.
+// The content of the help dialog: a field that narrows it down, every command with its shortcuts
+// and a line of explanation, a few things worth knowing, which build this is, the open-source
+// notices and the diagnostics.
 import type { HelpGroup } from '../app/helpContent.ts';
 
+/** Something worth knowing that is not a command. */
+export interface HelpTip {
+  icon: string;
+  title: string;
+  text: string;
+}
+
 export interface HelpOptions {
+  /** Placeholder and accessible name of the field that narrows the help down. */
+  filterLabel: string;
+  /** Shown when nothing in the help contains what was typed into the field. */
+  noMatches: string;
   /** The commands, grouped (see app/helpContent.ts). */
   groups: readonly HelpGroup[];
-  notesTitle: string;
-  notes: readonly string[];
+  tipsTitle: string;
+  tips: readonly HelpTip[];
   aboutTitle: string;
   /** Name and build of the app. */
   aboutText: string;
@@ -25,31 +37,68 @@ function createElement<K extends keyof HTMLElementTagNameMap>(doc: Document, tag
   return element;
 }
 
+/** An icon that is decoration: the text next to it says the same in words. */
+function createIcon(doc: Document, icon: string): HTMLElement {
+  const element = createElement(doc, 'span', 'help-icon', icon);
+  element.setAttribute('aria-hidden', 'true');
+  return element;
+}
+
+/** A part of the help with the entries the filter can hide; it goes away with its last entry. */
+interface FilteredSection {
+  section: HTMLElement;
+  entries: HTMLElement[];
+}
+
 export function createHelpContent(doc: Document, options: HelpOptions): HTMLElement {
   const element = createElement(doc, 'div', 'help');
+  const sections: FilteredSection[] = [];
 
+  const filter = createElement(doc, 'input', 'modal-input help-filter');
+  filter.type = 'search';
+  filter.placeholder = options.filterLabel;
+  filter.setAttribute('aria-label', options.filterLabel);
+  // Not words of a language; a phone should neither correct nor capitalise "ctrl".
+  filter.autocomplete = 'off';
+  filter.spellcheck = false;
+
+  const empty = createElement(doc, 'p', 'help-empty', options.noMatches);
+  empty.setAttribute('role', 'status');
+  empty.hidden = true;
+
+  const groups = createElement(doc, 'div', 'help-groups');
   for (const group of options.groups) {
     const section = createElement(doc, 'section', 'help-group');
     section.append(createElement(doc, 'h3', 'help-heading', group.label));
     const list = createElement(doc, 'ul', 'help-list');
-    for (const row of group.rows) {
+    const entries = group.rows.map((row) => {
       const item = createElement(doc, 'li', 'help-row');
-      const icon = createElement(doc, 'span', 'help-icon', row.icon);
-      // The name next to it says the same in words.
-      icon.setAttribute('aria-hidden', 'true');
+      const body = createElement(doc, 'span', 'help-body');
+      body.append(createElement(doc, 'span', 'help-label', row.label));
+      if (row.hint !== undefined) body.append(createElement(doc, 'span', 'help-hint', row.hint));
       const keys = createElement(doc, 'span', 'help-keys');
       keys.append(...row.shortcuts.map((shortcut) => createElement(doc, 'kbd', 'help-key', shortcut)));
-      item.append(icon, createElement(doc, 'span', 'help-label', row.label), keys);
-      list.append(item);
-    }
+      item.append(createIcon(doc, row.icon), body, keys);
+      return item;
+    });
+    list.append(...entries);
     section.append(list);
-    element.append(section);
+    groups.append(section);
+    sections.push({ section, entries });
   }
 
-  const notes = createElement(doc, 'section', 'help-notes');
-  const noteList = createElement(doc, 'ul', 'help-note-list');
-  noteList.append(...options.notes.map((note) => createElement(doc, 'li', '', note)));
-  notes.append(createElement(doc, 'h3', 'help-heading', options.notesTitle), noteList);
+  const tips = createElement(doc, 'section', 'help-notes');
+  const tipList = createElement(doc, 'ul', 'help-note-list');
+  const tipEntries = options.tips.map((tip) => {
+    const item = createElement(doc, 'li', 'help-note');
+    const body = createElement(doc, 'span', 'help-body');
+    body.append(createElement(doc, 'strong', 'help-note-title', tip.title), createElement(doc, 'span', 'help-note-text', tip.text));
+    item.append(createIcon(doc, tip.icon), body);
+    return item;
+  });
+  tipList.append(...tipEntries);
+  tips.append(createElement(doc, 'h3', 'help-heading', options.tipsTitle), tipList);
+  sections.push({ section: tips, entries: tipEntries });
 
   const about = createElement(doc, 'section', 'help-about');
   about.append(createElement(doc, 'h3', 'help-heading', options.aboutTitle), createElement(doc, 'p', 'help-text', options.aboutText));
@@ -62,6 +111,25 @@ export function createHelpContent(doc: Document, options: HelpOptions): HTMLElem
     createElement(doc, 'pre', 'help-license-text', options.licensesText),
   );
 
-  element.append(notes, about, licenses, options.diagnostics);
+  // Every word typed has to occur somewhere in an entry (name, explanation or key), in any order
+  // and in any case: "ctrl s" finds what Ctrl+S and Ctrl+Shift+S do.
+  filter.addEventListener('input', () => {
+    const words = filter.value.toLowerCase().split(/\s+/).filter((word) => word !== '');
+    let anyShown = false;
+    for (const { section, entries } of sections) {
+      let sectionShown = false;
+      for (const entry of entries) {
+        const text = (entry.textContent ?? '').toLowerCase();
+        const shown = words.every((word) => text.includes(word));
+        entry.hidden = !shown;
+        sectionShown ||= shown;
+      }
+      section.hidden = !sectionShown;
+      anyShown ||= sectionShown;
+    }
+    empty.hidden = anyShown;
+  });
+
+  element.append(filter, empty, groups, tips, about, licenses, options.diagnostics);
   return element;
 }

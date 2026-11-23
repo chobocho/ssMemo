@@ -26,7 +26,7 @@ function createHarness(): Harness {
   };
   return {
     ...dom,
-    modals: createModals(document, { confirm: 'OK', cancel: 'Cancel' }),
+    modals: createModals(document, { confirm: 'OK', cancel: 'Cancel', close: 'Close' }),
     topDialog,
     openDialogCount: () => openDialogs().length,
     button(label) {
@@ -318,4 +318,49 @@ test('dialogs that are open at the same time have different names', () => {
   void harness.modals.confirm('Delete?');
   assert.notEqual(harness.topDialog().getAttribute('aria-labelledby'), first);
   assert.equal(nameOf(harness), 'Delete?');
+});
+
+// --- the header of a custom dialog ------------------------------------------
+
+test('a custom dialog has a close button in its header that dismisses it', async () => {
+  const harness = createHarness();
+  const answer = harness.modals.open<string>(() => ({ title: 'Memos', content: harness.document.createElement('div') }));
+  const header = harness.topDialog().querySelector('.modal-header');
+  assert.equal(header?.querySelector('.modal-title')?.textContent, 'Memos');
+  const close = header?.querySelector<HTMLButtonElement>('button.modal-close');
+  // The symbol alone says nothing to a screen reader.
+  assert.equal(close?.getAttribute('aria-label'), 'Close');
+  close?.click();
+  assert.equal(await answer, undefined);
+  assert.equal(harness.openDialogCount(), 0);
+});
+
+test('the close button comes before the content, so a long dialog opens at its top', () => {
+  // The browser focuses the first focusable element and scrolls it into view.
+  const harness = createHarness();
+  const content = harness.document.createElement('div');
+  content.append(harness.document.createElement('button'));
+  void harness.modals.open(() => ({ title: 'Help', content }));
+  assert.equal(harness.topDialog().querySelector('button')?.className, 'modal-close');
+  assert.equal(harness.topDialog().querySelector('.modal-body')?.contains(content), true);
+});
+
+test('only a dialog that asks for it gets the wide layout', () => {
+  const harness = createHarness();
+  void harness.modals.open(() => ({ title: 'Memos', content: harness.document.createElement('div') }));
+  assert.equal(harness.topDialog().classList.contains('modal-wide'), false);
+  void harness.modals.open(() => ({ title: 'Help', content: harness.document.createElement('div'), wide: true }));
+  assert.equal(harness.topDialog().classList.contains('modal-wide'), true);
+});
+
+test('the text of a prompt is selected when the field first gets the focus, and only then', () => {
+  const harness = createHarness();
+  void harness.modals.prompt('Memo title', { initialValue: 'old title', validate: () => undefined });
+  const input = promptInput(harness);
+  input.focus();
+  assert.deepEqual([input.selectionStart, input.selectionEnd], [0, 'old title'.length]);
+  input.setSelectionRange(3, 3);
+  input.blur();
+  input.focus();
+  assert.deepEqual([input.selectionStart, input.selectionEnd], [3, 3]);
 });

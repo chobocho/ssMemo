@@ -178,7 +178,17 @@ export function createEditorTabs(view: EditorViewPort, options: EditorTabsOption
 
     read: (look) => (activeTabId === undefined ? undefined : look(view.state)),
 
-    remeasure: () => view.requestMeasure(),
+    remeasure() {
+      if (activeTabId === undefined) return;
+      // Asking the editor to measure is not enough: it reads line heights again only after it
+      // has redrawn its content, and a short memo does not even change the height of the text
+      // area. Until then the line numbers would keep the old spacing and drift away from their
+      // lines. Showing the same state again redraws everything; undo history, selection and
+      // focus are part of the state or put back by the editor, the scroll position by us.
+      const scrollPosition = view.scrollSnapshot();
+      view.setState(view.state);
+      view.dispatch({ effects: scrollPosition });
+    },
   };
 }
 

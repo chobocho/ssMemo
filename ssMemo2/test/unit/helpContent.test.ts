@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { COMMAND_DEFINITIONS, COMMAND_GROUPS } from '../../src/app/commandTable.ts';
+import { COMMAND_DEFINITIONS, COMMAND_GROUPS, COMMAND_HINT_KEYS } from '../../src/app/commandTable.ts';
 import { buildHelpGroups } from '../../src/app/helpContent.ts';
 import { en } from '../../src/i18n/en.ts';
 import { createTranslator } from '../../src/i18n/i18n.ts';
@@ -40,4 +40,21 @@ test('a group without commands is left out, and a command of an unlisted group i
   );
   assert.deepEqual(built.map((group) => group.label), [en['group.memo'], 'unlisted']);
   assert.deepEqual(built[1]?.rows, [{ icon: 'B', label: en['command.closeTab'], shortcuts: ['Alt-w'] }]);
+});
+
+test('a command gets its line of explanation where the table has one, and only there', () => {
+  const rows = buildHelpGroups(COMMAND_DEFINITIONS, COMMAND_GROUPS, t, (shortcut) => shortcut, COMMAND_HINT_KEYS).flatMap((group) => group.rows);
+  const trash = rows.find((row) => row.label === en['command.trash']);
+  assert.equal(trash?.hint, en['hint.trash']);
+  const next = rows.find((row) => row.label === en['command.findNext']);
+  assert.equal(next !== undefined && 'hint' in next, false);
+  assert.equal(rows.filter((row) => row.hint !== undefined).length, Object.keys(COMMAND_HINT_KEYS).length);
+});
+
+test('every explanation belongs to a command of the table and has a text', () => {
+  const ids = new Set<string>(COMMAND_DEFINITIONS.map((definition) => definition.id));
+  for (const [id, key] of Object.entries(COMMAND_HINT_KEYS)) {
+    assert.equal(ids.has(id), true, id);
+    assert.notEqual(en[key], '', id);
+  }
 });

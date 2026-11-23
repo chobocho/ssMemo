@@ -5,7 +5,7 @@ import { createBackupReminder } from './app/backupReminder.ts';
 import { createCalcActions } from './app/calcActions.ts';
 import type { CalcDialogAction } from './app/calcActions.ts';
 import { readBuildId } from './app/buildInfo.ts';
-import { COMMAND_DEFINITIONS, COMMAND_GROUPS, SYMBOL_COMMAND_IDS, bindCommands, iconOf } from './app/commandTable.ts';
+import { COMMAND_DEFINITIONS, COMMAND_GROUPS, COMMAND_HINT_KEYS, SYMBOL_COMMAND_IDS, bindCommands, iconOf } from './app/commandTable.ts';
 import type { CommandId } from './app/commandTable.ts';
 import { createCommandRegistry } from './app/commands.ts';
 import type { Command } from './app/commands.ts';
@@ -77,6 +77,7 @@ import { isApplePlatform, readEnvironment } from './ui/environment.ts';
 import { installFileDrop } from './ui/fileDrop.ts';
 import { createFileIo } from './ui/fileIo.ts';
 import { createHelpContent } from './ui/helpDialog.ts';
+import type { HelpTip } from './ui/helpDialog.ts';
 import { createMemoManager } from './ui/memoManager.ts';
 import { createModals } from './ui/modal.ts';
 import { nextPaint } from './ui/nextPaint.ts';
@@ -119,11 +120,16 @@ const UNKNOWN_STORAGE_FACTS: StorageFacts = { durability: 'unknown', usageBytes:
 // A page opened from a memo gets no handle on this page and is not told where it was opened from.
 const NEW_TAB_FEATURES = 'noopener,noreferrer';
 const FINE_POINTER_QUERY = '(pointer: fine)';
+// A device that is used with a mouse, and so with a keyboard: a desktop or a laptop.
+const KEYBOARD_DEVICE_QUERY = '(hover: hover) and (pointer: fine)';
 // The preview follows typing after this pause, and gives up on memos longer than this: rendering
 // them would stall a phone at every pause.
 const PREVIEW_DELAY_MS = 300;
 const PREVIEW_MAX_CHARACTERS = 500_000;
 const MENU_COMMAND_ID: CommandId = 'app.menu';
+// Icons of the two things worth knowing in the help that have no command to borrow one from.
+const TABS_TIP_ICON = '🗂️';
+const SAFE_MODE_TIP_ICON = '🛟';
 // Commands that get a button in the header, in display order. Tabs have their own controls.
 const TOOLBAR_COMMAND_IDS: readonly CommandId[] = [
   'memo.manage',
@@ -132,6 +138,8 @@ const TOOLBAR_COMMAND_IDS: readonly CommandId[] = [
   'search.open',
   'view.preview',
   'view.toggleWrap',
+  'tools.calc',
+  'tools.chunks',
   'view.fontSmaller',
   'view.fontLarger',
   'settings.language',
@@ -139,13 +147,16 @@ const TOOLBAR_COMMAND_IDS: readonly CommandId[] = [
   MENU_COMMAND_ID,
 ];
 // From which screen width a button is shown; the ones not listed are always there. The cover
-// screen of a foldable has room for four, the unfolded screen (about 580 CSS px) for seven. The
-// menu lists every command at any width.
+// screen of a foldable has room for four, the unfolded screen (about 580 CSS px) for seven, and
+// the narrowest wide window for all thirteen next to the title and the save state. The menu
+// lists every command at any width.
 const TOOLBAR_TIERS: ReadonlyMap<string, ToolbarTier> = new Map<CommandId, ToolbarTier>([
   ['search.open', 'medium'],
   ['view.preview', 'medium'],
   ['help.show', 'medium'],
   ['view.toggleWrap', 'wide'],
+  ['tools.calc', 'wide'],
+  ['tools.chunks', 'wide'],
   ['view.fontSmaller', 'wide'],
   ['view.fontLarger', 'wide'],
   ['settings.language', 'wide'],
@@ -194,7 +205,7 @@ async function start(win: Window): Promise<void> {
   const shell = createAppShell(doc, APP_NAME);
   const status = createStatusIndicator(doc);
   const notices = createNoticeBar(doc, t('notice.dismiss'), (remove) => win.setTimeout(remove, INFO_NOTICE_DURATION_MS));
-  const modals = createModals(doc, { confirm: t('modal.confirm'), cancel: t('modal.cancel') });
+  const modals = createModals(doc, { confirm: t('modal.confirm'), cancel: t('modal.cancel'), close: t('modal.close') });
   shell.header.append(status.element);
   shell.noticeHost.append(notices.element);
   mountPoint.append(shell.element);
@@ -228,7 +239,7 @@ async function start(win: Window): Promise<void> {
   const tabs = createTabManager();
   let editedSinceStart = false;
   // Mounted after the shell is in the document so the editor can measure its real size at once.
-  // It is not focused automatically: on a phone that would pop up the keyboard on every load.
+  // It gets the focus at the end of the start, and only where there is a keyboard (see below).
   const editor = mountEditorTabs(
     shell.editorHost,
     {
@@ -432,7 +443,7 @@ async function start(win: Window): Promise<void> {
     await localFiles.openFiles(await fileIo.pickFiles({ multiple: true }));
   };
 
-  const renameMemo = async (meta: DocumentMeta): Promise<void> => {
+  const renameMemo = async (meta: Pick<DocumentMeta, 'id' | 'title'>): Promise<void> => {
     const title = await modals.prompt(t('manager.renamePrompt'), {
       initialValue: meta.title,
       validate: (value) => {
@@ -499,6 +510,21 @@ async function start(win: Window): Promise<void> {
       notices.show(t((await pins.toggle(id)) ? 'notice.memoPinned' : 'notice.memoUnpinned'), 'info');
     } catch {
       notices.show(t('notice.pinFailed'));
+    }
+  };
+  const renameActiveMemo = async (): Promise<void> => {
+    // What was typed a moment ago is written first: only a stored memo has a name to change.
+    await workspace.flushAll();
+    const id = workspace.getActiveDocumentId();
+    const active = workspace.getActiveDocument();
+    if (id === undefined || !active) {
+      notices.show(t('notice.renameNothing'), 'info');
+      return;
+    }
+    try {
+      await renameMemo({ id, title: active.title });
+    } catch {
+      notices.show(t('notice.saveFailed'));
     }
   };
   const chooseMemoSort = async (): Promise<void> => {
@@ -718,18 +744,33 @@ async function start(win: Window): Promise<void> {
     refreshDiagnostics();
     // The usage may have grown since the page was opened; the panel updates when the answer is in.
     void refreshStorageFacts();
+    const tip = (icon: string, titleKey: MessageKey, textKey: MessageKey, params?: Record<string, string>): HelpTip => ({
+      icon,
+      title: t(titleKey),
+      text: t(textKey, params),
+    });
     void modals.open(() => ({
       title: t('command.help'),
+      wide: true,
       content: createHelpContent(doc, {
-        groups: buildHelpGroups(COMMAND_DEFINITIONS, COMMAND_GROUPS, t, describeShortcut),
-        notesTitle: t('help.notes'),
-        notes: [
-          t('help.note.autosave'),
-          t('help.note.files'),
-          t('help.note.redo', { redo: describeShortcut('Mod-y'), symbol: describeShortcut('Mod-Shift-z') }),
-          t('help.note.calc'),
-          t('help.note.url'),
-          t('help.note.safe'),
+        filterLabel: t('help.filter'),
+        noMatches: t('help.noMatches'),
+        groups: buildHelpGroups(COMMAND_DEFINITIONS, COMMAND_GROUPS, t, describeShortcut, COMMAND_HINT_KEYS),
+        tipsTitle: t('help.notes'),
+        tips: [
+          tip(iconOf('file.save'), 'help.tip.autosave.title', 'help.tip.autosave.text'),
+          tip(TABS_TIP_ICON, 'help.tip.tabs.title', 'help.tip.tabs.text', { rename: describeShortcut('F2') }),
+          tip(iconOf('file.open'), 'help.tip.files.title', 'help.tip.files.text'),
+          tip(iconOf('view.toggleWrap'), 'help.tip.undo.title', 'help.tip.undo.text', {
+            undo: describeShortcut('Mod-z'),
+            redo: describeShortcut('Mod-y'),
+            symbol: describeShortcut('Mod-Shift-z'),
+          }),
+          tip(iconOf('tools.calc'), 'help.tip.calc.title', 'help.tip.calc.text'),
+          tip(iconOf('tools.openUrl'), 'help.tip.url.title', 'help.tip.url.text'),
+          tip(iconOf('backup.export'), 'help.tip.backup.title', 'help.tip.backup.text', { command: t('command.exportBackup') }),
+          tip(iconOf('app.menu'), 'help.tip.menu.title', 'help.tip.menu.text'),
+          tip(SAFE_MODE_TIP_ICON, 'help.tip.safe.title', 'help.tip.safe.text'),
         ],
         aboutTitle: t('help.about'),
         aboutText: t('help.build', { name: APP_NAME, build: facts.buildId }),
@@ -746,6 +787,7 @@ async function start(win: Window): Promise<void> {
   const showMenu = (): void => {
     void modals.open((close) => ({
       title: t('command.menu'),
+      wide: true,
       content: createCommandMenu(doc, {
         commands: commands.list().filter((command) => command.id !== MENU_COMMAND_ID),
         t,
@@ -764,6 +806,7 @@ async function start(win: Window): Promise<void> {
     bindCommands({
       'memo.manage': showMemoManager,
       'memo.new': () => workspace.newMemo(),
+      'memo.rename': () => void renameActiveMemo(),
       'memo.pin': { run: () => void togglePin(), isOn: isActiveMemoPinned },
       'memo.trash': showTrash,
       'tab.close': closeActiveTab,
@@ -827,6 +870,8 @@ async function start(win: Window): Promise<void> {
       onActivate: (tabId) => workspace.activateTab(tabId),
       onClose: (tabId) => void closeTab(tabId),
       onNew: () => workspace.newMemo(),
+      // The first click of the double click has made the tab the active one.
+      onRename: () => void renameActiveMemo(),
     }),
   );
 
@@ -840,6 +885,9 @@ async function start(win: Window): Promise<void> {
 
   await workspace.start();
   updatePageTitle();
+  // With a keyboard at hand, typing can begin at once, as in ssMemoWeb. Not on a touch screen:
+  // there the focus would pop up the on-screen keyboard on every load.
+  if (win.matchMedia(KEYBOARD_DEVICE_QUERY).matches) editor.focus();
 
   // The memos of ssMemoWeb come over by themselves, once, where memos are kept at all. Not waited
   // for: the app is ready, and the memos only have to be in the list when it is opened.
