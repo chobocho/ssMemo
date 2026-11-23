@@ -841,6 +841,10 @@ async function start(win: Window): Promise<void> {
   await workspace.start();
   updatePageTitle();
 
+  // The memos of ssMemoWeb come over by themselves, once, where memos are kept at all. Not waited
+  // for: the app is ready, and the memos only have to be in the list when it is opened.
+  if (opened.mode === 'persistent') void legacyImport.migrateOnce();
+
   // A reminder to make a backup, where memos are kept at all. Not waited for: the app is ready.
   if (opened.mode === 'persistent') {
     void workspace

@@ -266,8 +266,10 @@ test('describeLegacyImportNotice has words for every outcome of importing from s
   const upToDate = describeLegacyImportNotice({ kind: 'legacy-up-to-date', count: 7 }, t);
   const imported = describeLegacyImportNotice({ kind: 'legacy-imported', added: 3 }, t);
   const failed = describeLegacyImportNotice({ kind: 'legacy-failed' }, t);
-  assert.equal(new Set([nothing, upToDate, imported, failed]).size, 4);
-  for (const message of [nothing, upToDate, imported, failed]) assert.equal(message.includes('ssMemoWeb'), true, message);
+  const migrated = describeLegacyImportNotice({ kind: 'legacy-migrated', added: 5 }, t);
+  assert.equal(new Set([nothing, upToDate, imported, failed, migrated]).size, 5);
+  assert.equal(migrated.includes('5'), true);
+  for (const message of [nothing, upToDate, imported, failed, migrated]) assert.equal(message.includes('ssMemoWeb'), true, message);
   assert.equal(upToDate.includes('7'), true);
   assert.equal(imported.includes('3'), true);
   // Why nothing was found is not obvious: the old app must have run at this very address.

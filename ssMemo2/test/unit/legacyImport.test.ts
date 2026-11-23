@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createLegacyImport, parseLegacyRecords, planLegacyImport } from '../../src/app/legacyImport.ts';
+import { LEGACY_MIGRATION_KEY, createLegacyImport, parseLegacyRecords, planLegacyImport } from '../../src/app/legacyImport.ts';
 import type { LegacyImportNotice, LegacyMemo } from '../../src/app/legacyImport.ts';
 import { MAX_TITLE_LENGTH } from '../../src/app/documentStore.ts';
 import { createMemoryStorage } from '../../src/storage/memoryStorage.ts';
@@ -136,6 +136,7 @@ interface Harness {
   questions: { found: number; missing: number }[];
   steps: string[];
   run(): Promise<void>;
+  migrateOnce(): Promise<void>;
   storedTitles(): Promise<string[]>;
 }
 
@@ -177,6 +178,7 @@ function createHarness(setup: Setup = {}): Harness {
     questions,
     steps,
     run: () => legacyImport.run(),
+    migrateOnce: () => legacyImport.migrateOnce(),
     storedTitles: async () => (await storage.listDocuments()).documents.map((meta) => meta.title).sort(),
   };
 }
@@ -269,4 +271,79 @@ test('all memos are written in one step', async () => {
   });
   await harness.run();
   assert.deepEqual(writes, [2]);
+});
+
+// --- migrateOnce ------------------------------------------------------------
+
+test('at startup the memos of the old app come over without a question', async () => {
+  const harness = createHarness();
+  await harness.migrateOnce();
+  assert.deepEqual(harness.questions, []);
+  assert.deepEqual(await harness.storedTitles(), ['Ideas', 'Shopping']);
+  assert.deepEqual(harness.notices, [{ kind: 'legacy-migrated', added: 2 }]);
+  assert.deepEqual(harness.steps, ['read', 'flush']);
+});
+
+test('once migrated, a memo that was deleted here does not come back at the next start', async () => {
+  const harness = createHarness();
+  await harness.migrateOnce();
+  const { documents } = await harness.storage.listDocuments();
+  for (const meta of documents) await harness.storage.deleteDocument(meta.id);
+
+  await harness.migrateOnce();
+  assert.deepEqual(await harness.storedTitles(), []);
+  assert.equal(harness.notices.length, 1);
+  // The old database is not even opened again.
+  assert.deepEqual(harness.steps, ['read', 'flush']);
+});
+
+test('memos that are here already are not doubled, and nothing is said', async () => {
+  const storage = createMemoryStorage();
+  await storage.saveDocument({ id: 'a', title: 'Shopping', content: 'milk', createdAt: OLD_TIME, updatedAt: OLD_TIME }, NEW_DOCUMENT_REV);
+  await storage.saveDocument({ id: 'b', title: 'Ideas', content: 'tests', createdAt: OLD_TIME, updatedAt: OLD_TIME }, NEW_DOCUMENT_REV);
+  const harness = createHarness({ storage });
+  await harness.migrateOnce();
+  assert.deepEqual(await harness.storedTitles(), ['Ideas', 'Shopping']);
+  assert.deepEqual(harness.notices, []);
+  assert.notEqual(await storage.getValue(LEGACY_MIGRATION_KEY), undefined);
+});
+
+test('where the old app left nothing, the migration stays open for a later start', async () => {
+  for (const records of [undefined, [], [record('__CALC_MEMORY__', '{}')]]) {
+    const harness = createHarness({ records });
+    await harness.migrateOnce();
+    assert.deepEqual(harness.notices, []);
+    assert.equal(await harness.storage.getValue(LEGACY_MIGRATION_KEY), undefined);
+  }
+});
+
+test('a failed migration is silent, changes nothing, and is tried again at the next start', async () => {
+  const unreadable = createHarness({ readFails: true });
+  await unreadable.migrateOnce();
+  assert.deepEqual(unreadable.notices, []);
+  assert.equal(await unreadable.storage.getValue(LEGACY_MIGRATION_KEY), undefined);
+
+  const memory = createMemoryStorage();
+  let failing = true;
+  const storage: StoragePort = {
+    ...memory,
+    writeDocuments: (drafts, options) =>
+      failing ? Promise.reject(new StorageError('quota', 'full')) : memory.writeDocuments(drafts, options),
+  };
+  const harness = createHarness({ storage });
+  await harness.migrateOnce();
+  assert.deepEqual(await harness.storedTitles(), []);
+  assert.deepEqual(harness.notices, []);
+
+  failing = false;
+  await harness.migrateOnce();
+  assert.deepEqual(await harness.storedTitles(), ['Ideas', 'Shopping']);
+  assert.deepEqual(harness.notices, [{ kind: 'legacy-migrated', added: 2 }]);
+});
+
+test('the menu command still works after the migration, and finds everything in place', async () => {
+  const harness = createHarness();
+  await harness.migrateOnce();
+  await harness.run();
+  assert.deepEqual(harness.notices.at(-1), { kind: 'legacy-up-to-date', count: 2 });
 });

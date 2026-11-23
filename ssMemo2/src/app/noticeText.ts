@@ -164,6 +164,8 @@ export function describeLegacyImportNotice(notice: LegacyImportNotice, t: Transl
       return t('notice.legacyUpToDate', { count: notice.count });
     case 'legacy-imported':
       return t('notice.legacyImported', { added: notice.added });
+    case 'legacy-migrated':
+      return t('notice.legacyMigrated', { added: notice.added });
     case 'legacy-failed':
       return t('notice.legacyFailed');
   }

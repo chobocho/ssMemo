@@ -11,6 +11,12 @@ const MEMO_KEY_PREFIX = 'memo:';
 /** The one memo of its earliest version, which later versions moved into a titled memo. */
 const SINGLE_MEMO_KEY = 'NOTEPAD';
 
+/**
+ * Where it is noted that the memos of the old app were brought over by themselves. Without it, a
+ * memo the user deleted or edited here would come back at every start.
+ */
+export const LEGACY_MIGRATION_KEY = 'legacyMigration';
+
 export interface LegacyMemo {
   title: string;
   content: string;
@@ -39,6 +45,8 @@ export type LegacyImportNotice =
   /** All `count` memos of the old app are here already. */
   | { kind: 'legacy-up-to-date'; count: number }
   | { kind: 'legacy-imported'; added: number }
+  /** `added` memos were brought over at startup, without the user asking for it. */
+  | { kind: 'legacy-migrated'; added: number }
   /** Nothing was written; the stored memos are as they were. */
   | { kind: 'legacy-failed' };
 
@@ -60,6 +68,16 @@ export interface LegacyImportOptions {
 export interface LegacyImport {
   /** Never rejects. */
   run(): Promise<void>;
+  /**
+   * Brings the memos of the old app over without asking, once: after it has succeeded it does
+   * nothing any more. Where there is nothing to bring over yet, or it fails, it is tried again at
+   * the next call. Says something only if memos were added. Never rejects.
+   */
+  migrateOnce(): Promise<void>;
+}
+
+function isMigrationDone(value: unknown): boolean {
+  return typeof value === 'object' && value !== null && (value as Record<string, unknown>).done === true;
 }
 
 function isTimestamp(value: unknown): value is string {
@@ -154,6 +172,29 @@ export function createLegacyImport(options: LegacyImportOptions): LegacyImport {
         onNotice({ kind: 'legacy-imported', added: plan.drafts.length });
       } catch {
         onNotice({ kind: 'legacy-failed' });
+      }
+    },
+
+    async migrateOnce() {
+      try {
+        if (isMigrationDone(await storage.getValue(LEGACY_MIGRATION_KEY))) return;
+        const memos = parseLegacyRecords((await options.readRecords()) ?? [], options.singleMemoTitle);
+        // Not noted as done: the old app may yet be used at this address.
+        if (memos.length === 0) return;
+
+        await options.flushAll();
+        const plan = planLegacyImport(memos, {
+          existing: (await storage.getAllDocuments()).documents,
+          now: options.now(),
+          createId: options.createId,
+        });
+        // New ids only, and all or nothing; see run().
+        if (plan.drafts.length > 0) await storage.writeDocuments(plan.drafts, { replaceAll: false });
+        // If this write fails, the next start finds every memo in place and adds nothing.
+        await storage.setValue(LEGACY_MIGRATION_KEY, { done: true, at: options.now().toISOString() });
+        if (plan.drafts.length > 0) onNotice({ kind: 'legacy-migrated', added: plan.drafts.length });
+      } catch {
+        // Nobody asked for this, so there is nobody to tell. The menu command reports failures.
       }
     },
   };

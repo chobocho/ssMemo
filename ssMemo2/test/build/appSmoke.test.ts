@@ -350,7 +350,7 @@ function addOldAppData(factory: IDBFactory, records: unknown[]): Promise<void> {
 const OLD_DEFAULT_TITLE = String.fromCharCode(0xae30, 0xbcf8, 0x20, 0xba54, 0xbaa8);
 const OLD_TIME = '2025-06-01T10:00:00.000Z';
 
-test('the memos ssMemoWeb left at the same address are imported, and only once', async () => {
+test('the memos ssMemoWeb left at the same address come over at startup, and only once', async () => {
   const factory = await seededFactory();
   const oldRecords = [
     { key: `memo:${OLD_DEFAULT_TITLE}`, content: 'from the old app', updatedAt: OLD_TIME },
@@ -361,15 +361,12 @@ test('the memos ssMemoWeb left at the same address are imported, and only once',
   await addOldAppData(factory, oldRecords);
 
   const page = await openPage({ factory });
-  await pickFromMenu(page, 'Import from ssMemoWeb');
-  await wait(150);
-  // Asked first, with the numbers: two memos, neither of them here yet.
-  assert.match(topDialog(page).textContent ?? '', /2 memo\(s\).* 2 of which/);
-  dialogButton(page, 'Import').click();
   await wait(200);
-  assert.equal(page.noticeTexts().some((text) => text.includes('Imported 2 memo(s) from ssMemoWeb')), true);
+  // Nothing is asked; the user is told what happened.
+  assert.equal(page.document.querySelector('dialog[open]'), null);
+  assert.equal(page.noticeTexts().some((text) => text.includes('Brought over 2 memo(s)')), true);
   assert.deepEqual((await storedTitles(factory)).sort(), ['Ideas', 'Recipes', 'Shopping', OLD_DEFAULT_TITLE].sort());
-  // What is on screen stays; the imported memos wait in the memo list.
+  // What is on screen stays; the memos that came over wait in the memo list.
   assert.deepEqual(page.tabTitles(), ['Shopping', 'Ideas']);
   toolbarButton(page, 'Memo list').click();
   await wait(100);
@@ -377,7 +374,7 @@ test('the memos ssMemoWeb left at the same address are imported, and only once',
   topDialog(page).click();
   await wait(50);
 
-  // A second time there is nothing left to do, and nothing is asked.
+  // The menu command finds nothing left to do, and nothing is asked.
   await pickFromMenu(page, 'Import from ssMemoWeb');
   await wait(150);
   assert.equal(page.document.querySelector('dialog[open]'), null);
@@ -387,6 +384,37 @@ test('the memos ssMemoWeb left at the same address are imported, and only once',
   // The data of the old app is exactly as it was.
   const left = (await readLegacyRecords(factory)) ?? [];
   assert.equal(JSON.stringify([...left].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)))), JSON.stringify([...oldRecords].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)))));
+  assert.deepEqual(page.errors, []);
+  page.close();
+
+  // A memo that is removed here afterwards does not come back at the next visit.
+  const storage = await openIndexedDbStorage(factory);
+  const recipes = (await storage.listDocuments()).documents.find((meta) => meta.title === 'Recipes');
+  assert.notEqual(recipes, undefined);
+  await storage.deleteDocument(recipes?.id ?? '');
+  storage.close();
+  const reloaded = await openPage({ factory });
+  await wait(200);
+  assert.equal(reloaded.noticeTexts().some((text) => text.includes('Brought over')), false);
+  assert.equal((await storedTitles(factory)).includes('Recipes'), false);
+  assert.deepEqual(reloaded.errors, []);
+  reloaded.close();
+});
+
+test('ssMemoWeb memos are asked about first when the import is started from the menu', async () => {
+  const factory = await seededFactory();
+  const page = await openPage({ factory });
+  await wait(200);
+  // The old app is used at this address only after this app has started.
+  await addOldAppData(factory, [{ key: 'memo:Recipes', content: 'pancakes', updatedAt: OLD_TIME }]);
+
+  await pickFromMenu(page, 'Import from ssMemoWeb');
+  await wait(150);
+  assert.match(topDialog(page).textContent ?? '', /1 memo\(s\).* 1 of which/);
+  dialogButton(page, 'Import').click();
+  await wait(200);
+  assert.equal(page.noticeTexts().some((text) => text.includes('Imported 1 memo(s) from ssMemoWeb')), true);
+  assert.equal((await storedTitles(factory)).includes('Recipes'), true);
   assert.deepEqual(page.errors, []);
   page.close();
 });

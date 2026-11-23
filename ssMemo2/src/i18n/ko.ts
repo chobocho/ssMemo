@@ -220,6 +220,7 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'notice.legacyNothing': 'ssMemoWeb 메모를 찾지 못했습니다. ssMemoWeb을 이 페이지와 같은 주소에서 썼을 때만 읽을 수 있습니다.',
   'notice.legacyUpToDate': 'ssMemoWeb 메모 {count}개가 이미 모두 여기에 있습니다.',
   'notice.legacyImported': 'ssMemoWeb에서 메모 {added}개를 가져왔습니다. 메모 목록에서 볼 수 있습니다.',
+  'notice.legacyMigrated': '이 브라우저에 남아 있던 ssMemoWeb 메모 {added}개를 자동으로 가져왔습니다. 메모 목록에서 볼 수 있습니다. ssMemoWeb의 메모는 그대로 남습니다.',
   'notice.legacyFailed': 'ssMemoWeb 메모를 가져오지 못했습니다. 바뀐 것은 없습니다.',
   'notice.backupNever': '아직 백업한 적이 없고, 메모는 이 브라우저에만 있습니다. 메뉴 ☰ → {command}로 모든 메모를 파일 하나에 저장할 수 있습니다.',
   'notice.backupOld': '마지막 백업 후 {days}일이 지났습니다. 메뉴 ☰ → {command}로 모든 메모를 파일 하나에 저장할 수 있습니다.',

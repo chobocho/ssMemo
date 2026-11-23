@@ -225,6 +225,7 @@ export const en = {
   'notice.legacyNothing': 'No memos of ssMemoWeb were found. They can be read only where ssMemoWeb was used at the same address as this page.',
   'notice.legacyUpToDate': 'All {count} memo(s) of ssMemoWeb are here already.',
   'notice.legacyImported': 'Imported {added} memo(s) from ssMemoWeb. They are in the memo list.',
+  'notice.legacyMigrated': 'Brought over {added} memo(s) that ssMemoWeb left in this browser. They are in the memo list. The memos in ssMemoWeb stay as they are.',
   'notice.legacyFailed': 'The memos of ssMemoWeb could not be imported. Nothing was changed.',
   'notice.backupNever': 'No backup has been made yet, and the memos exist only in this browser. Menu ☰ → {command} writes them all to one file.',
   'notice.backupOld': 'The last backup is {days} days old. Menu ☰ → {command} writes all memos to one file.',
