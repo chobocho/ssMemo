@@ -216,6 +216,8 @@ export const ko: Readonly<Record<MessageKey, string>> = {
   'help.tip.files.text': '파일은 화면에 끌어다 놓아도 열립니다. 보기만 한 파일은 흔적을 남기지 않고, 고친 파일은 메모로 남습니다.',
   'help.tip.undo.title': '실행 취소와 다시 실행',
   'help.tip.undo.text': '실행 취소는 {undo}, 다시 실행은 {redo}입니다. {symbol}은 기호를 넣는 키입니다.',
+  'help.tip.indent.title': '들여쓰기',
+  'help.tip.indent.text': '메모 안에서 Tab은 들여쓰고 Shift+Tab은 내어 씁니다. 여러 줄을 선택하면 한꺼번에 적용됩니다. 키보드로 메모 밖으로 나가려면 Esc를 누른 다음 Tab을 누릅니다.',
   'help.tip.calc.title': '계산기',
   'help.tip.calc.text': '계산은 선택한 내용이나 현재 줄에 적용됩니다: + - * / // ( ), 변수, sin cos tan factorial, # 주석. 정수는 자릿수 제한 없이 정확합니다.',
   'help.tip.url.title': '웹 주소',

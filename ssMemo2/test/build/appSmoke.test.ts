@@ -842,7 +842,8 @@ test('the open-file button opens every chosen file in a tab of its own', async (
   ]);
   assert.deepEqual(page.errors, []);
   assert.deepEqual(page.noticeTexts(), []);
-  assert.deepEqual(page.tabTitles(), ['New memo', 'plain.txt', 'legacy.txt']);
+  // The blank tab the app started with was never typed in, so the first file took its place.
+  assert.deepEqual(page.tabTitles(), ['plain.txt', 'legacy.txt']);
   assert.equal(page.activeTabTitle(), 'legacy.txt');
   assert.equal(page.editorText(), String.fromCharCode(0xc548, 0xb155));
   assert.equal(page.document.querySelector('input[type="file"]'), null);
@@ -861,7 +862,7 @@ test('a file dropped on the page opens too, and a file that is not text is refus
   page.document.querySelector('.cm-content')?.dispatchEvent(drop);
   await wait(200);
   assert.deepEqual(page.errors, []);
-  assert.deepEqual(page.tabTitles(), ['New memo', 'dropped.md']);
+  assert.deepEqual(page.tabTitles(), ['dropped.md']);
   assert.equal(page.editorText(), 'dropped text');
   assert.equal(page.noticeTexts().length, 1);
   assert.match(page.noticeTexts()[0] ?? '', /photo\.png/);

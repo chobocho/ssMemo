@@ -21,7 +21,8 @@ function withTempDir(run: (dir: string) => void): void {
 }
 
 test('build.sh is an executable POSIX script with LF line endings', () => {
-  assert.equal((statSync(buildScript).mode & EXECUTABLE_BITS) !== 0, true);
+  // Windows has no executable bit to look at; there the mode recorded by git is what counts.
+  if (process.platform !== 'win32') assert.equal((statSync(buildScript).mode & EXECUTABLE_BITS) !== 0, true);
   const text = readFileSync(buildScript, 'utf8');
   assert.equal(text.startsWith('#!/bin/sh\n'), true);
   assert.equal(text.includes('\r'), false);

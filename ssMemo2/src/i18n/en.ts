@@ -221,6 +221,8 @@ export const en = {
   'help.tip.files.text': 'Files can also be opened by dropping them on the page. A file you only look at leaves nothing behind; one you edit is kept as a memo.',
   'help.tip.undo.title': 'Undo and redo',
   'help.tip.undo.text': 'Undo is {undo}. Redo is {redo}. {symbol} inserts a symbol instead.',
+  'help.tip.indent.title': 'Indenting',
+  'help.tip.indent.text': 'In a memo, Tab indents and Shift+Tab takes the indentation away again, for all selected lines at once. To leave the memo with the keyboard, press Esc and then Tab.',
   'help.tip.calc.title': 'Calculator',
   'help.tip.calc.text': 'Calculate works on the selected text or the current line: + - * / // ( ), variables, sin cos tan factorial, # comments. Whole numbers keep every digit.',
   'help.tip.url.title': 'Web addresses',

@@ -104,6 +104,21 @@ test('bold, italic and inline code', () => {
   assertContains(renderMarkdown('`코드`'), '<code>코드</code>');
 });
 
+test('names with underscores and arithmetic with asterisks are not emphasis', () => {
+  assert.equal(renderMarkdown('my_file_name.txt and snake_case_var'), '<p>my_file_name.txt and snake_case_var</p>');
+  assert.equal(renderMarkdown('my__private__name'), '<p>my__private__name</p>');
+  assert.equal(renderMarkdown('2 * 3 * 4 = 24'), '<p>2 * 3 * 4 = 24</p>');
+  assert.equal(renderMarkdown('2 ** 3 ** 4'), '<p>2 ** 3 ** 4</p>');
+  assert.equal(renderMarkdown('a _ b _ c'), '<p>a _ b _ c</p>');
+});
+
+test('emphasis still works inside a sentence, also right before a Korean particle', () => {
+  assert.equal(renderMarkdown('real *italic* and _italic_ and **bold**'), '<p>real <em>italic</em> and <em>italic</em> and <strong>bold</strong></p>');
+  assert.equal(renderMarkdown('이것은 _중요_합니다'), '<p>이것은 <em>중요</em>합니다</p>');
+  assert.equal(renderMarkdown('이것은 __중요__합니다'), '<p>이것은 <strong>중요</strong>합니다</p>');
+  assert.equal(renderMarkdown('2*3 and *two words*'), '<p>2*3 and <em>two words</em></p>');
+});
+
 test('markup inside a code span is left alone, outside of it it works', () => {
   const bold = renderMarkdown('`**x**`');
   assertContains(bold, '<code>**x**</code>');

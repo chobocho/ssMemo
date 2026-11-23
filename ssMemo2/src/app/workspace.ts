@@ -93,7 +93,10 @@ export interface Workspace {
   start(): Promise<void>;
   /** Opens a blank memo in a new tab. Returns false at the tab limit. */
   newMemo(): boolean;
-  /** Shows a stored memo, in its existing tab if it has one. Resolves false if it could not be shown. */
+  /**
+   * Shows a stored memo, in its existing tab if it has one. A blank tab on screen that was never
+   * typed in is replaced rather than kept. Resolves false if the memo could not be shown.
+   */
   openMemo(documentId: string): Promise<boolean>;
   /**
    * Shows a local file in a new tab. Like a blank memo it is stored only once it is edited, so
@@ -279,6 +282,22 @@ export function createWorkspace(options: WorkspaceOptions): Workspace {
     return memo;
   }
 
+  /**
+   * Makes room for a memo or file that is about to be opened: a blank tab on screen that was
+   * never typed in has no purpose once there is something else to show, so it gives up its place
+   * instead of piling up next to it. The caller shows another tab right afterwards.
+   */
+  function dropUntouchedBlankTab(): void {
+    const memo = activeMemo();
+    if (!memo || memo.meta || memo.source || memo.saveState !== undefined) return;
+    // Empty in the editor, or never shown and blank from the start.
+    if ((editor.getText(memo.tabId) ?? memo.initialText) !== '') return;
+    memo.autosave.discard();
+    memos.delete(memo.tabId);
+    editor.remove(memo.tabId);
+    tabs.close(memo.tabId);
+  }
+
   function showActiveTab(): void {
     const memo = activeMemo();
     if (!memo) return;
@@ -371,7 +390,16 @@ export function createWorkspace(options: WorkspaceOptions): Workspace {
         onNotice({ kind: 'memo-missing' });
         return false;
       }
+      // Asked for twice in a row (a double click in the list): the first request opened the tab
+      // while this one was still reading. A second tab on the same memo would make the two save
+      // against each other, and one of them would end up as a "copy".
+      const openedMeanwhile = findByDocument(documentId);
+      if (openedMeanwhile) {
+        activateTab(openedMeanwhile.tabId);
+        return true;
+      }
       saveActiveTab();
+      dropUntouchedBlankTab();
       if (!addTab(documentTab(document))) return false;
       showActiveTab();
       persistSession();
@@ -384,6 +412,7 @@ export function createWorkspace(options: WorkspaceOptions): Workspace {
       const content: TabContent = { title, text: file.text, source: file.source };
       if (file.bytes) content.originalBytes = file.bytes;
       if (file.writable) content.localFile = file.writable;
+      dropUntouchedBlankTab();
       if (!addTab(content)) return false;
       showActiveTab();
       persistSession();

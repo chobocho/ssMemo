@@ -10,7 +10,9 @@ OUTPUT_NAME="index.html"
 # Resolve the target before changing directory so a relative path means what the caller expects.
 case "${1:-}" in
   "") RELEASE_DIR="${ROOT_DIR}/release" ;;
-  /*) RELEASE_DIR="$1" ;;
+  # A Windows path with a drive letter (Git Bash) is absolute too. Taken for a relative one, it
+  # ended up as a folder called "C:" inside the caller's folder.
+  /* | [A-Za-z]:[\\/]*) RELEASE_DIR="$1" ;;
   *) RELEASE_DIR="$(pwd)/$1" ;;
 esac
 

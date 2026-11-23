@@ -432,6 +432,46 @@ test('openMemo opens a memo in a new tab, or switches to the tab it is already i
   assert.equal(harness.visibleText(), 'older text');
 });
 
+test('openMemo asked for twice at once (a double click) opens one tab, not two', async () => {
+  const harness = createHarness(await storageWithTwoMemos());
+  await harness.workspace.start();
+  const results = await Promise.all([harness.workspace.openMemo('older'), harness.workspace.openMemo('older')]);
+  assert.deepEqual(results, [true, true]);
+  assert.deepEqual(harness.titles(), ['newer memo', 'older memo']);
+  assert.equal(harness.visibleText(), 'older text');
+});
+
+test('a blank tab that was never typed in gives up its place to an opened memo or file', async () => {
+  const storage = await storageWithTwoMemos();
+  const harness = createHarness(storage, 2);
+  await harness.workspace.start();
+  harness.workspace.newMemo();
+  assert.deepEqual(harness.titles(), ['newer memo', DEFAULT_TITLE]);
+
+  // Also at the tab limit: the blank tab is what makes the room.
+  assert.equal(await harness.workspace.openMemo('older'), true);
+  assert.deepEqual(harness.titles(), ['newer memo', 'older memo']);
+  assert.equal(harness.visibleText(), 'older text');
+  assert.deepEqual(harness.notices, []);
+
+  const fresh = createHarness();
+  await fresh.workspace.start();
+  assert.equal(fresh.workspace.openFile({ text: 'file text', source: FILE_SOURCE }), true);
+  assert.equal(fresh.titles().length, 1);
+  assert.equal(fresh.visibleText(), 'file text');
+});
+
+test('a blank tab that was typed in stays when a memo is opened', async () => {
+  const harness = createHarness(await storageWithTwoMemos());
+  await harness.workspace.start();
+  harness.workspace.newMemo();
+  harness.type('draft');
+  assert.equal(await harness.workspace.openMemo('older'), true);
+  assert.deepEqual(harness.titles(), ['newer memo', DEFAULT_TITLE, 'older memo']);
+  await harness.workspace.flushAll();
+  assert.equal((await harness.storage.listDocuments()).documents.length, 3);
+});
+
 test('openMemo reports a memo that no longer exists', async () => {
   const harness = createHarness(await storageWithTwoMemos());
   await harness.workspace.start();
@@ -682,6 +722,8 @@ test('openFile saves the tab that was showing before', async () => {
 test('openFile at the tab limit opens nothing and the user is told', async () => {
   const harness = createHarness(createMemoryStorage(), 1);
   await harness.workspace.start();
+  // Typed in, so the only tab is not a blank one that could give up its place.
+  harness.type('kept');
   assert.equal(harness.workspace.openFile({ text: 'file text', source: FILE_SOURCE }), false);
   assert.deepEqual(harness.titles(), [DEFAULT_TITLE]);
   assert.deepEqual(harness.notices, [{ kind: 'tab-limit' }]);
@@ -693,10 +735,10 @@ test('a file name that cannot be a title is fitted, and the source keeps the rea
   const longName = `${'n'.repeat(300)}.txt`;
   harness.workspace.openFile({ text: 'a', source: { ...FILE_SOURCE, fileName: longName } });
   harness.workspace.openFile({ text: 'b', source: { ...FILE_SOURCE, fileName: '   ' } });
-  assert.deepEqual(harness.titles().slice(1), ['n'.repeat(MAX_TITLE_LENGTH), DEFAULT_TITLE]);
+  assert.deepEqual(harness.titles(), ['n'.repeat(MAX_TITLE_LENGTH), DEFAULT_TITLE]);
 
   harness.type('b, edited');
-  harness.workspace.activateTab(harness.tabs.getTabs()[1]?.id ?? '');
+  harness.workspace.activateTab(harness.tabs.getTabs()[0]?.id ?? '');
   harness.type('a, edited');
   await harness.workspace.flushAll();
   const sources = (await harness.storage.listDocuments()).documents.map((meta) => meta.source?.fileName).sort();

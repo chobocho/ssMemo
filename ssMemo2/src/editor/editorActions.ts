@@ -23,6 +23,45 @@ export function insertText(state: EditorState, text: string): TransactionSpec {
   return { ...state.replaceSelection(text), scrollIntoView: true, userEvent: INPUT_EVENT };
 }
 
+const TAB = '\t';
+// How many leading spaces count as one step of indentation when it is taken away again.
+const LEADING_INDENT_SPACES = /^ {1,4}/;
+
+/** The start of every line the main selection touches; a line it merely ends in front of is left out. */
+function selectedLineStarts(state: EditorState): { from: number; text: string }[] {
+  const { from, to } = state.selection.main;
+  const first = state.doc.lineAt(from).number;
+  const lastLine = state.doc.lineAt(to);
+  const last = lastLine.number > first && to === lastLine.from ? lastLine.number - 1 : lastLine.number;
+  const lines: { from: number; text: string }[] = [];
+  for (let number = first; number <= last; number++) {
+    const line = state.doc.line(number);
+    lines.push({ from: line.from, text: line.text });
+  }
+  return lines;
+}
+
+/**
+ * What the Tab key does: a tab character at the cursor, or with a selection one in front of every
+ * selected line that has text. The selection stays on the text it was on.
+ */
+export function indent(state: EditorState): TransactionSpec {
+  if (state.selection.main.empty) return insertText(state, TAB);
+  const changes = selectedLineStarts(state)
+    .filter((line) => line.text !== '')
+    .map((line) => ({ from: line.from, insert: TAB }));
+  return { changes, userEvent: 'input.indent' };
+}
+
+/** What Shift+Tab does: takes one tab, or up to four spaces, from the start of every selected line. */
+export function outdent(state: EditorState): TransactionSpec {
+  const changes = selectedLineStarts(state).flatMap((line) => {
+    const length = line.text.startsWith(TAB) ? TAB.length : (LEADING_INDENT_SPACES.exec(line.text)?.[0].length ?? 0);
+    return length === 0 ? [] : [{ from: line.from, to: line.from + length }];
+  });
+  return { changes, userEvent: 'delete.dedent' };
+}
+
 /**
  * Puts a divider at the cursor, on a line of its own: line breaks are added around it only where
  * there is text on the same line. A selection is replaced.

@@ -54,10 +54,13 @@ function renderInline(text: string): string {
   html = html.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (match, label: string, target: string) =>
     LINK_TARGET_PATTERN.test(target) ? `${protect(`<a href="${target}" ${LINK_ATTRIBUTES}>`)}${label}${protect('</a>')}` : match,
   );
-  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>');
-  html = html.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>');
-  html = html.replace(/(^|[^_])_([^_\n]+)_(?!_)/g, '$1<em>$2</em>');
+  // A marker counts only if it hugs the text it encloses: "2 * 3 * 4" is arithmetic, not italics.
+  // An underscore must also not sit inside a word of Latin letters or digits, so "my_file_name"
+  // stays as it is. Korean text may follow directly, because particles are written without a space.
+  html = html.replace(/\*\*(?!\s)([^*]+?)(?<!\s)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/(?<![A-Za-z0-9])__(?!\s)([^_]+?)(?<!\s)__(?![A-Za-z0-9])/g, '<strong>$1</strong>');
+  html = html.replace(/(^|[^*])\*(?!\s)([^*\n]+?)(?<!\s)\*(?!\*)/g, '$1<em>$2</em>');
+  html = html.replace(/(?<![A-Za-z0-9_])_(?!\s)([^_\n]+?)(?<!\s)_(?![A-Za-z0-9_])/g, '<em>$1</em>');
   // Only the exact escaped forms are turned back into tags. A tag with attributes does not match
   // and stays escaped.
   html = html.replace(/&lt;(\/?)([biu])&gt;/gi, '<$1$2>');

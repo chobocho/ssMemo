@@ -13,6 +13,24 @@ h2 { font-size: 1.05rem; margin-top: 2rem; }
 <h1>ssMemo2 작업 이력</h1>
 <p>최신 항목이 위에 옵니다. 새 항목은 첫 <code>&lt;h2&gt;</code> 위에 추가합니다.</p>
 
+<h2>[2026-11-24 00:15] 빈 탭 교체와 Tab 키 들여쓰기</h2>
+<ul>
+<li><b>기획:</b> 앞선 코드 리뷰에서 고치지 않고 남긴 두 가지 — ① 손대지 않은 빈 탭이 메모·파일을 열어도 남아 쌓임, ② 편집기에서 Tab 키가 들여쓰기 대신 포커스를 옮김.</li>
+<li><b>개발:</b> ① 화면에 보이는 탭이 한 번도 입력하지 않은 빈 메모면, 메모나 파일을 열 때 그 탭 자리에 연다(탭 한도에 걸렸을 때도 빈 탭이 자리를 내준다). 입력한 적이 있는 탭은 그대로 둔다. ② Tab은 커서 자리에 탭 문자를 넣고, 선택이 있으면 선택한 줄마다 앞에 넣는다(빈 줄 제외). Shift+Tab은 줄 앞의 탭 하나 또는 공백 4칸까지를 뺀다. 키보드로 메모 밖으로 나가려면 Esc 다음 Tab(2초 안), 또는 Ctrl+M. 도움말 "알아 둘 점"에 "들여쓰기" 항목 추가.</li>
+<li><b>파일:</b> <code>src/app/workspace.ts</code>, <code>src/editor/editorActions.ts</code>, <code>src/editor/editorSetup.ts</code>, <code>src/main.ts</code>, <code>src/i18n/en.ts</code>, <code>ko.ts</code>, <code>readme.md</code>, <code>test/manual/checklist.md</code>, <code>test/unit/workspace.test.ts</code>, <code>editorActions.test.ts</code>, <code>test/build/appSmoke.test.ts</code>, <code>release/index.html</code> (458,290바이트, 빌드 <code>0.1.0+797bae48</code>)</li>
+<li><b>검증:</b> 타입 검사 통과, 단위 1101 passed, 0 failed(신규 4개), 빌드 테스트 92 passed, 0 failed. 빈 탭이 남는다고 가정하던 기존 테스트 4개(단위 2, 빌드 2)는 새 동작에 맞게 고쳤다. Chrome에서 직접 확인 — 빈 탭에서 메모를 열면 그 자리에 열림, Tab으로 탭 문자 입력, 전체 선택 뒤 Tab/Shift+Tab으로 들여쓰기·내어쓰기, Esc 다음 Tab으로 포커스가 편집기 밖으로 나감.</li>
+<li><b>비고:</b> 프로젝트 안의 <code>C:</code> 폴더는 여전히 남아 있다(삭제 권한 거부). 커밋은 하지 않았다.</li>
+</ul>
+
+<h2>[2026-11-23 23:23] 코드 리뷰와 개선 (브라우저 확인 포함)</h2>
+<ul>
+<li><b>기획:</b> 핵심 소스(작업 공간, 자동 저장, 편집기, 저장소, 마크다운, 계산기, 파일 입출력, 휴지통, 백업)를 읽고 의심 가는 곳을 Chrome에서 실제로 재현했다. 확인된 문제 4가지 — ① 마크다운 미리보기에서 <code>my_file_name</code>, <code>2 * 3 * 4</code>가 기울임꼴로 깨짐, ② 메모 목록에서 메모를 더블클릭하면 같은 메모가 탭 두 개로 열림(두 탭이 서로 충돌해 "충돌 사본"이 생길 수 있음), ③ Windows(Git Bash)에서 <code>build.sh</code>에 <code>C:\...</code> 경로를 주면 상대 경로로 보고 프로젝트 안에 <code>C:</code> 폴더를 만듦(빌드 테스트 3개가 실패하던 원인), ④ 대화상자가 열린 상태에서 Ctrl+S·Ctrl+O·F1을 누르면 브라우저가 페이지 저장·파일 열기·도움말 탭을 띄움.</li>
+<li><b>개발:</b> ① 강조 기호는 글자에 붙어 있을 때만 인정하고, 밑줄은 영문·숫자 낱말 안에서는 강조로 보지 않는다(한글 조사가 바로 붙는 <code>_중요_합니다</code>는 그대로 동작). ② <code>openMemo</code>가 메모를 읽은 뒤 그 사이 열린 탭이 있는지 다시 확인한다. ③ <code>build.sh</code>가 드라이브 문자 경로를 절대 경로로 처리하고, 실행 비트 검사는 Windows에서 건너뛴다. ④ 대화상자가 열려 있으면 명령은 실행하지 않되 위 세 단축키의 브라우저 기본 동작만 막는다(Ctrl+F 등은 그대로).</li>
+<li><b>파일:</b> <code>src/lib/markdown.ts</code>, <code>src/app/workspace.ts</code>, <code>src/main.ts</code>, <code>build.sh</code>, <code>test/unit/markdown.test.ts</code>, <code>test/unit/workspace.test.ts</code>, <code>test/build/buildScript.test.ts</code>, <code>release/index.html</code> (456,851바이트, 빌드 <code>0.1.0+f495832c</code>)</li>
+<li><b>검증:</b> 타입 검사 통과, 단위 1097 passed, 0 failed(신규 3개), 빌드 테스트 92 passed, 0 failed(이전 89). Chrome에서 직접 확인 — 수정 전 ①② 재현, 수정 후 미리보기 정상·더블클릭 시 탭 한 개·대화상자 중 Ctrl+S/Ctrl+O/F1 차단(합성 키 이벤트의 <code>defaultPrevented</code>로 확인). 이상 없음을 확인한 것 — 시작 시 편집기 포커스, 찾기 패널을 연 채 글자 크기 변경, 두 창에서 같은 메모를 고칠 때의 충돌 사본 처리.</li>
+<li><b>비고:</b> 예전 테스트 실행이 남긴 프로젝트 안의 <code>C:</code> 폴더(빌드 사본만 들어 있음)는 삭제 권한이 거부되어 그대로 있다. 직접 지워야 한다. 고치지 않고 남긴 것 — 손대지 않은 빈 탭이 메모를 열어도 남는 점, 편집기에서 Tab 키가 들여쓰기 대신 포커스를 옮기는 점. 커밋은 하지 않았다.</li>
+</ul>
+
 <h2>[2026-11-23 23:07] UX 보완과 F1 도움말 개편 (ssMemoWeb 대비)</h2>
 <ul>
 <li><b>기획:</b> ssMemo2와 ssMemoWeb을 브라우저(Chrome)에 나란히 띄워 비교했다. 찾은 문제 — ① 도움말이 맨 아래로 스크롤된 채 열림(첫 포커스가 맨 아래 "오픈 소스 라이선스"), ② 대화상자에 닫기 버튼이 없어 터치 화면에서 닫기 어려움, ③ 도움말·메뉴가 넓은 창에서도 좁은 한 단이라 스크롤이 김, ④ 도움말에 명령 이름만 있고 ssMemoWeb 같은 설명이 없음, ⑤ PC에서 시작 직후 편집기에 포커스가 없어 클릭해야 입력됨(ssMemoWeb은 바로 입력), ⑥ 툴바·탭을 누르면 포커스를 빼앗김, ⑦ 버튼에 마우스를 올려도 반응이 없음, ⑧ 메모 이름을 메모 목록에서만 바꿀 수 있음, ⑨ ssMemoWeb 툴바에 있던 계산·절취선 버튼이 메뉴에만 있음, ⑩ 글자 크기를 바꾼 직후 줄 번호가 줄과 어긋남.</li>

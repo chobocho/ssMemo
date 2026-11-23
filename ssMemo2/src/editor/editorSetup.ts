@@ -13,6 +13,7 @@ import {
   searchKeymap,
 } from './cm6.ts';
 import type { Extension, KeyBinding, StateEffect } from './cm6.ts';
+import { indent, outdent } from './editorActions.ts';
 
 export interface EditorStateOptions {
   /** Called by a mounted editor after its content changed. */
@@ -131,8 +132,24 @@ function withoutAppKeys(binding: KeyBinding): KeyBinding | undefined {
   return BINDING_KEY_FIELDS.some((field) => kept[field] !== undefined) ? kept : undefined;
 }
 
+// Tab indents, as in any editor (in ssMemoWeb it left the text area). The keyboard can still get
+// out: the editor lets Tab move the focus right after Escape was pressed, and Ctrl+M (on a Mac
+// Shift+Alt+M) hands Tab back to the browser until it is pressed again.
+const INDENT_BINDING: KeyBinding = {
+  key: 'Tab',
+  run: (view) => {
+    view.dispatch(indent(view.state));
+    return true;
+  },
+  shift: (view) => {
+    view.dispatch(outdent(view.state));
+    return true;
+  },
+};
+
 /** Everything the editor reacts to by itself. */
 export const EDITOR_KEYMAP: readonly KeyBinding[] = [
+  INDENT_BINDING,
   ...defaultKeymap,
   ...historyKeymap,
   ...searchKeymap.filter((binding) => binding.key === SEARCH_PANEL_CLOSE_KEY),

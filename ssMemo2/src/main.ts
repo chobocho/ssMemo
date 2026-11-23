@@ -127,9 +127,12 @@ const KEYBOARD_DEVICE_QUERY = '(hover: hover) and (pointer: fine)';
 const PREVIEW_DELAY_MS = 300;
 const PREVIEW_MAX_CHARACTERS = 500_000;
 const MENU_COMMAND_ID: CommandId = 'app.menu';
-// Icons of the two things worth knowing in the help that have no command to borrow one from.
+// Commands whose keys (Ctrl+S, Ctrl+O, F1) the browser acts on by itself when the page does not.
+const KEYS_KEPT_FROM_THE_BROWSER: ReadonlySet<string> = new Set<CommandId>(['file.save', 'file.open', 'help.show']);
+// Icons of the three things worth knowing in the help that have no command to borrow one from.
 const TABS_TIP_ICON = '🗂️';
 const SAFE_MODE_TIP_ICON = '🛟';
+const INDENT_TIP_ICON = '⇥';
 // Commands that get a button in the header, in display order. Tabs have their own controls.
 const TOOLBAR_COMMAND_IDS: readonly CommandId[] = [
   'memo.manage',
@@ -766,6 +769,7 @@ async function start(win: Window): Promise<void> {
             redo: describeShortcut('Mod-y'),
             symbol: describeShortcut('Mod-Shift-z'),
           }),
+          tip(INDENT_TIP_ICON, 'help.tip.indent.title', 'help.tip.indent.text'),
           tip(iconOf('tools.calc'), 'help.tip.calc.title', 'help.tip.calc.text'),
           tip(iconOf('tools.openUrl'), 'help.tip.url.title', 'help.tip.url.text'),
           tip(iconOf('backup.export'), 'help.tip.backup.title', 'help.tip.backup.text', { command: t('command.exportBackup') }),
@@ -854,10 +858,15 @@ async function start(win: Window): Promise<void> {
   // One handler on the document, so shortcuts work wherever the focus is (in ssMemoWeb they
   // only worked while the text area had it).
   doc.addEventListener('keydown', (event) => {
-    // While a dialog is open, keys belong to the dialog.
-    if (doc.querySelector('dialog[open]')) return;
     const command = commands.findByKeyEvent(event, useCommandKey);
     if (!command) return;
+    // While a dialog is open, keys belong to the dialog and no command runs. A few of them would
+    // make the browser do something of its own instead (save the page as HTML, open its help in
+    // a new tab), which is never what was meant here; those are swallowed.
+    if (doc.querySelector('dialog[open]')) {
+      if (KEYS_KEPT_FROM_THE_BROWSER.has(command.id)) event.preventDefault();
+      return;
+    }
     event.preventDefault();
     command.run();
   });

@@ -7,10 +7,12 @@ import {
   getCodeToRun,
   getSelectedUrl,
   getUrlToOpen,
+  indent,
   insertDivider,
   insertResultLines,
   insertText,
   joinChunks,
+  outdent,
   splitIntoChunks,
   toggleChunks,
 } from '../../src/editor/editorActions.ts';
@@ -265,4 +267,30 @@ test('without a selection the address under the cursor is taken, but only by the
 test('the cursor on the second line finds the address on that line', () => {
   const text = 'first line\nsee https://example.com/b';
   assert.equal(getUrlToOpen(stateWith(text, text.length - 3)), 'https://example.com/b');
+});
+
+// --- indent and outdent -------------------------------------------------------
+
+test('indent puts a tab at the cursor, and in front of every selected line that has text', () => {
+  const atCursor = applied(stateWith('ab', 1), indent(stateWith('ab', 1)));
+  assert.equal(atCursor.doc.toString(), 'a\tb');
+  assert.equal(atCursor.selection.main.head, 2);
+
+  // From inside the first line to the very start of the fourth: the fourth is not touched.
+  const start = stateWith('one\n\nthree\nfour', 1, 11);
+  const indented = applied(start, indent(start));
+  assert.equal(indented.doc.toString(), '\tone\n\n\tthree\nfour');
+  assert.equal(undone(indented).doc.toString(), 'one\n\nthree\nfour');
+});
+
+test('outdent takes one tab or up to four spaces from the selected lines, and nothing else', () => {
+  const text = '\t\ta\n      b\n  c\nd';
+  const start = stateWith(text, 0, text.length);
+  assert.equal(applied(start, outdent(start)).doc.toString(), '\ta\n  b\nc\nd');
+
+  const cursorOnly = stateWith('\ta\n\tb', 5);
+  assert.equal(applied(cursorOnly, outdent(cursorOnly)).doc.toString(), '\ta\nb');
+
+  const nothing = stateWith('plain', 2);
+  assert.equal(applied(nothing, outdent(nothing)).doc.toString(), 'plain');
 });
